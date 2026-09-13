@@ -1,5 +1,7 @@
 import { app, dialog } from 'electron'
-import { readFileSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 
 // macOS 双击自安装:DMG 里只放 app,用户双击图标启动时,若发现自己不在
@@ -28,10 +30,14 @@ interface SelfInstallStrings {
 
 const SELF_INSTALL_STRINGS: Record<SelfInstallLocale, SelfInstallStrings> = {
   en: {
-    runningTitle: 'Memoh is already running',
+    runningTitle: 'Quit Memoh to Install',
     runningDetail:
-      'Memoh is still running in the background. Quit it from the Memoh menu bar icon ' +
-      '(closing the window is not enough), then open this installer again.',
+      'You are installing Memoh, but Memoh is still\n' +
+      'running in the background. Quit Memoh to\n' +
+      'continue the installation.\n\n' +
+      'Closing the window does not quit Memoh. Click the\n' +
+      'Memoh menu bar icon and choose "Quit Memoh",\n' +
+      'then open this installer again.',
     conflictTitle: 'Memoh is already installed',
     conflictDetail:
       'A version of Memoh already exists in your Applications folder. Replace it with this one?',
@@ -40,9 +46,12 @@ const SELF_INSTALL_STRINGS: Record<SelfInstallLocale, SelfInstallStrings> = {
     ok: 'OK',
   },
   zh: {
-    runningTitle: 'Memoh 正在运行',
+    runningTitle: '安装前请先退出 Memoh',
     runningDetail:
-      'Memoh 仍在后台运行。请通过菜单栏的 Memoh 图标退出(仅关闭窗口并不会退出),然后重新打开本安装包。',
+      '你正在安装 Memoh,但 Memoh 仍在后台运行。\n' +
+      '请先退出 Memoh,再继续安装。\n\n' +
+      '仅关闭窗口不会退出 Memoh。请点击菜单栏的\n' +
+      'Memoh 图标,选择「退出 Memoh」,然后重新打开本安装包。',
     conflictTitle: '已安装 Memoh',
     conflictDetail: '「应用程序」文件夹中已存在一个 Memoh,要用当前版本替换它吗?',
     replace: '替换',
@@ -50,10 +59,14 @@ const SELF_INSTALL_STRINGS: Record<SelfInstallLocale, SelfInstallStrings> = {
     ok: '好',
   },
   ja: {
-    runningTitle: 'Memoh は実行中です',
+    runningTitle: 'インストールの前に Memoh を終了',
     runningDetail:
-      'Memoh はバックグラウンドで実行中です。メニューバーの Memoh アイコンから終了してから' +
-      '(ウインドウを閉じるだけでは終了しません)、このインストーラーをもう一度開いてください。',
+      'Memoh をインストールしようとしていますが、\n' +
+      'Memoh はバックグラウンドで実行中です。\n' +
+      'Memoh を終了してからインストールを続けてください。\n\n' +
+      'ウインドウを閉じるだけでは終了しません。\n' +
+      'メニューバーの Memoh アイコンから「Memoh を終了」を選び、\n' +
+      'このインストーラーをもう一度開いてください。',
     conflictTitle: 'Memoh はすでにインストールされています',
     conflictDetail: 'アプリケーションフォルダにすでに Memoh があります。このバージョンで置き換えますか?',
     replace: '置き換える',
@@ -87,6 +100,43 @@ export function showQuitRunningInstanceDialog(): void {
     message: strings.runningTitle,
     detail: strings.runningDetail,
   })
+}
+
+function appleScriptString(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
+/**
+ * 用 osascript 弹同一个"请先退出"对话框 —— 供拿不到单实例锁的第二实例使用。
+ *
+ * 实测:经 LaunchServices 拉起的锁失败实例永远等不到 app ready(ready 被
+ * second-instance 投递流程吞掉),而 Electron 的 dialog 在 ready 前不可用。
+ * 所以提示交给独立的 osascript 进程显示,它不需要 ready,本进程退出后
+ * 对话框仍然存活。
+ */
+export function showQuitRunningInstancePromptDetached(): void {
+  const strings = selfInstallStrings()
+  const icon = join(process.resourcesPath, 'icon.icns')
+  // display dialog 不会自动按语义断行,文案里的 \n 逐行交给 AppleScript
+  // 的 return 拼接,保证排版是写文案时刻意设计过的。
+  const detail = strings.runningDetail
+    .split('\n')
+    .map(appleScriptString)
+    .join(' & return & ')
+  const script =
+    `display dialog ${detail} ` +
+    `with title ${appleScriptString(strings.runningTitle)} ` +
+    `buttons {${appleScriptString(strings.ok)}} ` +
+    `default button ${appleScriptString(strings.ok)}` +
+    (existsSync(icon) ? ` with icon (POSIX file ${appleScriptString(icon)})` : '')
+  try {
+    spawn('/usr/bin/osascript', ['-e', script], {
+      detached: true,
+      stdio: 'ignore',
+    }).unref()
+  } catch (error) {
+    console.error('self-install: failed to spawn prompt helper', error)
+  }
 }
 
 function plistString(plist: string, key: string): string | null {

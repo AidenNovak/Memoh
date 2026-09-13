@@ -47,7 +47,8 @@ patterns, and the verification checklist for every surface in this package.
 src/
 ├── App.vue                    # Root component (RouterView + Toaster + settings init)
 ├── main.ts                    # App entry (plugins, global components, API client setup)
-├── router.ts                  # Route definitions, auth guard, chunk error recovery
+├── routes.ts                  # Shared Web/Desktop business route factory
+├── router.ts                  # Web history, auth guard, chunk error recovery
 ├── style.css                  # Tailwind imports (delegates to @felinic/ui/style.css)
 ├── i18n.ts                    # vue-i18n configuration
 ├── assets/                    # Static assets (logo.svg)
@@ -249,6 +250,11 @@ src/
 
 ## Routes
 
+Business routes are defined once in `src/routes.ts` through
+`createAppRoutes('web' | 'desktop')`. Add or rename shared pages there so both
+hosts receive the same route names, params, lazy imports, and metadata. Keep
+router creation and host-specific guards in each host's bootstrap.
+
 The app uses a two-section layout architecture:
 
 ### Chat Section (`/`)
@@ -277,7 +283,8 @@ Chat routes register **null stub components** in the router. The real UI (`MainS
 | `/settings/transcription` | — | redirect | Legacy alias → `voice` |
 | `/settings/email` | email | `email/index.vue` | Email provider management |
 | `/settings/supermarket` | supermarket | `supermarket/index.vue` | Template/skill marketplace |
-| `/settings/supermarket/skills/:registryId/:packageId` | supermarket-package-detail | `supermarket/package-detail.vue` | Registry Skill Package detail |
+| `/settings/supermarket/category/:categoryId` | supermarket-category | `supermarket/category.vue` | App category |
+| `/settings/supermarket/:registryId/:appId` | supermarket-app-detail | `supermarket/app-detail.vue` | App detail |
 | `/settings/usage` | usage | `usage/index.vue` | Token usage statistics |
 | `/settings/people` | people | `people/index.vue` | User management (admin only) |
 | `/settings/appearance` | appearance | `appearance/index.vue` | Theme, locale, and appearance settings |
@@ -286,7 +293,7 @@ Chat routes register **null stub components** in the router. The real UI (`MainS
 | `/settings/platform` | platform | `platform/index.vue` | Platform management |
 | `/settings/about` | about | `about/index.vue` | About page |
 
-`/settings` redirects to `/settings/bots` by default.
+`/settings` remains addressable as the mobile navigation list on Web; Desktop redirects it to `/settings/bots`.
 
 ### Standalone Routes
 

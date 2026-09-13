@@ -9,11 +9,11 @@ import (
 	skillset "github.com/felinics/memoh/internal/skills"
 )
 
-// UpdateRequest selects what to update for one App on a workspace target.
+// UpdateRequest selects what to update for one App in a bot's isolated workspace.
 type UpdateRequest struct {
-	RegistryID        string
-	AppID             string
-	WorkspaceTargetID string
+	RegistryID string
+	AppID      string
+
 	// Release moves the installation to the registry's current release.
 	Release bool
 	// Dependencies are updated to their latest version. Each must be one the
@@ -42,16 +42,13 @@ func (s *Service) UpdateSelection(ctx context.Context, botID string, req UpdateR
 	if len(depIDs) > 0 && s.dependencies == nil {
 		return OperationResult{}, ErrDependenciesUnavailable
 	}
-	targetID, err := s.skills.ResolveTargetID(ctx, botID, req.WorkspaceTargetID)
-	if err != nil {
-		return OperationResult{}, err
-	}
-	unlock, err := lockInstallation(ctx, botID, targetID, registryID, appID)
+
+	unlock, err := lockInstallation(ctx, botID, registryID, appID)
 	if err != nil {
 		return OperationResult{}, err
 	}
 	defer unlock()
-	inst, err := s.store.Get(ctx, botID, targetID, registryID, appID)
+	inst, err := s.store.Get(ctx, botID, registryID, appID)
 	installed := err == nil
 	if err != nil && !errors.Is(err, ErrNotInstalled) {
 		return OperationResult{}, fmt.Errorf("apps: read installation: %w", err)
@@ -84,7 +81,7 @@ func (s *Service) UpdateSelection(ctx context.Context, botID string, req UpdateR
 	for _, depID := range depIDs {
 		sink.Send(Event{Type: EventStep, Kind: KindDependency, ID: depID})
 		step := StepResult{Kind: KindDependency, ID: depID}
-		res, err := s.dependencies.Update(ctx, botID, targetID, depID, "", logSink(sink, KindDependency, depID))
+		res, err := s.dependencies.Update(ctx, botID, depID, "", logSink(sink, KindDependency, depID))
 		if err != nil {
 			step.Status, step.Error = StepFailed, err.Error()
 			failed++
@@ -143,7 +140,7 @@ func (s *Service) Update(ctx context.Context, botID, installationID string, sink
 	if err != nil {
 		return OperationResult{}, err
 	}
-	unlock, err := lockInstallation(ctx, botID, inst.WorkspaceTargetID, inst.RegistryID, inst.AppID)
+	unlock, err := lockInstallation(ctx, botID, inst.RegistryID, inst.AppID)
 	if err != nil {
 		return OperationResult{}, err
 	}
@@ -188,5 +185,5 @@ func (s *Service) updateRelease(ctx context.Context, botID string, inst Installa
 	if err := validateReferences(release); err != nil {
 		return OperationResult{}, err
 	}
-	return s.materialize(ctx, botID, inst.WorkspaceTargetID, release, inst.Reason, StatusUpdating, sink, announced)
+	return s.materialize(ctx, botID, release, inst.Reason, StatusUpdating, sink, announced)
 }

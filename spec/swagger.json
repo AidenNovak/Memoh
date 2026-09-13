@@ -2273,7 +2273,7 @@
         },
         "/bots/{bot_id}/apps": {
             "get": {
-                "description": "Every App installed on the workspace target with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.",
+                "description": "Every App installed on the bot workspace with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.",
                 "produces": [
                     "application/json"
                 ],
@@ -2288,12 +2288,6 @@
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -2422,12 +2416,6 @@
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5368,12 +5356,6 @@
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "type": "boolean",
                         "description": "Refresh definitions and workspace discovery",
                         "name": "refresh",
@@ -5437,12 +5419,6 @@
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5505,12 +5481,6 @@
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "description": "Dependencies to check",
@@ -5591,12 +5561,6 @@
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "description": "Version to install (optional)",
                         "name": "payload",
                         "in": "body",
@@ -5674,12 +5638,6 @@
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "description": "Version to install (optional)",
                         "name": "payload",
                         "in": "body",
@@ -5752,12 +5710,6 @@
                         "name": "dep_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5853,12 +5805,6 @@
                     },
                     {
                         "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "Keep a previously prepared definition revision",
                         "name": "definition_revision",
                         "in": "query"
@@ -5931,12 +5877,6 @@
                         "name": "dep_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "description": "Version to update to (optional)",
@@ -22302,7 +22242,7 @@
                     "type": "string"
                 },
                 "shared": {
-                    "description": "Shared is set when another installed App references the same\ndependency on this workspace target.",
+                    "description": "Shared is set when another installed App references the same\ndependency on this bot workspace.",
                     "type": "boolean"
                 }
             }
@@ -22322,9 +22262,6 @@
                     "type": "string"
                 },
                 "revision": {
-                    "type": "string"
-                },
-                "workspace_target_id": {
                     "type": "string"
                 }
             }
@@ -22463,12 +22400,8 @@
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
-                },
-                "workspace_target_id": {
-                    "type": "string"
                 }
             }
         },
@@ -22668,9 +22601,6 @@
                 "release": {
                     "description": "Release moves the installation to the registry's current release.",
                     "type": "boolean"
-                },
-                "workspace_target_id": {
-                    "type": "string"
                 }
             }
         },
@@ -25036,8 +24966,7 @@
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
                 }
             }
@@ -25113,10 +25042,6 @@
                     "items": {
                         "type": "string"
                     }
-                },
-                "workspace_target_id": {
-                    "description": "WorkspaceTargetID overrides the query parameter of the same name.",
-                    "type": "string"
                 }
             }
         },
@@ -25134,8 +25059,7 @@
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
                 }
             }

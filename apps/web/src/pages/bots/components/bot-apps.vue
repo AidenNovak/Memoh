@@ -6,33 +6,6 @@
       :title="t('apps.title')"
     >
       <template #actions>
-        <Select
-          v-if="targets.length > 1"
-          :model-value="displayTargetId"
-          :disabled="running"
-          @update:model-value="onTargetChange"
-        >
-          <SelectTrigger class="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="end">
-            <SelectItem
-              v-for="target in targets"
-              :key="target.target_id"
-              :value="target.target_id"
-              :disabled="!workspaceTargetAvailable(target)"
-            >
-              {{ workspaceTargetName(target, t) }}
-              <span
-                v-if="!workspaceTargetAvailable(target)"
-                class="text-caption text-muted-foreground"
-              >
-                {{ workspaceTargetStatusLabel(target, t) }}
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
         <Button
           variant="outline"
           :loading="checking"
@@ -139,7 +112,6 @@
           </Empty>
         </SettingsSection>
 
-
         <div
           v-else
           class="grid grid-cols-1 gap-4 sm:grid-cols-2"
@@ -238,8 +210,6 @@
       :open="confirm.open"
       :mode="confirm.mode"
       :item="confirm.item"
-      :target-kind="targetKind"
-      :target-name="targetName"
       @update:open="(value) => { confirm.open = value }"
       @confirm="onDependencyConfirmed"
     />
@@ -295,11 +265,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   PageShell,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   SettingsRow,
   SettingsSection,
   SettingsShell,
@@ -309,13 +274,11 @@ import {
 import { ArrowRight, Plus, RefreshCw } from 'lucide-vue-next'
 import {
   deleteBotsByBotIdConnectorsByConnectionId,
-  getBotsByBotIdWorkspaceTargets,
   getConnectorsCatalog,
   patchBotsByBotIdConnectorsByConnectionId,
   postBotsByBotIdConnectorsByConnectionIdReauth,
   postBotsByBotIdContainerStart,
   type ConnectorsConnector,
-  type WorkspaceWorkspaceTarget,
 } from '@memohai/sdk'
 import DependencyConfirmDialog from './dependency-confirm-dialog.vue'
 import DependencyProgressDialog from './dependency-progress-dialog.vue'
@@ -369,13 +332,6 @@ import {
   type DependencyMenuAction,
   type DependencyPrimaryAction,
 } from '@/utils/workspace-dependency'
-import {
-  workspaceTargetAvailable,
-  workspaceTargetName,
-  workspaceTargetStatusLabel,
-} from '@/utils/workspace-target'
-
-type ValidWorkspaceTarget = WorkspaceWorkspaceTarget & { target_id: string }
 
 const props = defineProps<{ botId: string }>()
 
@@ -392,44 +348,10 @@ onMounted(() => {
   void capabilitiesStore.load()
 })
 
-// ---- Workspace target -------------------------------------------------------
-
-const { data: targetsResponse } = useQuery({
-  key: () => ['bot-workspace-targets', props.botId],
-  query: async () => {
-    const { data } = await getBotsByBotIdWorkspaceTargets({ path: { bot_id: props.botId }, throwOnError: true })
-    return data
-  },
-  enabled: () => !!props.botId,
-})
-
-const targets = computed<ValidWorkspaceTarget[]>(() => (
-  (targetsResponse.value?.targets ?? []).filter(
-    (target): target is ValidWorkspaceTarget => typeof target.target_id === 'string' && target.target_id.length > 0,
-  )
-))
-const primaryTargetId = computed(() => targets.value.find(target => target.primary)?.target_id ?? targets.value[0]?.target_id ?? '')
-const selectedTargetId = ref('')
-const displayTargetId = computed(() => selectedTargetId.value || primaryTargetId.value)
-const selectedTarget = computed(() => targets.value.find(target => target.target_id === displayTargetId.value))
-const targetKind = computed<'native' | 'remote'>(() => (
-  !selectedTarget.value || selectedTarget.value.kind === 'native' ? 'native' : 'remote'
-))
-const targetName = computed(() => (selectedTarget.value ? workspaceTargetName(selectedTarget.value, t) : ''))
-
-function onTargetChange(value: unknown) {
-  const next = typeof value === 'string' ? value : ''
-  selectedTargetId.value = next === primaryTargetId.value ? '' : next
-}
-
-watch(() => props.botId, () => {
-  selectedTargetId.value = ''
-})
-
 // ---- App list -----------------------------------------------------------
 
 const forceRefresh = ref(false)
-const { data, error, isLoading, refetch } = useBotAppsQuery(botIdRef, selectedTargetId, forceRefresh)
+const { data, error, isLoading, refetch } = useBotAppsQuery(botIdRef, forceRefresh)
 
 // Pinia Colada's refetch ignores `enabled`, so manual refreshes must skip the
 // window before the bot id is known; otherwise they hit `/bots//apps`.
@@ -444,7 +366,6 @@ const workspaceState = computed<DependencyWorkspaceState | undefined>(() => {
   if (data.value?.workspace_state) return data.value.workspace_state
   if (isApiErrorCode(error.value, 'workspace_dependency.workspace_not_running')) return 'not_running'
   if (isApiErrorCode(error.value, 'workspace_dependency.workspace_missing')) return 'missing'
-  if (isApiErrorCode(error.value, 'workspace_dependency.remote_offline')) return 'remote_offline'
   return undefined
 })
 const loadFailed = computed(() => !!error.value && !data.value && !workspaceState.value)
@@ -483,16 +404,10 @@ const banner = computed(() => {
       return {
         title: t('bots.dependencies.workspace.notRunningTitle'),
         description: t('apps.workspaceNotRunningDescription'),
-        action: targetKind.value === 'native' ? 'start' : '',
+        action: 'start',
       }
     case 'missing':
-      return { title: t('bots.dependencies.workspace.missingTitle'), description: '', action: targetKind.value === 'native' ? 'container' : '' }
-    case 'remote_offline':
-      return {
-        title: t('bots.dependencies.workspace.remoteOfflineTitle', { name: targetName.value }),
-        description: t('bots.dependencies.workspace.remoteOfflineDescription'),
-        action: '',
-      }
+      return { title: t('bots.dependencies.workspace.missingTitle'), description: '', action: 'container' }
     default:
       return null
   }
@@ -546,7 +461,6 @@ function onAppAction(item: AppItem, action: AppRowAction) {
     case 'retry':
       if (!item.installation_id) return
       startApp({
-        targetId: selectedTargetId.value,
         registryId: item.registry_id ?? '',
         appId: item.app_id ?? '',
         installationId: item.installation_id,
@@ -574,13 +488,12 @@ function onUpdateConfirmed(choice: AppUpdateChoice) {
   updateTarget.value = null
   if (!item) return
   startApp({
-    targetId: selectedTargetId.value,
     registryId: item.registry_id ?? '',
     appId: item.app_id ?? '',
     installationId: item.installation_id ?? undefined,
     name: appDisplayName(item, locale.value),
     action: 'update',
-    update: { ...choice, workspaceTargetId: selectedTargetId.value || undefined },
+    update: { ...choice },
   })
 }
 
@@ -611,7 +524,6 @@ function onRemoveConfirmed(options: { removeUnreferencedRequired: boolean }) {
   removeTarget.value = null
   if (!item?.installation_id) return
   startApp({
-    targetId: selectedTargetId.value,
     registryId: item.registry_id ?? '',
     appId: item.app_id ?? '',
     installationId: item.installation_id,
@@ -734,7 +646,7 @@ const {
   retry: retryDependency,
   viewProgress: viewDependencyProgress,
   setProgressOpen: setDependencyProgressOpen,
-} = useDependencyOperation(botIdRef, selectedTargetId)
+} = useDependencyOperation(botIdRef)
 
 const confirm = reactive<{
   open: boolean
@@ -799,7 +711,7 @@ async function onRollbackConfirmed() {
   const to = formatDependencyVersion(item.previous_version)
   rollingBack.value = true
   try {
-    await runMutation(() => rollbackDependency(props.botId, selectedTargetId.value, item.id ?? ''), {
+    await runMutation(() => rollbackDependency(props.botId, item.id ?? ''), {
       fallbackMessage: t('bots.dependencies.rollback.failed'),
       onSuccess: async () => {
         rollbackTarget.value = null
@@ -849,7 +761,7 @@ async function loadScript(action: ScriptAction) {
   script.error = ''
   script.data = null
   try {
-    const response = await fetchDependencyScript(props.botId, selectedTargetId.value, item.id, action, script.definitionRevision)
+    const response = await fetchDependencyScript(props.botId, item.id, action, script.definitionRevision)
     if (sequence === scriptSequence) {
       script.data = response
       script.definitionRevision = response.definition_revision ?? ''
@@ -865,7 +777,7 @@ function switchScriptAction(action: ScriptAction) {
   void loadScript(action)
 }
 
-watch([botIdRef, selectedTargetId], () => {
+watch(botIdRef, () => {
   confirm.open = false
   removeTarget.value = null
   updateTarget.value = null
@@ -881,10 +793,10 @@ async function checkUpdates() {
   if (checking.value) return
   checking.value = true
   try {
-    await runMutation(() => checkAppUpdates(props.botId, selectedTargetId.value), {
+    await runMutation(() => checkAppUpdates(props.botId), {
       fallbackMessage: t('apps.checkUpdatesFailed'),
       onSuccess: async (refreshed) => {
-        queryCache.setQueryData(['bot-apps', props.botId, selectedTargetId.value], refreshed)
+        queryCache.setQueryData(['bot-apps', props.botId], refreshed)
         await Promise.all([invalidateBotApps(queryCache, props.botId), invalidateBotDependencies(queryCache, props.botId)])
         toast.success(t('apps.checkUpdatesDone'))
       },

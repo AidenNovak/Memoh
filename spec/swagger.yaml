@@ -3209,7 +3209,7 @@ definitions:
       shared:
         description: |-
           Shared is set when another installed App references the same
-          dependency on this workspace target.
+          dependency on this bot workspace.
         type: boolean
     type: object
   handlers.AppInstallRequest:
@@ -3219,8 +3219,6 @@ definitions:
       registry_id:
         type: string
       revision:
-        type: string
-      workspace_target_id:
         type: string
     required:
     - app_id
@@ -3326,9 +3324,6 @@ definitions:
         - running
         - not_running
         - missing
-        - remote_offline
-        type: string
-      workspace_target_id:
         type: string
     type: object
   handlers.AppRemovalPreviewApp:
@@ -3463,8 +3458,6 @@ definitions:
       release:
         description: Release moves the installation to the registry's current release.
         type: boolean
-      workspace_target_id:
-        type: string
     required:
     - app_id
     - registry_id
@@ -5102,7 +5095,6 @@ definitions:
         - running
         - not_running
         - missing
-        - remote_offline
         type: string
     type: object
   handlers.WorkspaceDependencyOperationResponse:
@@ -5153,9 +5145,6 @@ definitions:
         items:
           type: string
         type: array
-      workspace_target_id:
-        description: WorkspaceTargetID overrides the query parameter of the same name.
-        type: string
     type: object
   handlers.WorkspaceDependencyPreflightResponse:
     properties:
@@ -5168,7 +5157,6 @@ definitions:
         - running
         - not_running
         - missing
-        - remote_offline
         type: string
     type: object
   handlers.WorkspaceDependencyScriptEnv:
@@ -8805,7 +8793,7 @@ paths:
       - bot-agents
   /bots/{bot_id}/apps:
     get:
-      description: Every App installed on the workspace target with its Skills, dependency
+      description: Every App installed on the bot workspace with its Skills, dependency
         references and connector references, plus the canonical Apps of dependencies
         the workspace carries that no App references.
       parameters:
@@ -8813,10 +8801,6 @@ paths:
         in: path
         name: bot_id
         required: true
-        type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
         type: string
       - description: Refresh workspace discovery
         in: query
@@ -9163,10 +9147,6 @@ paths:
         in: path
         name: bot_id
         required: true
-        type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
         type: string
       produces:
       - application/json
@@ -10875,10 +10855,6 @@ paths:
         name: bot_id
         required: true
         type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
-        type: string
       - description: Refresh definitions and workspace discovery
         in: query
         name: refresh
@@ -10931,10 +10907,6 @@ paths:
         in: path
         name: dep_id
         required: true
-        type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
         type: string
       - description: Version to install (optional)
         in: body
@@ -10989,10 +10961,6 @@ paths:
         name: dep_id
         required: true
         type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
-        type: string
       - description: Version to install (optional)
         in: body
         name: payload
@@ -11042,10 +11010,6 @@ paths:
         in: path
         name: dep_id
         required: true
-        type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
         type: string
       produces:
       - application/json
@@ -11112,10 +11076,6 @@ paths:
         in: query
         name: action
         type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
-        type: string
       - description: Keep a previously prepared definition revision
         in: query
         name: definition_revision
@@ -11169,10 +11129,6 @@ paths:
         name: dep_id
         required: true
         type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
-        type: string
       - description: Version to update to (optional)
         in: body
         name: payload
@@ -11218,10 +11174,6 @@ paths:
         name: bot_id
         required: true
         type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
-        type: string
       produces:
       - application/json
       responses:
@@ -11264,10 +11216,6 @@ paths:
         in: path
         name: bot_id
         required: true
-        type: string
-      - description: Workspace target ID (defaults to the bot's current target)
-        in: query
-        name: workspace_target_id
         type: string
       - description: Dependencies to check
         in: body

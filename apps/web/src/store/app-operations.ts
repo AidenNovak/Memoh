@@ -38,7 +38,7 @@ export interface AppOperation {
   /** `appOperationKey(botId, registryId, appId)`. */
   key: string
   botId: string
-  targetId: string
+
   registryId: string
   appId: string
   installationId: string
@@ -60,8 +60,7 @@ export interface AppOperation {
 
 export interface StartAppOperationInput {
   botId: string
-  /** '' → the bot's current workspace target. */
-  targetId: string
+
   registryId: string
   appId: string
   installationId?: string
@@ -277,7 +276,6 @@ export const useAppOperationsStore = defineStore('app-operations', () => {
       try {
         const { data } = await getBotsByBotIdApps({
           path: { bot_id: operation.botId },
-          query: operation.targetId ? { workspace_target_id: operation.targetId } : undefined,
           signal,
           throwOnError: true,
         })
@@ -397,7 +395,6 @@ export const useAppOperationsStore = defineStore('app-operations', () => {
     const operation = reactive<AppOperation>({
       key,
       botId: input.botId,
-      targetId: input.targetId,
       registryId: input.registryId,
       appId: input.appId,
       installationId: input.installationId ?? '',

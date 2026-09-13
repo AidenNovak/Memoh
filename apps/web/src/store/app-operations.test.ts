@@ -24,7 +24,7 @@ vi.mock('@/composables/api/useAppStream', () => ({ streamAppOperation: mocks.str
 import { useAppOperationsStore } from './app-operations'
 
 const target = {
-  botId: 'bot', targetId: 'native', registryId: 'memoh', appId: 'editor',
+  botId: 'bot', registryId: 'memoh', appId: 'editor',
   installationId: 'installation', name: 'Editor', action: 'remove' as const,
 }
 

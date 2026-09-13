@@ -38,7 +38,6 @@ const (
 	CodeWorkspaceDependencyBusy                  Code = "workspace_dependency.busy"
 	CodeWorkspaceDependencyWorkspaceNotRunning   Code = "workspace_dependency.workspace_not_running"
 	CodeWorkspaceDependencyWorkspaceMissing      Code = "workspace_dependency.workspace_missing"
-	CodeWorkspaceDependencyRemoteOffline         Code = "workspace_dependency.remote_offline"
 	CodeWorkspaceDependencyRollbackUnavailable   Code = "workspace_dependency.rollback_unavailable"
 	CodeWorkspaceDependencyOperationFailed       Code = "workspace_dependency.operation_failed"
 	CodeProviderTemplateNotFound                 Code = "provider_template.not_found"
@@ -308,10 +307,6 @@ var catalog = map[Code]Definition{
 	CodeWorkspaceDependencyWorkspaceMissing: {
 		HTTPStatus: http.StatusConflict,
 		Detail:     "The workspace has not been created yet.",
-	},
-	CodeWorkspaceDependencyRemoteOffline: {
-		HTTPStatus: http.StatusConflict,
-		Detail:     "That computer is offline.",
 	},
 	CodeWorkspaceDependencyRollbackUnavailable: {
 		HTTPStatus: http.StatusConflict,

@@ -34,11 +34,11 @@ func (s *cleanupStore) ListConnectorRefs(ctx context.Context, id string) ([]Conn
 	return s.Store.ListConnectorRefs(ctx, id)
 }
 
-func (s *cleanupStore) ListTargetDependencyRefs(ctx context.Context, bot, target string) ([]TargetDependencyRef, error) {
+func (s *cleanupStore) ListBotDependencyRefs(ctx context.Context, bot string) ([]BotDependencyRef, error) {
 	if s.failure == "shared_dependencies" {
 		return nil, errCleanupProbe
 	}
-	return s.Store.ListTargetDependencyRefs(ctx, bot, target)
+	return s.Store.ListBotDependencyRefs(ctx, bot)
 }
 
 func (s *cleanupStore) RemoveDependencyRef(ctx context.Context, id, dep string) error {
@@ -64,23 +64,23 @@ type cleanupDeps struct {
 	started   int
 }
 
-func (d *cleanupDeps) List(ctx context.Context, bot, target string) (workspacedeps.ListResult, error) {
+func (d *cleanupDeps) List(ctx context.Context, bot string) (workspacedeps.ListResult, error) {
 	if d.listErr != nil {
 		return workspacedeps.ListResult{}, d.listErr
 	}
 	if d.view != nil {
 		return *d.view, nil
 	}
-	return d.fakeDeps.List(ctx, bot, target)
+	return d.fakeDeps.List(ctx, bot)
 }
 
-func (d *cleanupDeps) Refresh(ctx context.Context, bot, target string) (workspacedeps.ListResult, error) {
-	return d.List(ctx, bot, target)
+func (d *cleanupDeps) Refresh(ctx context.Context, bot string) (workspacedeps.ListResult, error) {
+	return d.List(ctx, bot)
 }
 
 // EnsureRunning starts the injected workspace view the way the real
 // service starts a stopped native container.
-func (d *cleanupDeps) EnsureRunning(context.Context, string, string) error {
+func (d *cleanupDeps) EnsureRunning(context.Context, string) error {
 	if d.ensureErr != nil {
 		return d.ensureErr
 	}
@@ -91,11 +91,11 @@ func (d *cleanupDeps) EnsureRunning(context.Context, string, string) error {
 	return nil
 }
 
-func (d *cleanupDeps) Remove(ctx context.Context, bot, target, dep string, sink workspacedeps.LogSink) (workspacedeps.OperationResult, error) {
+func (d *cleanupDeps) Remove(ctx context.Context, bot, dep string, sink workspacedeps.LogSink) (workspacedeps.OperationResult, error) {
 	if d.removeErr != nil {
 		return workspacedeps.OperationResult{}, d.removeErr
 	}
-	result, err := d.fakeDeps.Remove(ctx, bot, target, dep, sink)
+	result, err := d.fakeDeps.Remove(ctx, bot, dep, sink)
 	// Real discovery still lists the catalog entry after its copy is removed.
 	d.present[dep] = absentDep(dep)
 	return result, err
@@ -274,7 +274,7 @@ func TestUpdateCleanupMutationFailuresRemainRetryable(t *testing.T) {
 }
 
 func TestCleanupRejectsIncompleteDependencyDiscovery(t *testing.T) {
-	for _, state := range []string{"query_error", "missing", "remote_offline", "discovery_error", "busy", "start_failed"} {
+	for _, state := range []string{"query_error", "missing", "discovery_error", "busy", "start_failed"} {
 		t.Run(state, func(t *testing.T) {
 			f := newCleanupFixture(t)
 			view := f.deps.list()
@@ -283,8 +283,6 @@ func TestCleanupRejectsIncompleteDependencyDiscovery(t *testing.T) {
 				f.depFaults.listErr = errCleanupProbe
 			case "missing":
 				view.Workspace = workspacedeps.WorkspaceMissing
-			case "remote_offline":
-				view.Workspace = workspacedeps.WorkspaceRemoteOffline
 			case "discovery_error":
 				view.DiscoveryError = "probe interrupted"
 			case "busy":
@@ -423,11 +421,11 @@ func TestFailedCleanupPersistsPublicMessageOnly(t *testing.T) {
 	})
 	t.Run("sentinel keeps its text", func(t *testing.T) {
 		f := newCleanupFixture(t)
-		f.depFaults.removeErr = workspacedeps.ErrRemoteOffline
-		if _, err := f.service.Update(t.Context(), testBotID, f.inst.ID, &recorder{}); !errors.Is(err, workspacedeps.ErrRemoteOffline) {
+		f.depFaults.removeErr = workspacedeps.ErrBusy
+		if _, err := f.service.Update(t.Context(), testBotID, f.inst.ID, &recorder{}); !errors.Is(err, workspacedeps.ErrBusy) {
 			t.Fatalf("err = %v", err)
 		}
-		if got := f.installation(t).LastError; got != "remove dependency node: "+workspacedeps.ErrRemoteOffline.Error() {
+		if got := f.installation(t).LastError; got != "remove dependency node: "+workspacedeps.ErrBusy.Error() {
 			t.Fatalf("last_error = %q", got)
 		}
 	})

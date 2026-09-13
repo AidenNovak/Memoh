@@ -751,7 +751,7 @@ export const getBotsByBotIdAppsQueryKey = (options: Options<GetBotsByBotIdAppsDa
 /**
  * List the Apps installed for a bot
  *
- * Every App installed on the workspace target with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.
+ * Every App installed on the bot workspace with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.
  */
 export const getBotsByBotIdAppsQuery = defineQueryOptions<Options<GetBotsByBotIdAppsData>, GetBotsByBotIdAppsResponse, GetBotsByBotIdAppsError>((options: Options<GetBotsByBotIdAppsData>) => ({
     key: getBotsByBotIdAppsQueryKey(options),

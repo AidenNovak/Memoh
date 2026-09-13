@@ -192,7 +192,7 @@ src/
 │   │       ├── tts-model-select.vue         # TTS model selector
 │   │       ├── channel-settings-panel.vue   # Channel settings panel
 │   │       ├── container-create-progress.vue # Container creation progress
-│   │       ├── bot-dependencies.vue         # Workspace dependencies tab (target select, check updates, grouped rows, dialogs)
+│   │       ├── bot-apps.vue                 # Bot Apps in its isolated workspace (check updates, details, dialogs)
 │   │       ├── dependency-row.vue           # One dependency row: icon, version/status badges, primary action + menu
 │   │       ├── dependency-kv-list.vue       # Read-only key/value block shared by the dependency dialogs
 │   │       ├── dependency-confirm-dialog.vue # Confirm install / update / align / reinstall of a workspace dependency

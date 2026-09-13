@@ -2282,7 +2282,7 @@ const docTemplate = `{
         },
         "/bots/{bot_id}/apps": {
             "get": {
-                "description": "Every App installed on the workspace target with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.",
+                "description": "Every App installed on the bot workspace with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.",
                 "produces": [
                     "application/json"
                 ],
@@ -2297,12 +2297,6 @@ const docTemplate = `{
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -2431,12 +2425,6 @@ const docTemplate = `{
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5377,12 +5365,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "type": "boolean",
                         "description": "Refresh definitions and workspace discovery",
                         "name": "refresh",
@@ -5446,12 +5428,6 @@ const docTemplate = `{
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5514,12 +5490,6 @@ const docTemplate = `{
                         "name": "bot_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "description": "Dependencies to check",
@@ -5600,12 +5570,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "description": "Version to install (optional)",
                         "name": "payload",
                         "in": "body",
@@ -5683,12 +5647,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
                         "description": "Version to install (optional)",
                         "name": "payload",
                         "in": "body",
@@ -5761,12 +5719,6 @@ const docTemplate = `{
                         "name": "dep_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5862,12 +5814,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "Keep a previously prepared definition revision",
                         "name": "definition_revision",
                         "in": "query"
@@ -5940,12 +5886,6 @@ const docTemplate = `{
                         "name": "dep_id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace target ID (defaults to the bot's current target)",
-                        "name": "workspace_target_id",
-                        "in": "query"
                     },
                     {
                         "description": "Version to update to (optional)",
@@ -22311,7 +22251,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "shared": {
-                    "description": "Shared is set when another installed App references the same\ndependency on this workspace target.",
+                    "description": "Shared is set when another installed App references the same\ndependency on this bot workspace.",
                     "type": "boolean"
                 }
             }
@@ -22331,9 +22271,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "revision": {
-                    "type": "string"
-                },
-                "workspace_target_id": {
                     "type": "string"
                 }
             }
@@ -22472,12 +22409,8 @@ const docTemplate = `{
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
-                },
-                "workspace_target_id": {
-                    "type": "string"
                 }
             }
         },
@@ -22677,9 +22610,6 @@ const docTemplate = `{
                 "release": {
                     "description": "Release moves the installation to the registry's current release.",
                     "type": "boolean"
-                },
-                "workspace_target_id": {
-                    "type": "string"
                 }
             }
         },
@@ -25045,8 +24975,7 @@ const docTemplate = `{
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
                 }
             }
@@ -25122,10 +25051,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                },
-                "workspace_target_id": {
-                    "description": "WorkspaceTargetID overrides the query parameter of the same name.",
-                    "type": "string"
                 }
             }
         },
@@ -25143,8 +25068,7 @@ const docTemplate = `{
                     "enum": [
                         "running",
                         "not_running",
-                        "missing",
-                        "remote_offline"
+                        "missing"
                     ]
                 }
             }

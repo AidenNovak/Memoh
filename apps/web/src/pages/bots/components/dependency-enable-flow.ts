@@ -21,7 +21,6 @@ export type EnableFlowStep =
   | { kind: 'satisfied' }
   /** The UI guides the user to the workspace; it never starts it silently. */
   | { kind: 'workspace'; state: 'not_running' | 'missing' }
-  | { kind: 'remote_offline' }
   | { kind: 'install'; item: DependencyItem }
   | { kind: 'platform_unsupported'; item: DependencyItem }
   /** The Server did not recognise the dependency or answered without a state. */
@@ -64,8 +63,6 @@ export function resolveEnableFlowStep(
     case 'not_running':
     case 'missing':
       return { kind: 'workspace', state: response.workspace_state }
-    case 'remote_offline':
-      return { kind: 'remote_offline' }
   }
   const preflight = (response?.items ?? []).find(item => item.dependency_id === requirement.dependencyId)
   if (!preflight) return { kind: 'unknown' }

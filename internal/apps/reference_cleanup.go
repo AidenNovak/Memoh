@@ -38,14 +38,14 @@ func (s *Service) pruneReferences(ctx context.Context, inst Installation, releas
 			return keep.Type == ref.ConnectorType
 		})
 	})
-	var targetRefs []TargetDependencyRef
+	var botRefs []BotDependencyRef
 	if len(deps) > 0 {
-		targetRefs, err = s.store.ListTargetDependencyRefs(ctx, inst.BotID, inst.WorkspaceTargetID)
+		botRefs, err = s.store.ListBotDependencyRefs(ctx, inst.BotID)
 		if err != nil {
 			return fail("inspect shared dependencies before cleanup", err)
 		}
 	}
-	states, err := s.cleanupDependencyStates(ctx, inst, deps, targetRefs)
+	states, err := s.cleanupDependencyStates(ctx, inst, deps, botRefs)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (s *Service) pruneReferences(ctx context.Context, inst Installation, releas
 		step := StepResult{Kind: KindDependency, ID: ref.DependencyID, Status: StepKept}
 		entry, known := states[ref.DependencyID]
 		switch {
-		case referencedByOthers(targetRefs, ref.DependencyID, inst.ID):
+		case referencedByOthers(botRefs, ref.DependencyID, inst.ID):
 			step.Error = RemovalReasonShared
 		case !known || !entry.Observed.Present:
 			// Not in the catalog or not in the workspace: nothing to remove.
@@ -70,7 +70,7 @@ func (s *Service) pruneReferences(ctx context.Context, inst Installation, releas
 			step.Error = RemovalReasonImage
 		default:
 			sink.Send(Event{Type: EventStep, Kind: KindDependency, ID: ref.DependencyID})
-			if _, err := s.dependencies.Remove(ctx, inst.BotID, inst.WorkspaceTargetID, ref.DependencyID, logSink(sink, KindDependency, ref.DependencyID)); err != nil {
+			if _, err := s.dependencies.Remove(ctx, inst.BotID, ref.DependencyID, logSink(sink, KindDependency, ref.DependencyID)); err != nil {
 				return record(step, fail("remove dependency "+ref.DependencyID, err))
 			}
 			step.Status = StepRemoved
@@ -93,10 +93,10 @@ func (s *Service) pruneReferences(ctx context.Context, inst Installation, releas
 // cleanupDependencyStates returns live workspace facts for the references
 // pruneReferences may have to remove from the workspace; shared references
 // need none. A stopped native workspace is started the way an installation
-// starts it. A missing workspace, an offline remote target, failed discovery
+// starts it. A missing workspace, failed discovery
 // or an operation still in progress retain the references for a later retry
 // instead of deciding on incomplete information.
-func (s *Service) cleanupDependencyStates(ctx context.Context, inst Installation, deps []DependencyRef, refs []TargetDependencyRef) (map[string]workspacedeps.Entry, error) {
+func (s *Service) cleanupDependencyStates(ctx context.Context, inst Installation, deps []DependencyRef, refs []BotDependencyRef) (map[string]workspacedeps.Entry, error) {
 	unshared := slices.DeleteFunc(slices.Clone(deps), func(ref DependencyRef) bool {
 		return referencedByOthers(refs, ref.DependencyID, inst.ID)
 	})
@@ -106,15 +106,15 @@ func (s *Service) cleanupDependencyStates(ctx context.Context, inst Installation
 	if s.dependencies == nil {
 		return nil, ErrDependenciesUnavailable
 	}
-	view, err := s.dependencies.List(ctx, inst.BotID, inst.WorkspaceTargetID)
+	view, err := s.dependencies.List(ctx, inst.BotID)
 	if err != nil {
 		return nil, fail("inspect dependencies before cleanup", err)
 	}
 	if view.Workspace == workspacedeps.WorkspaceNotRunning {
-		if err := s.dependencies.EnsureRunning(ctx, inst.BotID, inst.WorkspaceTargetID); err != nil {
+		if err := s.dependencies.EnsureRunning(ctx, inst.BotID); err != nil {
 			return nil, fail("start workspace for dependency cleanup", err)
 		}
-		if view, err = s.dependencies.Refresh(ctx, inst.BotID, inst.WorkspaceTargetID); err != nil {
+		if view, err = s.dependencies.Refresh(ctx, inst.BotID); err != nil {
 			return nil, fail("inspect dependencies after starting the workspace", err)
 		}
 	}

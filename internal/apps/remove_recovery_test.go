@@ -48,8 +48,8 @@ func (tx removalTx) Commit(ctx context.Context) error {
 	return tx.SkillTransaction.Commit(ctx)
 }
 
-func (p *removalPublisher) RemoveSkills(ctx context.Context, bot, target, registry, app, revision string) (SkillTransaction, error) {
-	tx, err := p.fakePublisher.RemoveSkills(ctx, bot, target, registry, app, revision)
+func (p *removalPublisher) RemoveSkills(ctx context.Context, bot, registry, app, revision string) (SkillTransaction, error) {
+	tx, err := p.fakePublisher.RemoveSkills(ctx, bot, registry, app, revision)
 	return removalTx{SkillTransaction: tx, publisher: p}, err
 }
 

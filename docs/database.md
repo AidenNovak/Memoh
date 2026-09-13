@@ -64,7 +64,7 @@ The canonical source of truth for the full PostgreSQL schema is `db/postgres/mig
 - `mcp_oauth_tokens` — MCP OAuth tokens
 
 **Apps**
-- `bot_app_installations` — Installed Registry App revision per bot and workspace target
+- `bot_app_installations` — Installed Registry App revision per bot in its isolated workspace
 
 **Containers**
 - `containers` — Bot container instances

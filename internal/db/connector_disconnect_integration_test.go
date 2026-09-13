@@ -38,8 +38,8 @@ func TestConnectorDisconnectFinalizationIsAtomicAndScoped(t *testing.T) {
 	for index, pair := range [][2]string{{teamA, botA}, {teamA, botA}, {teamA, siblingBot}, {teamB, botB}} {
 		id := uuid.NewString()
 		apps = append(apps, id)
-		exec(`INSERT INTO bot_app_installations(id,team_id,bot_id,workspace_target_id,registry_id,app_id,revision,status)
-		 VALUES ($1,$2,$3,'native','memoh',$4,repeat('a',64),'installed')`, id, pair[0], pair[1], id)
+		exec(`INSERT INTO bot_app_installations(id,team_id,bot_id,registry_id,app_id,revision,status)
+		 VALUES ($1,$2,$3,'memoh',$4,repeat('a',64),'installed')`, id, pair[0], pair[1], id)
 		exec(`INSERT INTO bot_app_connector_refs(team_id,installation_id,connector_type,connection_id,required)
 		 VALUES ($1,$2,'github','shared-id',$3)`, pair[0], id, index != 1)
 	}

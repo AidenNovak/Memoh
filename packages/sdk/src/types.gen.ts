@@ -1802,7 +1802,7 @@ export type HandlersAppDependencyItem = {
     id?: string;
     /**
      * Shared is set when another installed App references the same
-     * dependency on this workspace target.
+     * dependency on this bot workspace.
      */
     shared?: boolean;
 };
@@ -1811,7 +1811,6 @@ export type HandlersAppInstallRequest = {
     app_id: string;
     registry_id: string;
     revision: string;
-    workspace_target_id?: string;
 };
 
 export type HandlersAppItem = {
@@ -1861,8 +1860,7 @@ export type HandlersAppItem = {
 export type HandlersAppListResponse = {
     dependency_catalog_stale?: boolean;
     items?: Array<HandlersAppItem>;
-    workspace_state?: 'running' | 'not_running' | 'missing' | 'remote_offline';
-    workspace_target_id?: string;
+    workspace_state?: 'running' | 'not_running' | 'missing';
 };
 
 export type HandlersAppRemovalPreviewApp = {
@@ -1928,7 +1926,6 @@ export type HandlersAppUpdateRequest = {
      * Release moves the installation to the registry's current release.
      */
     release?: boolean;
-    workspace_target_id?: string;
 };
 
 export type HandlersBatchDeleteRequest = {
@@ -2866,7 +2863,7 @@ export type HandlersWorkspaceDependencyListResponse = {
     discovery_error?: string;
     items?: Array<HandlersWorkspaceDependencyItem>;
     platform?: HandlersWorkspaceDependencyPlatform;
-    workspace_state?: 'running' | 'not_running' | 'missing' | 'remote_offline';
+    workspace_state?: 'running' | 'not_running' | 'missing';
 };
 
 export type HandlersWorkspaceDependencyOperationResponse = {
@@ -2895,15 +2892,11 @@ export type HandlersWorkspaceDependencyPreflightItem = {
 
 export type HandlersWorkspaceDependencyPreflightRequest = {
     dependency_ids?: Array<string>;
-    /**
-     * WorkspaceTargetID overrides the query parameter of the same name.
-     */
-    workspace_target_id?: string;
 };
 
 export type HandlersWorkspaceDependencyPreflightResponse = {
     items?: Array<HandlersWorkspaceDependencyPreflightItem>;
-    workspace_state?: 'running' | 'not_running' | 'missing' | 'remote_offline';
+    workspace_state?: 'running' | 'not_running' | 'missing';
 };
 
 export type HandlersWorkspaceDependencyScriptEnv = {
@@ -6154,10 +6147,6 @@ export type GetBotsByBotIdAppsData = {
     };
     query?: {
         /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-        /**
          * Refresh workspace discovery
          */
         refresh?: boolean;
@@ -6252,12 +6241,7 @@ export type PostBotsByBotIdAppsCheckUpdatesData = {
          */
         bot_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/apps/check-updates';
 };
 
@@ -8626,10 +8610,6 @@ export type GetBotsByBotIdDependenciesData = {
     };
     query?: {
         /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-        /**
          * Refresh definitions and workspace discovery
          */
         refresh?: boolean;
@@ -8679,12 +8659,7 @@ export type PostBotsByBotIdDependenciesCheckUpdatesData = {
          */
         bot_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/check-updates';
 };
 
@@ -8733,12 +8708,7 @@ export type PostBotsByBotIdDependenciesPreflightData = {
          */
         bot_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/preflight';
 };
 
@@ -8791,12 +8761,7 @@ export type PostBotsByBotIdDependenciesByDepIdInstallData = {
          */
         dep_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/{dep_id}/install';
 };
 
@@ -8849,12 +8814,7 @@ export type PostBotsByBotIdDependenciesByDepIdReinstallData = {
          */
         dep_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/{dep_id}/reinstall';
 };
 
@@ -8904,12 +8864,7 @@ export type PostBotsByBotIdDependenciesByDepIdRollbackData = {
          */
         dep_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/{dep_id}/rollback';
 };
 
@@ -8973,10 +8928,6 @@ export type GetBotsByBotIdDependenciesByDepIdScriptData = {
          */
         action?: 'install' | 'update' | 'remove' | 'reinstall' | 'rollback';
         /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-        /**
          * Keep a previously prepared definition revision
          */
         definition_revision?: string;
@@ -9033,12 +8984,7 @@ export type PostBotsByBotIdDependenciesByDepIdUpdateData = {
          */
         dep_id: string;
     };
-    query?: {
-        /**
-         * Workspace target ID (defaults to the bot's current target)
-         */
-        workspace_target_id?: string;
-    };
+    query?: never;
     url: '/bots/{bot_id}/dependencies/{dep_id}/update';
 };
 

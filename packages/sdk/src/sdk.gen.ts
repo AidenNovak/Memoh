@@ -426,7 +426,7 @@ export const getBotsByBotIdAgentsByIdRuntimeControls = <ThrowOnError extends boo
 /**
  * List the Apps installed for a bot
  *
- * Every App installed on the workspace target with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.
+ * Every App installed on the bot workspace with its Skills, dependency references and connector references, plus the canonical Apps of dependencies the workspace carries that no App references.
  */
 export const getBotsByBotIdApps = <ThrowOnError extends boolean = false>(options: Options<GetBotsByBotIdAppsData, ThrowOnError>): RequestResult<GetBotsByBotIdAppsResponses, GetBotsByBotIdAppsErrors, ThrowOnError> => (options.client ?? client).get<GetBotsByBotIdAppsResponses, GetBotsByBotIdAppsErrors, ThrowOnError>({ url: '/bots/{bot_id}/apps', ...options });
 

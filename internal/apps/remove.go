@@ -70,15 +70,15 @@ func (s *Service) plan(ctx context.Context, inst Installation, prepareWorkspace 
 	if err != nil {
 		return RemovalPreview{}, fmt.Errorf("apps: list dependency references: %w", err)
 	}
-	targetRefs, err := s.store.ListTargetDependencyRefs(ctx, inst.BotID, inst.WorkspaceTargetID)
+	botRefs, err := s.store.ListBotDependencyRefs(ctx, inst.BotID)
 	if err != nil {
 		return RemovalPreview{}, fmt.Errorf("apps: list dependency references: %w", err)
 	}
 	var states map[string]workspacedeps.Entry
 	if prepareWorkspace {
-		states, err = s.cleanupDependencyStates(ctx, inst, depRefs, targetRefs)
+		states, err = s.cleanupDependencyStates(ctx, inst, depRefs, botRefs)
 	} else {
-		states, err = s.dependencyStates(ctx, inst.BotID, inst.WorkspaceTargetID)
+		states, err = s.dependencyStates(ctx, inst.BotID)
 	}
 	if err != nil {
 		return RemovalPreview{}, fail("inspect dependencies before removal", err)
@@ -87,7 +87,7 @@ func (s *Service) plan(ctx context.Context, inst Installation, prepareWorkspace 
 		item := RemovalPreviewDependency{ID: ref.DependencyID, Action: RemovalActionRemove}
 		entry, known := states[ref.DependencyID]
 		switch {
-		case referencedByOthers(targetRefs, ref.DependencyID, inst.ID):
+		case referencedByOthers(botRefs, ref.DependencyID, inst.ID):
 			item.Action, item.Reason = RemovalActionKeep, RemovalReasonShared
 		case !known || !entry.Observed.Present:
 			item.Action, item.Reason = RemovalActionKeep, RemovalReasonAbsent
@@ -100,7 +100,7 @@ func (s *Service) plan(ctx context.Context, inst Installation, prepareWorkspace 
 	if err != nil {
 		return RemovalPreview{}, fmt.Errorf("apps: list connector references: %w", err)
 	}
-	botRefs, err := s.store.ListBotConnectorRefs(ctx, inst.BotID)
+	botConnectorRefs, err := s.store.ListBotConnectorRefs(ctx, inst.BotID)
 	if err != nil {
 		return RemovalPreview{}, fmt.Errorf("apps: list connector references: %w", err)
 	}
@@ -109,12 +109,12 @@ func (s *Service) plan(ctx context.Context, inst Installation, prepareWorkspace 
 		switch {
 		case ref.ConnectionID == "":
 			item.Action = RemovalActionNone
-		case connectionReferencedByOthers(botRefs, ref.ConnectionID, inst.ID):
+		case connectionReferencedByOthers(botConnectorRefs, ref.ConnectionID, inst.ID):
 			item.Action, item.Reason = RemovalActionKeep, RemovalReasonShared
 		}
 		preview.Connectors = append(preview.Connectors, item)
 	}
-	required, err := s.orphanedRequired(ctx, inst, targetRefs)
+	required, err := s.orphanedRequired(ctx, inst, botRefs)
 	if err != nil {
 		return RemovalPreview{}, err
 	}
@@ -122,15 +122,15 @@ func (s *Service) plan(ctx context.Context, inst Installation, prepareWorkspace 
 	return preview, nil
 }
 
-// orphanedRequired lists auto-installed Apps on the target whose every
+// orphanedRequired lists auto-installed Apps on the bot whose every
 // dependency would lose its last reference once inst is removed.
-func (s *Service) orphanedRequired(ctx context.Context, inst Installation, targetRefs []TargetDependencyRef) ([]Installation, error) {
-	installations, err := s.store.ListForTarget(ctx, inst.BotID, inst.WorkspaceTargetID)
+func (s *Service) orphanedRequired(ctx context.Context, inst Installation, botRefs []BotDependencyRef) ([]Installation, error) {
+	installations, err := s.store.ListForBot(ctx, inst.BotID)
 	if err != nil {
 		return nil, fmt.Errorf("apps: list installations: %w", err)
 	}
-	remaining := make([]TargetDependencyRef, 0, len(targetRefs))
-	for _, ref := range targetRefs {
+	remaining := make([]BotDependencyRef, 0, len(botRefs))
+	for _, ref := range botRefs {
 		if ref.InstallationID != inst.ID {
 			remaining = append(remaining, ref)
 		}
@@ -169,7 +169,7 @@ func (s *Service) orphanedRequired(ctx context.Context, inst Installation, targe
 	return result, nil
 }
 
-func referencedByOthers(refs []TargetDependencyRef, dependencyID, installationID string) bool {
+func referencedByOthers(refs []BotDependencyRef, dependencyID, installationID string) bool {
 	for _, ref := range refs {
 		if ref.DependencyID == dependencyID && ref.InstallationID != installationID {
 			return true
@@ -197,7 +197,7 @@ func (s *Service) Remove(ctx context.Context, botID, installationID string, opts
 	if err != nil {
 		return OperationResult{}, err
 	}
-	unlock, err := lockInstallation(ctx, botID, inst.WorkspaceTargetID, inst.RegistryID, inst.AppID)
+	unlock, err := lockInstallation(ctx, botID, inst.RegistryID, inst.AppID)
 	if err != nil {
 		return OperationResult{}, err
 	}
@@ -224,7 +224,7 @@ func (s *Service) Remove(ctx context.Context, botID, installationID string, opts
 	}
 
 	sink.Send(Event{Type: EventStep, Kind: KindSkills, ID: inst.AppID})
-	tx, err := s.skills.RemoveSkills(ctx, botID, inst.WorkspaceTargetID, inst.RegistryID, inst.AppID, inst.Revision)
+	tx, err := s.skills.RemoveSkills(ctx, botID, inst.RegistryID, inst.AppID, inst.Revision)
 	if err != nil {
 		return result, failRemoval(fail("remove Skills", err))
 	}
@@ -233,7 +233,7 @@ func (s *Service) Remove(ctx context.Context, botID, installationID string, opts
 	for _, dep := range plan.Dependencies {
 		sink.Send(Event{Type: EventStep, Kind: KindDependency, ID: dep.ID})
 		if dep.Action == RemovalActionRemove && s.dependencies != nil {
-			if _, err := s.dependencies.Remove(ctx, botID, inst.WorkspaceTargetID, dep.ID, logSink(sink, KindDependency, dep.ID)); err != nil {
+			if _, err := s.dependencies.Remove(ctx, botID, dep.ID, logSink(sink, KindDependency, dep.ID)); err != nil {
 				cause := fail("remove dependency "+dep.ID, err)
 				record(StepResult{Kind: KindDependency, ID: dep.ID, Status: StepFailed, Error: publicMessage(cause)})
 				return result, failRemoval(errors.Join(cause, tx.Rollback(ctx)))

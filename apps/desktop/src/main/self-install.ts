@@ -16,6 +16,12 @@ import { is } from '@electron-toolkit/utils'
 // 自安装弹框的界面文案跟随系统语言(app.getLocale),与 web 端 i18n 的
 // en/zh/ja 三档对齐;其余语言回落英文。安装包流程先于登录/设置,读不到
 // 应用内语言偏好,系统语言是这里唯一诚实的来源。
+//
+// 已知不一致(待菜单栏展开样式改版时同步):runningDetail 指引用户去点
+// 菜单栏托盘图标的退出项,但托盘退出项在 index.ts buildTrayMenu 里
+// 硬编码为英文 "Quit Memoh",zh/ja 文案给出的本地化名称与界面实际不符
+// (en 恰好与硬编码一致)。改版引入快捷 Memo 等新面板项后,这里要按真实
+// 退出项文案重新对齐。
 type SelfInstallLocale = 'en' | 'zh' | 'ja'
 
 interface SelfInstallStrings {
@@ -76,7 +82,8 @@ const SELF_INSTALL_STRINGS: Record<SelfInstallLocale, SelfInstallStrings> = {
 }
 
 function selfInstallStrings(): SelfInstallStrings {
-  // 必须在 ready 之后调用;两个弹框入口(第二实例提示 / 搬家冲突)都满足。
+  // getLocale 不要求 ready:detached 提示(锁失败实例)赶在 ready 前调用,
+  // 搬家冲突分支在 ready 后,两个入口都成立。
   const locale = app.getLocale().toLowerCase()
   if (locale.startsWith('zh')) return SELF_INSTALL_STRINGS.zh
   if (locale.startsWith('ja')) return SELF_INSTALL_STRINGS.ja
@@ -85,9 +92,9 @@ function selfInstallStrings(): SelfInstallStrings {
 
 /**
  * 提示"旧版正在运行,先退出再装"。两个入口共用:
- * 1. index.ts 里没抢到单实例锁、被判定为安装/更新尝试的第二实例;
- * 2. 下方 moveToApplicationsFolder 的 existsAndRunning 冲突分支(防御性,
- *    有入口 1 之后基本不可达)。
+ * 1. index.ts 里没抢到单实例锁、被判定为安装/更新尝试的第二实例
+ *    (仅带单实例锁的发行版存在此入口);
+ * 2. 下方 moveToApplicationsFolder 的 existsAndRunning 冲突分支。
  */
 export function showQuitRunningInstanceDialog(): void {
   const strings = selfInstallStrings()
@@ -177,7 +184,8 @@ export function shouldPromptRunningInstall(): boolean {
 /**
  * 若在 macOS 打包态且当前不在 /Applications,尝试把 app 搬进 /Applications。
  *
- * @returns true 表示已触发搬家 + 重启,调用方应立即 return、不要再启动任何本地进程。
+ * @returns true 表示启动序列到此为止(搬家+重启,或提示后自行退出),
+ *          调用方应立即 return、不要再启动任何本地进程。
  *          false 表示无需搬家 / 搬家失败 / 用户取消 —— 调用方按原地运行继续。
  */
 export function maybeSelfInstallMacOS(): boolean {
@@ -194,6 +202,9 @@ export function maybeSelfInstallMacOS(): boolean {
   }
   if (alreadyInstalled) return false
 
+  // existsAndRunning 冲突分支置位:弹过"请先退出"提示后本实例必须退出,
+  // 不能原地运行。
+  let promptedToQuit = false
   try {
     const moved = app.moveToApplicationsFolder({
       conflictHandler: (conflictType) => {
@@ -214,11 +225,17 @@ export function maybeSelfInstallMacOS(): boolean {
           return response === 0
         }
         // 'existsAndRunning':旧版正在运行,无法安全覆盖 —— 提示用户退出旧版
-        // 再重开安装包。此前静默 return false、原地从 DMG 运行,零反馈。
+        // 后重开安装包,本实例随即退出:原地继续跑会与指引自相矛盾(看似
+        // 装完,实际跑的是 DMG 里的副本),还会再冒出一个并存实例。
         showQuitRunningInstanceDialog()
+        promptedToQuit = true
         return false
       },
     })
+    if (promptedToQuit) {
+      app.quit()
+      return true
+    }
     // moved===true 时 Electron 会拷贝到 /Applications、启动那一份并退出当前实例。
     return moved
   } catch (error) {

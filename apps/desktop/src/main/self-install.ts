@@ -48,12 +48,12 @@ const SELF_INSTALL_STRINGS: Record<SelfInstallLocale, SelfInstallStrings> = {
   zh: {
     runningTitle: '安装前请先退出 Memoh',
     runningDetail:
-      '你正在安装 Memoh,但 Memoh 仍在后台运行。\n' +
-      '请先退出 Memoh,再继续安装。\n\n' +
+      '你正在安装 Memoh，但 Memoh 仍在后台运行。\n' +
+      '请先退出 Memoh，再继续安装。\n\n' +
       '仅关闭窗口不会退出 Memoh。请点击菜单栏的\n' +
-      'Memoh 图标,选择「退出 Memoh」,然后重新打开本安装包。',
+      'Memoh 图标，选择「退出 Memoh」，然后重新打开本安装包。',
     conflictTitle: '已安装 Memoh',
-    conflictDetail: '「应用程序」文件夹中已存在一个 Memoh,要用当前版本替换它吗?',
+    conflictDetail: '「应用程序」文件夹中已存在一个 Memoh，要用当前版本替换它吗？',
     replace: '替换',
     keepBoth: '保留两者 / 原地运行',
     ok: '好',

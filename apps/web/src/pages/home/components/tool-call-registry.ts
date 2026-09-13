@@ -402,8 +402,12 @@ function patchLineCounts(patch: string): { add: number; remove: number } {
 function unifiedDiffLineCounts(diff: string): { add: number; remove: number } {
   let add = 0
   let remove = 0
+  // ---/+++ are file headers only before the first hunk; inside a hunk they
+  // are content lines (e.g. a removed "-- comment") and must be counted.
+  let seenHunk = false
   for (const line of diff.split('\n')) {
-    if (line.startsWith('+++') || line.startsWith('---')) continue
+    if (line.startsWith('@@')) seenHunk = true
+    if (!seenHunk && (line.startsWith('---') || line.startsWith('+++'))) continue
     if (line.startsWith('+')) add++
     else if (line.startsWith('-')) remove++
   }

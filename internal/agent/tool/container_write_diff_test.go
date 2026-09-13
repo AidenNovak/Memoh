@@ -23,6 +23,8 @@ type writeDiffTestContainerService struct {
 	pb.UnimplementedContainerServiceServer
 	files   map[string][]byte
 	statErr error
+	readErr error
+	sizes   map[string]int64
 }
 
 func (s *writeDiffTestContainerService) Stat(_ context.Context, req *pb.StatRequest) (*pb.StatResponse, error) {
@@ -33,13 +35,20 @@ func (s *writeDiffTestContainerService) Stat(_ context.Context, req *pb.StatRequ
 	if !ok {
 		return nil, status.Error(codes.NotFound, "not found")
 	}
+	size, ok := s.sizes[req.GetPath()]
+	if !ok {
+		size = int64(len(content))
+	}
 	return &pb.StatResponse{Entry: &pb.FileEntry{
 		Path: req.GetPath(),
-		Size: int64(len(content)),
+		Size: size,
 	}}, nil
 }
 
 func (s *writeDiffTestContainerService) ReadRaw(req *pb.ReadRawRequest, stream pb.ContainerService_ReadRawServer) error {
+	if s.readErr != nil {
+		return s.readErr
+	}
 	content, ok := s.files[req.GetPath()]
 	if !ok {
 		return status.Error(codes.NotFound, "not found")
@@ -179,5 +188,33 @@ func TestExecWriteSkipsDiffForIdenticalRewrite(t *testing.T) {
 
 	if diff := uiDiffForTest(t, result); diff != "" {
 		t.Fatalf("execWrite attached a diff for a no-op rewrite:\n%s", diff)
+	}
+}
+
+func TestExecWriteSkipsDiffWhenReadRawFails(t *testing.T) {
+	t.Parallel()
+	svc := &writeDiffTestContainerService{
+		files:   map[string][]byte{"demo/existing.md": []byte("old\n")},
+		readErr: status.Error(codes.Internal, "read backend broken"),
+	}
+	result := execWriteForTest(t, svc, "demo/existing.md", "new\n")
+
+	// Stat succeeded but the old bytes never arrived — the "before" side is
+	// unknown, so an all-add diff would claim an overwrite is a creation.
+	if diff := uiDiffForTest(t, result); diff != "" {
+		t.Fatalf("execWrite attached a diff despite read failure:\n%s", diff)
+	}
+}
+
+func TestExecWriteSkipsDiffForOversizedExistingFile(t *testing.T) {
+	t.Parallel()
+	svc := &writeDiffTestContainerService{
+		files: map[string][]byte{"demo/big.md": []byte("old\n")},
+		sizes: map[string]int64{"demo/big.md": largeFileThreshold + 1},
+	}
+	result := execWriteForTest(t, svc, "demo/big.md", "new\n")
+
+	if diff := uiDiffForTest(t, result); diff != "" {
+		t.Fatalf("execWrite must not read files above the diff threshold; got diff:\n%s", diff)
 	}
 }

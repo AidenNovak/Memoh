@@ -247,18 +247,18 @@ interface ParsedDiffLine {
 // content lines, and uses the @@ hunk headers to track the old/new line
 // counters: removal rows show the old line number, addition and context rows
 // the new one. Hunk header lines themselves are never rendered.
-function parseUnifiedDiffRows(diffText: string): ParsedDiffLine[] {
+export function parseUnifiedDiffRows(diffText: string): ParsedDiffLine[] {
   const rows: ParsedDiffLine[] = []
   let oldLine = 1
   let newLine = 1
+  let seenHunk = false
   // A trailing newline would split into a phantom empty content line; real
   // content lines always carry their prefix, so only the tail can be bare.
   const rawLines = diffText.split('\n')
   if (rawLines.at(-1) === '') rawLines.pop()
   for (const raw of rawLines) {
-    if (raw.startsWith('--- ') || raw.startsWith('+++ ')) continue
-    if (raw.startsWith('\\')) continue
     if (raw.startsWith('@@')) {
+      seenHunk = true
       const match = raw.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/)
       if (match) {
         oldLine = Number(match[1])
@@ -266,6 +266,12 @@ function parseUnifiedDiffRows(diffText: string): ParsedDiffLine[] {
       }
       continue
     }
+    // ---/+++ are file headers only before the first hunk. Inside a hunk they
+    // are content lines whose text starts with "-- " or "++ " (a removed SQL
+    // comment, an added diff marker) — eating them would also desync the line
+    // counters for the rest of the hunk.
+    if (!seenHunk && (raw.startsWith('--- ') || raw.startsWith('+++ '))) continue
+    if (raw.startsWith('\\')) continue
     if (raw.startsWith('-')) {
       rows.push({ kind: 'remove', lineNumber: oldLine, text: raw.slice(1) })
       oldLine += 1

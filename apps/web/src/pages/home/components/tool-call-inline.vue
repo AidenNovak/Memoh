@@ -218,8 +218,11 @@ const expandable = computed(() => {
   if (resultFailed.value) return true
   if (display.value.detail === ToolCallDetailWrite) {
     const input = props.block.input as Record<string, unknown> | undefined
+    // block.diff covers write(path, "") clearing a file: empty content must
+    // not make the server-rendered all-delete diff unreachable.
     return (typeof input?.content === 'string' && input.content.length > 0)
       || input?.content_truncated === true
+      || Boolean(props.block.diff)
   }
   return Boolean(display.value.detail) || display.value.expandable === true
 })

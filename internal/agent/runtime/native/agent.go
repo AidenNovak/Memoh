@@ -782,7 +782,7 @@ func (a *Agent) runStream(ctx context.Context, cfg RunConfig, ch chan<- StreamEv
 			if isRetryableStreamError(p.Error) {
 				streamResult, aborted = a.runMidStreamRetry(
 					ctx, streamCtx, cancel, toolLoopAbortCallIDs,
-					ch, cfg, sdkTools, approvalTools, prepareStep, streamResult,
+					ch, cfg, sdkTools, approvalTools, toolExecutionMetadata, prepareStep, streamResult,
 					committedStepMessages, onStepCommitted, &interruptedStep,
 					stepNumber, errMsg, &allText, textLoopProbeBuffer,
 				)
@@ -2050,6 +2050,7 @@ func (a *Agent) runMidStreamRetry(
 	cfg RunConfig,
 	sdkTools []sdk.Tool,
 	approvalTools []sdk.Tool,
+	uiMetadata *toolExecutionMetadataRegistry,
 	prepareStep func(*sdk.GenerateParams) *sdk.GenerateParams,
 	prevResult *sdk.StreamResult,
 	_ *stepMessageCapture,
@@ -2218,6 +2219,7 @@ func (a *Agent) runMidStreamRetry(
 					ToolCallID: rp.ToolCallID,
 					Input:      rp.Input,
 					Result:     rp.Output,
+					Metadata:   uiMetadata.metadata(rp.ToolCallID),
 				}) || !sendEvent(sendCtx, ch, StreamEvent{
 					Type:           EventProgress,
 					StepNumber:     stepNumber,
@@ -2239,6 +2241,7 @@ func (a *Agent) runMidStreamRetry(
 					ToolName:   rp.ToolName,
 					ToolCallID: rp.ToolCallID,
 					Error:      rp.Error.Error(),
+					Metadata:   uiMetadata.metadata(rp.ToolCallID),
 				}) {
 					aborted = true
 				}

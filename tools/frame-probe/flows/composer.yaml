@@ -1,0 +1,64 @@
+# 场景②：输入面板升降 + 打字（探针用手势把这一段圈出来）。
+#
+# ## 为什么先往上翻再点输入框
+#
+# 这才是能被断言的那一半：**读者已经离开底部**时，键盘升起只应该让视口变矮，
+# **不应该让内容跟着挪**。判据在 `tools/frame-probe/measure.py` 的 `INVARIANTS`：
+# `first_row_shift_pt`（判据 A：首条可见行的屏幕坐标位移）与 `reader_gap_shrink_pt`
+# （判据 C：距底距离不许缩小）——量的是安静帧里的 `d_fvy` 与 `d_gap`。
+# 停在底部时按输入框，内容本来就要被顶上去（那是跟随底部的正确行为），量不出对错。
+#
+# ⚠️ **不要**把"阅读中 offset 变了多少"当判据：`measure.py` 里那个量叫
+# `reading_off_shift_max_pt`，是**诊断**不是判据（`INVARIANTS` 里没有它）。锚点/布局修正
+# 本来就会改 offset（内容在锚点上方变高时必须改，否则那一行会漂）——同一轮里 offset
+# 合法地动过 62pt，而首条可见行纹丝不动（见 `ios-performance-practices.md` §3.3）。
+# 这条注释原来引用的是一个**并不存在**的判据名 `reader_offset_shift_pt`
+# （2026-09-17 改正：要补的是注释，不是判据）。
+#
+# ## 为什么用坐标点输入框而不是文字
+#
+# 输入框的 placeholder 是 `chat.placeholder`（"Message"），但它可能和屏上别处同名，
+# 而且聚焦后 placeholder 就没了——按坐标更稳。composer 在底部，88% 落在它身上。
+#
+# 前提：由 `tools/frame-probe/measure.py --route /chat/fixture-session-stream` 准备
+# （固定服务端 + 种子 + 已进到对话页）。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible: 'Message'
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ① 离开底部：进阅读模式（手指**往下拖**——往上划是往列表末尾滚，而列表本来就贴底）
+- swipe:
+    start: 50%, 20%
+    end: 50%, 80%
+- swipe:
+    start: 50%, 20%
+    end: 50%, 80%
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ② 点输入框：键盘升起，视口变矮
+# 按 placeholder 文字点（语义匹配），再按一次坐标兜底：坐标在不同机型/字号下会飘，
+# 而这一条要的正是"键盘真的升起来了"（探针对应的观测量是 `bh` 变矮）。
+- tapOn:
+    text: 'Message'
+    optional: true
+- tapOn:
+    point: '50%,94%'
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ③ 打字：每个字符都会让 composer 重排一次
+- inputText: 'typing probe: does the transcript stay put while the keyboard is up'
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ④ 把键盘收掉（点列表区域，`keyboardDismissMode: interactive` 之外的那条路）
+- tapOn:
+    point: '50%,30%'
+- waitForAnimationToEnd:
+    timeout: 5000

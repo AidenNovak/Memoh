@@ -8,7 +8,11 @@ export default [
   ...vue.configs['flat/recommended'],
   // internal/**/protocolref holds vendored protocol reference snapshots
   // (pinned verbatim; a freshness test diffs them against upstream).
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/cache/**', '**/target/**', '**/.toolkit/**', 'packages/sdk/src/**', 'internal/**/protocolref/**'] },
+  // apps/mobile is excluded: the iOS client ships its own config
+  // (apps/mobile/eslint.config.js — Expo's rules plus React Native and Node
+  // globals), which is not the Vue ruleset below. Scanning RN sources with it
+  // only produces false positives; the iOS side runs through `pnpm ios:check`.
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/cache/**', '**/target/**', '**/.toolkit/**', 'packages/sdk/src/**', 'internal/**/protocolref/**', 'apps/mobile/**'] },
   {
     files: ['packages/**/*.{js,jsx,ts,tsx}', 'apps/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {

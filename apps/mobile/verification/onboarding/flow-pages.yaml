@@ -1,0 +1,32 @@
+appId: ai.memoh.ios
+---
+# 第一屏：引导第 1 页。右上角有"跳过"。
+- assertVisible: 'Your agents, on your server'
+- assertVisible: 'Skip'
+- takeScreenshot: onboarding-01
+# 横划翻页：分页真的翻得动（不是三页叠在一起）。
+- swipe:
+    start: '85%, 55%'
+    end: '15%, 55%'
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible: 'Approve from anywhere'
+- takeScreenshot: onboarding-02
+- swipe:
+    start: '85%, 55%'
+    end: '15%, 55%'
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible: 'Nothing leaves your server'
+- takeScreenshot: onboarding-03
+# 最后一页：主按钮变成"开始使用"，"跳过"收起。
+- assertVisible: 'Get started'
+- assertNotVisible: 'Skip'
+- tapOn: 'Get started'
+- waitForAnimationToEnd:
+    timeout: 3000
+# 终点是登录页——引导不拦人。
+- assertVisible: 'Sign in'
+- takeScreenshot: onboarding-04-login

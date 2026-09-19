@@ -1,0 +1,18 @@
+{
+  "Simulator Target Bundle": "ai.memoh.ios",
+  "aps": {
+    "alert": {
+      "title": "Waiting for you",
+      "body": "report-bot is holding a tool call until you decide."
+    },
+    "category": "approval",
+    "thread-id": "session:fixture-session-untitled",
+    "interruption-level": "time-sensitive",
+    "badge": 1,
+    "sound": "default"
+  },
+  "event": "approval_waiting",
+  "sessionId": "fixture-session-untitled",
+  "approvalId": "scene-approval-2",
+  "recipientUserId": "fixture-user"
+}

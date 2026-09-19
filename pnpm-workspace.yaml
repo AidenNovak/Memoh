@@ -1,6 +1,11 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+  # `@memoh-ios/kit` 既是 Expo 本地原生模块（`ios/` + expo-module.config.json），
+  # 也是 JS 侧 import 的包。列进来才是一个真 workspace 包：pnpm 会把它链接进
+  # node_modules，任何只认 node_modules 的工具（eslint / 脚本 / 代码生成器）都能解析到它。
+  # 详见 memoh-ios-dev.md「为什么 kit 是 workspace 包」。
+  - 'apps/mobile/modules/*'
 
 allowBuilds:
   electron-winstaller: true

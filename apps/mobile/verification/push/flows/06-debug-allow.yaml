@@ -1,0 +1,17 @@
+# 注入"点了『允许』"（仅调试页可达），验提交那一段。
+#
+# 从 `simulateNotificationOpen` 进，与原生事件走**同一个入口**：打开会话 → 等**那一次**
+# 审批（approval_id 必须相等）→ 按兜底决策提交。固定服务端会记下那一帧，由
+# `assert-approval.py` 逐字段断言。
+#
+# 前提：由 `push-run.sh` 用 simctl 冷启动到 `/debug/notifications`（本流不 launchApp）。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible:
+      id: 'debug-push-allow-approval'
+    timeout: 90000
+- tapOn:
+    id: 'debug-push-allow-approval'
+- waitForAnimationToEnd:
+    timeout: 3000

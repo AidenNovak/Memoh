@@ -1,0 +1,30 @@
+# 权限：**由用户在通知子页主动触发**。
+#
+# 这一条要验两件事：
+#
+# 1. 权限框不是冷启动弹的，是点了那一行才弹的（HIG：由上下文触发；这里的"上下文"就是
+#    用户自己进这一页想看通知设置）；
+# 2. 授予之后那一行**消失**——它只在 `notDetermined` 时出现（`policy.permissionActionFor`
+#    对已授权给 `nothing`），所以"消失了"本身就是状态真的变了。
+#
+# ⚠️ 系统授权框**不在 App 的无障碍树里**（它是 SpringBoard 画的），所以 `tapOn: 'Allow'`
+# 命不中——本轮实测：`tapOn: text: 'Allow'` 报 WARNED 且框还在。因此：
+#   - 本流只负责"点开那一行"，然后**由 shell 截图**（`02-permission-alert.png`）；
+#   - 点"Allow"在 `01b-allow-alert.yaml` 里按坐标点（坐标从那张截图量出来）。
+#
+# 前提：由 `push-run.sh` 用 simctl 带 dev-client 参数冷启动（本流不 launchApp）。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible:
+      id: 'settings-notifications'
+    timeout: 90000
+- tapOn:
+    id: 'settings-notifications'
+- extendedWaitUntil:
+    visible:
+      id: 'notifications-back'
+    timeout: 30000
+- assertVisible: 'Turn on notifications.*'
+- tapOn:
+    id: 'notifications-enable'

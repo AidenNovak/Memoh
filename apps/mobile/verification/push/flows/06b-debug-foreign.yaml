@@ -1,0 +1,17 @@
+# 注入"别的账号的通知"（仅调试页可达）：**不该有任何反应**。
+#
+# 换号之后前一个用户的审批弹到新用户手机上（Lody 第 24 条）最坏的结果就是"新用户点了
+# 允许、批准了别人的命令"。所以负载里的 `recipientUserId` 与当前登录用户不一致时，
+# 客户端不深链、不提交——这一条验的就是"什么都没发生"：固定服务端那边**不该有新帧**。
+#
+# 前提：由 `push-run.sh` 冷启动到 `/debug/notifications`（本流不 launchApp）。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible:
+      id: 'debug-push-foreign-approval'
+    timeout: 90000
+- tapOn:
+    id: 'debug-push-foreign-approval'
+- waitForAnimationToEnd:
+    timeout: 3000

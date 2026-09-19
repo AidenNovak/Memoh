@@ -83,6 +83,13 @@ system_alerts_evidence_dir() {
 
 system_alerts_textdump() {
   local binary="$MOBILE_SYSTEM_ALERTS/.artifacts/textdump"
+  # ⚠️ 源文件 `verification/ui/textdump.swift` 已随 harness 在 2026-09-19 删除。
+  # 这里明确失败，不静默降级（否则读字那一步会变成"看起来跑了"）。
+  if [ ! -f "$MOBILE_SYSTEM_ALERTS/ui/textdump.swift" ]; then
+    echo "system-alerts: 读字工具没了——verification/ui/textdump.swift 已随 harness 删除（memoh-ios-dev.md §9）。" >&2
+    echo "               恢复：git cat-file -p 5ff398467c42b206eeb721609e00549053360ccb > apps/mobile/verification/ui/textdump.swift" >&2
+    return 1
+  fi
   if [ ! -x "$binary" ]; then
     echo "system-alerts: 编译读字工具（textdump）…" >&2
     xcrun swiftc -O "$MOBILE_SYSTEM_ALERTS/ui/textdump.swift" -o "$binary" >&2 || return 1

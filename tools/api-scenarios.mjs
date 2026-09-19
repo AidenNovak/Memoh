@@ -17,7 +17,7 @@
  *   node tools/api-scenarios.mjs --scenario models  # 只跑一个
  *   node tools/api-scenarios.mjs --list
  *
- * 前置：`pnpm dev:env`，且服务器上已配好至少一个模型。
+ * 前置：`pnpm ios:dev-env`，且服务器上已配好至少一个模型。
  */
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -588,7 +588,7 @@ async function main() {
   const baseUrl = (env.MEMOH_DEV_BASE_URL ?? 'http://127.0.0.1:18080').replace(/\/+$/, '');
   const password = env.MEMOH_ADMIN_PASSWORD;
   if (!password) {
-    console.error(`需要 ${ENV_PATH} 里的 MEMOH_ADMIN_PASSWORD（见 docs/environment.md）`);
+    console.error(`需要 ${ENV_PATH} 里的 MEMOH_ADMIN_PASSWORD（联调环境的起法与能力矩阵：memoh-ios-dev.md §2 / §4.5）`);
     return 2;
   }
 

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Build the Debug Simulator app for verification, on one shared DerivedData.
 
-    pnpm verify:simulator --name 'app-launch' -- zsh -euc '
-      pnpm verify:ui --app "$(pnpm --silent verify:build)" --case app-launch
-    '
+    pnpm verify:simulator --name 'app-launch' -- pnpm verify:build
 
-stdout carries the app path and nothing else (so ``$(pnpm --silent verify:build)``
+stdout carries the app path and nothing else (so ``APP=$(pnpm --silent verify:build)``
 works); progress and the xcodebuild log go to stderr. ``--json`` prints
-``{"app", "derivedData", "log"}`` instead.
+``{"app", "derivedData", "log"}`` instead. **目前没有自动消费这个路径的 harness**
+（UI harness 已于 2026-09-19 删除，见 memoh-ios-dev.md §9），手工验收时用得上。
 
 One checkout has exactly one build cache - ``verification/.artifacts/derived-data``
 - so a rebuild after a source change reuses the previous products. Do not hand

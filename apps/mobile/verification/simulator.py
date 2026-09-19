@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Lease a reusable `Memoh <name> Verify` Simulator for one verification run.
 
-    pnpm verify:simulator --name 'app-launch' -- zsh -euc '
-      pnpm verify:native
-      pnpm verify:ui --app "$(pnpm --silent verify:build)" --case app-launch
-    '
+    pnpm verify:simulator --name 'app-launch' -- pnpm verify:native
+
+（``--name`` 后面的命令跑在租约里；``-- <命令>`` 可以接任意串。UI case 那一层
+已于 2026-09-19 删除，见 memoh-ios-dev.md §9。）
 
 The lease exports the UDID as ``MEMOH_VERIFY_UDID``; every other verification
 script reads that variable instead of choosing a device itself. Device selection

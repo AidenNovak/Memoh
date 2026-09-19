@@ -380,7 +380,7 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
      （见 `MessageListFrameProbe.deepCompareEnabled`）。
 
    两者的**语义必须一致**：只有展开状态变更（`expansionUpdates`）时内容没变也要 reconfigure，
-   首次出现的行走 insert 不算 changed——`pnpm test:swift` 那条 `testChangedSetKeepsTheOldDeepCompareSemantics` 钉的就是这个。
+   首次出现的行走 insert 不算 changed——`pnpm ios:test:swift` 那条 `testChangedSetKeepsTheOldDeepCompareSemantics` 钉的就是这个。
    */
   private func changedSet(ids: [TranscriptRow.ID],
                           next: [TranscriptRow.ID: TranscriptDisplayRow],

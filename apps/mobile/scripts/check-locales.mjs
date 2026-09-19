@@ -2,7 +2,7 @@
 /**
  * 校验 locales/*.json 的 key 集合完全一致、值非空、占位符一致。
  *
- * 这是 `pnpm check` 的一部分。它防的是最容易被 agent 忽略的坑：加了一条英文文案
+ * 这是 `pnpm ios:check` 的一部分。它防的是最容易被 agent 忽略的坑：加了一条英文文案
  * 却忘了中文（或反过来），上线后才发现某个语言缺 key。
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';

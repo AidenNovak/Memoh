@@ -100,18 +100,18 @@ Podspec 的源码范围仅 `ios/`，verification 不参与产品构建。
 纯逻辑部分（数据、政策、折叠状态、布局计算）**已能在任何机器上跑**：
 
 ```sh
-pnpm test:swift        # 传到构建机的 swift 容器里编译运行，不需要模拟器
-pnpm typecheck:kit     # UIKit 文件的类型检查（本机，几秒）
+pnpm ios:test:swift      # 传到构建机的 swift 容器里编译运行，不需要模拟器
+pnpm ios:typecheck:kit   # UIKit 文件的类型检查（本机，几秒）
 ```
 
-`test:swift` 跑 `verification/MessageListTests.swift` 里 `#if !canImport(UIKit)` 那一半
+`ios:test:swift` 跑 `verification/MessageListTests.swift` 里 `#if !canImport(UIKit)` 那一半
 （Foundation-only，用 swift-corelibs-xctest 的 runner）。当前 17 项通过：原有 10 项未改，
 新增聚合边界、分类、混合措辞上限、运行状态、中性色与原始数据/稳定身份检查。
 
 但**它看不见 UIKit 文件里的编译错误**——踩过两次（`let` 变量做 `+=`、把 UILabel 属性
 遮蔽成 String），都是纯逻辑测试全绿、iOS 构建才报错，代价是等一轮几分钟的 xcodebuild。
-`typecheck:kit` 补上这一环：`swiftc -typecheck` 走完整类型检查但不链接、不要模拟器，
-几秒出结果，已接进 `pnpm check`。
+`ios:typecheck:kit` 补上这一环：`swiftc -typecheck` 走完整类型检查但不链接、不要模拟器，
+几秒出结果，已接进 `pnpm ios:check`。
 
 覆盖范围有边界，别当成"Swift 都查了"：它检查 `MessageCells.swift`（六种 cell 的
 渲染逻辑，也就是上面那两个错所在），**不检查 `NativeMessageList.swift`**——那个文件
@@ -120,30 +120,25 @@ pnpm typecheck:kit     # UIKit 文件的类型检查（本机，几秒）
 只能靠真正的 xcodebuild 兜底。
 
 UIKit 宿主部分（`testActivitySurfaceDiffersFromUserBubble`、工具聚合行样式/无障碍/复用、
-非首个工具结束时列表刷新、
-列表虚拟化、贴底、上翻保持、回底与非法帧保留）仍是源码，
-**尚未接入 XCTest target**。后续应通过 config plugin/测试工程接入已链接
-MemohKit 和 ExpoModulesCore 的 iOS hosted XCTest target（不要只手改生成工程）。
-
-视觉与交互的现状用**场景截图**看，不靠回忆（8 个场景 × 2 种外观，不需要服务端
-也不需要凭据）：
+非首个工具结束时列表刷新、列表虚拟化、贴底、上翻保持、回底与非法帧保留）跑在
+**hosted XCTest target** 里：config plugin `plugins/withKitTests.js` 在 prebuild 时把它
+注入生成工程（宿主 = App，源码直接编进测试 bundle），跑法是
 
 ```sh
-pnpm verify:simulator --name scenes -- zsh -euc '
-  pnpm verify:build
-  pnpm verify:ui --app "$(pnpm --silent verify:build)" --case scenes
-'
+pnpm ios:test:hosted     # 需要先 ios:prebuild + ios:pods
 ```
 
-看图之前可以先量一遍硬数据：
+它要 prebuild + pods + 一次模拟器构建，所以**不在 `ios:check` 里**（那条要几十秒给出
+"代码自洽"的答复）。改了 `modules/memoh-kit/ios/` 的原生代码就要跑它。
 
-```sh
-python3 verification/ui/tools/measure_surfaces.py <screenshot.png>
-```
+视觉与交互的现状用**场景截图**看，不靠回忆（场景台本身还在 App 里：`/debug/scene/<id>`，
+从设置进入，不需要服务端也不需要凭据）：
 
-它输出配色占比与每种颜色的出现区间。**不能替代看图**（字号、间距、截断它看不到），
-但能回答"两种东西是不是同一个颜色"这类不靠眼睛的问题——上面那条 49% 同色就是它
-发现的。
+- **自动截图的 harness 已删**（2026-09-19，重写形态待定，见 memoh-ios-dev.md §9），
+  所以现在只能在模拟器里人工打开场景、人工截图。
+- 同一批删除里还带走了 `verification/ui/tools/measure_surfaces.py`（像素配色测量，
+  它当年量出"用户气泡和活动卡是同一种灰、占 49% 像素"）。要重做分层判据时先把它写回来。
+- 像素级判据（字号、间距、截断）本来就不该只靠工具看，**看图仍是必须的**。
 
 人工验收仍需检查（待验证项，不是已通过结论）：
 

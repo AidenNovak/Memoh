@@ -3,10 +3,12 @@
  * 文档链接检查：把 Markdown 里的**相对链接**解析成本地路径，报告解析不到的。
  *
  * 只查链接（`[文本](目标)`），不查正文里裸写的路径——正文里的证据路径常常指向
- * gitignore 掉的 `verification/**`\/`out/`（见 docs/README.md 的生命周期约定），
- * 那些本来就不该当链接。
+ * gitignore 掉的 `verification/**`/`out/`，那些本来就不该当链接。
  *
- *   node tools/docs-links.mjs            # 查仓库里所有 Markdown
+ * 默认范围是 **iOS 侧**（`AGENTS.md` + `memoh-ios-dev.md` + `apps/mobile/`）：
+ * 上游那几百份 Markdown 不归我们管，扫进来只会刷噪声。
+ *
+ *   node tools/docs-links.mjs            # 查 iOS 侧的 Markdown
  *   node tools/docs-links.mjs docs README.md AGENTS.md
  *
  * 退出码：发现死链为 1。
@@ -24,7 +26,10 @@ const SKIP_DIRS = new Set([
   'out',
   'results',
 ]);
-const roots = process.argv.slice(2).length > 0 ? process.argv.slice(2) : ['.'];
+const roots =
+  process.argv.slice(2).length > 0
+    ? process.argv.slice(2)
+    : ['AGENTS.md', 'memoh-ios-dev.md', 'apps/mobile'];
 
 function walk(target, found) {
   if (!existsSync(target)) return found;

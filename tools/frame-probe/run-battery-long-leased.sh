@@ -12,9 +12,10 @@
 set -eu
 OUT="$1"; PREFIX="$2"; shift 2
 EXTRA="$*"
-APP="${FRAME_PROBE_APP:-/Users/lijixiang/projects/memoh-ios/apps/mobile/verification/.artifacts/derived-data/Build/Products/Debug-iphonesimulator/Memoh.app}"
 HERE=$(cd "$(dirname "$0")" && pwd)
 MOBILE=$(cd "$HERE/../../apps/mobile" && pwd)
+# App 路径默认取本仓库的构建产物（不再写死某台机器上的绝对路径）。
+APP="${FRAME_PROBE_APP:-$MOBILE/verification/.artifacts/derived-data/Build/Products/Debug-iphonesimulator/Memoh.app}"
 mkdir -p "$OUT"
 
 cd "$MOBILE"

@@ -2,25 +2,29 @@
 /**
  * 协议漂移探测：比较两份 swagger 路径集合，打印"只在 A / 只在 B"。
  *
- * 这个仓库同时存在三个"Memoh 版本"，它们的路径集合**真的不一样**，所以
- * "源码里有这个接口"不等于"它能用"。三层事实源的分工见 docs/STRUCTURE.md §1。
+ * 上游源码就在本仓库里，所以默认 A 是**本仓库自己的** `spec/swagger.json`（= 我们
+ * fork 的上游基线），默认 B 是部署实例。"源码里有这个接口"不等于"它能用"——
+ * 三层事实源的分工见 memoh-ios-dev.md §4.5。
  *
- *   node tools/spec-drift.mjs                       # 本机上游只读副本 vs 部署实例
+ *   node tools/spec-drift.mjs                       # 本仓库的 spec vs 部署实例
  *   node tools/spec-drift.mjs --a <路径|URL> --b <路径|URL>
  *   node tools/spec-drift.mjs --full                # 打印全部差异路径
  *
  * 比部署实例（走隧道，只读）：
  *   node tools/spec-drift.mjs --b http://127.0.0.1:18080/api/swagger.json
  *
- * 比 fork（fork 的检出在服务器上，本地没有副本）：
+ * 比 fork 的检出（fork 在服务器上，本地没有副本）：
  *   ssh vultr-sg "cat /opt/memoh-dev/src/spec/swagger.json" > /tmp/fork-swagger.json
  *   node tools/spec-drift.mjs --a /tmp/fork-swagger.json --b http://127.0.0.1:18080/api/swagger.json
  *
  * 退出码：有漂移为 1，两边一致为 0。只读，不改任何东西。
  */
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DEFAULT_A = '/Users/lijixiang/projects/reference/memoh/spec/swagger.json';
+// 默认 A = 本仓库的 spec（脚本在 tools/ 下，所以往上走一层）。
+const DEFAULT_A = join(dirname(fileURLToPath(import.meta.url)), '..', 'spec', 'swagger.json');
 const DEFAULT_B = 'http://127.0.0.1:18080/api/swagger.json';
 
 function parseArgs(argv) {

@@ -252,7 +252,7 @@ enum ErrorBlockRecovery: Equatable, Sendable {
  ## 为什么判据必须住在这一层（而不是写在 cell 里）
  
  它是**纯函数**：输入是服务端给的两个字符串（`code`、`text`），输出是"标题 / 原因 /
- 可展开的细节 / 能不能重试"。这样同一份判断能被 hosted 测试和 `pnpm test:swift` 的
+ 可展开的细节 / 能不能重试"。这样同一份判断能被 hosted 测试和 `pnpm ios:test:swift` 的
  纯逻辑测试同时钉住，而 cell 只剩下"把四个字段摆上去"。
  
  ## 和 JS 侧那一份判据的关系
@@ -297,7 +297,7 @@ struct ErrorBlockPresentation: Equatable, Sendable {
    是因为**新 code 的默认答案必须是"不给"**——给错动作的代价是用户去做一件我们
    已知不会成的事（R19），而少给一次动作只是少一次方便。
    
-   ✅ 可测：`pnpm test:swift` 的 `testErrorBlockRetryWhitelist`。
+   ✅ 可测：`pnpm ios:test:swift` 的 `testErrorBlockRetryWhitelist`。
    */
   static let retryableCodes: Set<String> = [
     "agent.response_timeout",
@@ -772,7 +772,7 @@ struct TranscriptPayload: Sendable {
 /**
  diffable 快照要 `reconfigureItems` 的那些行——**只比 `Int`**。
 
- 单独拎出来是因为它的语义值得被钉住（`pnpm test:swift` 在构建机上跑，不需要 UIKit）：
+ 单独拎出来是因为它的语义值得被钉住（`pnpm ios:test:swift` 在构建机上跑，不需要 UIKit）：
 
  - "内容变了"由指纹回答，不是由主线程上的深比较回答；
  - **首次出现的行不算 changed**（它会被 `insert`，不需要 reconfigure）——

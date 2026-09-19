@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # 在模拟器上跑 MemohKit 的 **hosted 单元测试**（MemohKitTests target）。
 #
-# 与 `pnpm test:swift`（纯逻辑、跑在 vultr-sg 构建机）互补：这一半断言依赖 UIKit
+# 与 `pnpm ios:test:swift`（纯逻辑、跑在 vultr-sg 构建机）互补：这一半断言依赖 UIKit
 # （cell 复用、颜色映射、无障碍、事件），必须跑在 iOS 模拟器上、宿主为真 App。
 #
-# 前置：`pnpm prebuild` 已跑过（plugins/withKitTests.js 已把测试 target 注入
+# 前置：`pnpm ios:prebuild` 已跑过（plugins/withKitTests.js 已把测试 target 注入
 # ios/ 工程），且 `pnpm pods` 已完成。首次会全量编译 pods（约 8-10 分钟）。
 #
 # 为什么用专用模拟器：测试要安装/启动 App 宿主，占用默认设备会和别的构建冲突；

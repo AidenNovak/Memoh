@@ -3,7 +3,7 @@
 #
 # ## 为什么需要它
 #
-# `pnpm test:swift` 只编译 Foundation-only 那一半（Transcript / MemohStrings），
+# `pnpm ios:test:swift` 只编译 Foundation-only 那一半（Transcript / MemohStrings），
 # 所以**看不见 UIKit 文件里的编译错误**。踩过：`let heading` 却对它做 `+=`、
 # 以及一个 `String.text` 的笔误——两处都让纯逻辑测试全绿、iOS 构建才报错，
 # 代价是等一轮完整的 xcodebuild（几分钟）。

@@ -1,8 +1,9 @@
 #!/bin/zsh
 # 设备纪律：**规范设备写进脚本，不靠自动发现；拿不到就明确失败，并说清谁占着**。
 #
-# 被 `e2e/e2e.sh`、`navigation/bots-run.sh` 共用（两边以前各自抄了一份
-# "从 `simctl list` 里挑一台名字里有 Verify 的"——那是这套纪律烂掉的地方）。
+# 被 `files/run.sh`、`onboarding/run.sh`、`push/push-run.sh` 共用（以前 e2e / navigation
+# 各抄了一份"从 `simctl list` 里挑一台名字里有 Verify 的"——那是这套纪律烂掉的地方；
+# 那两个 harness 已于 2026-09-19 删除）。
 #
 # ## 为什么"自动发现"必须去掉
 #
@@ -26,7 +27,7 @@
 # （shebang 管不了"被 source"的情形：sourcing 的 shell 说了算）。所以先说清楚。
 if [ -n "${BASH_VERSION:-}" ]; then
   echo "✗ 这些验收脚本要在 zsh 里跑（bash 会把 \${(%):-%x} 报成 bad substitution）。" >&2
-  echo "  例：zsh apps/mobile/verification/navigation/bots-run.sh switch" >&2
+  echo "  例：zsh apps/mobile/verification/files/run.sh" >&2
   exit 2
 fi
 
@@ -36,8 +37,8 @@ MOBILE_VERIFY_ROOT=$(cd "$(dirname "${(%):-%x}")/.." && pwd)
 device_lease_instructions() {
   cat <<'TEXT'
   正确做法（一次租一台，租约会自动分配并锁定一台空闲设备）：
-      pnpm verify:simulator --name e2e -- zsh -euc 'pnpm verify:e2e'
-      pnpm verify:simulator --name bots -- zsh -euc 'pnpm verify:e2e'   # 或别的名字
+      pnpm verify:simulator --name native -- pnpm verify:native
+      pnpm verify:simulator --name files -- zsh apps/mobile/verification/files/run.sh
   看一眼谁占着哪台：
       pnpm verify:simulator --list
 TEXT

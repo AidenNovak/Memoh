@@ -18,7 +18,7 @@
  * 为什么排除 `Chat/NativeMessageList.swift`：
  * - 它 `import ExpoModulesCore`（整棵 RN pod 图），独立编译不成立；
  * - 与 `tools/typecheck-kit.sh` 排除它的先例一致；它的贴底/锚点**数值**已由
- *   `MessageListMetrics` 的 17 个纯逻辑测试覆盖（`pnpm test:swift`）。
+ *   `MessageListMetrics` 的 17 个纯逻辑测试覆盖（`pnpm ios:test:swift`）。
  *
  * `ios/` 是 prebuild 产物；本插件的改动随每次 prebuild 重新应用。
  */
@@ -57,7 +57,7 @@ const POD_ONLY_IMPORT = /^\s*import\s+ExpoModulesCore\b/m;
 /** 属于**别的套件**的测试文件：键是相对 apps/mobile/ 的路径，值是为什么不上模拟器。 */
 const OTHER_SUITES = {
   'modules/memoh-kit/verification/NotificationContractTests.swift':
-    'Foundation-only 的纯逻辑层，跑 `pnpm test:swift`（vultr-sg 的 swift 镜像），不需要模拟器',
+    'Foundation-only 的纯逻辑层，跑 `pnpm ios:test:swift`（vultr-sg 的 swift 镜像），不需要模拟器',
 };
 
 /** 源清单与磁盘不一致时，由测试 target 的 Run Script 阶段报出来。 */
@@ -158,13 +158,13 @@ function guardScript() {
     'drift="${TMPDIR:-/tmp}/memoh-kit-tests-drift.txt"',
     'current="${TMPDIR:-/tmp}/memoh-kit-tests-current.txt"',
     'if [ ! -f "$manifest" ]; then',
-    '  echo "error: 找不到 MemohKit 测试源清单 $manifest —— 先跑 pnpm prebuild。" >&2',
+    '  echo "error: 找不到 MemohKit 测试源清单 $manifest —— 先跑 pnpm ios:prebuild。" >&2',
     '  exit 1',
     'fi',
     `find ${SOURCE_ROOT} ${TEST_ROOT} -type f -name '*.swift' | LC_ALL=C sort > "$current"`,
     'if ! diff -u "$manifest" "$current" > "$drift" 2>&1; then',
     '  echo "error: MemohKit 的 Swift 文件集在 prebuild 之后变了，MemohKitTests 编的还是旧清单。" >&2',
-    '  echo "       跑 pnpm prebuild 让 plugins/withKitTests.js 重新取源文件，再重跑这次测试。" >&2',
+    '  echo "       跑 pnpm ios:prebuild 让 plugins/withKitTests.js 重新取源文件，再重跑这次测试。" >&2',
     '  echo "       差异（- 清单里有 / + 只在磁盘上）：" >&2',
     '  cat "$drift" >&2',
     '  exit 1',

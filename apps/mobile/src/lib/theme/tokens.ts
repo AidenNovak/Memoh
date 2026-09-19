@@ -287,7 +287,7 @@ export const MIN_TOUCH_TARGET = 44;
  列表行与大块走的是**另一套**合法做法：`backgroundColor: pressed ? palette.field` 换底
  （全 App 30 多处），不在本 token 的范围里。
 
- 这条规则由 `scripts/check-press-opacity.mjs` 在 `pnpm check` 里强制：新写的 `Pressable`
+ 这条规则由 `scripts/check-press-opacity.mjs` 在 `pnpm ios:check` 里强制：新写的 `Pressable`
  随手写一个 0.7 会直接红。**改这两个值要连着改那个脚本**——那正是"两档"这件事不能被
  悄悄改成三档的保证。
  */

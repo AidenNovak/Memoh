@@ -6,8 +6,8 @@
 存在"时最忌只写一句 `grep` 失败：那时读者既不知道屏幕上有什么，也不知道是断言写错了
 还是功能坏了。所以失败时把整屏文字打出来。
 
-复用 `verification/ui/textdump.swift`（Vision OCR，编译产物与 UI 那一套共用），
-不引入 Appium / Detox。
+复用 `verification/ui/textdump.swift`（Vision OCR）——**那个文件已随 harness 在 2026-09-19
+删除，所以本脚本现在跑不了**（见下方 import 处的说明与恢复用的 blob）。不引入 Appium / Detox。
 
 用法：
 
@@ -24,7 +24,22 @@ HERE = Path(__file__).resolve().parent
 UI = HERE.parent / 'ui'
 sys.path.insert(0, str(UI))
 
-from driver import DriverError, compile_textdump  # noqa: E402
+# ⚠️ 现在跑不了：`compile_textdump` 住在 `verification/ui/driver.py`，而 `verification/ui/`
+# 已于 2026-09-19 整体删除（harness 从 0 重写，形态待定）。**没有静默降级**——这里必须
+# 明确失败，否则会变成"断言没跑但看起来跑过了"。
+# 要恢复：`git cat-file -p 1131ed46380f9abb7b6e9e1f67eaef42b51dc74d > verification/ui/driver.py`
+# （textdump.swift 的 blob 是 5ff398467c42b206eeb721609e00549053360ccb），或重写时
+# 把 OCR 读取这一步换成一个新的实现。
+try:
+    from driver import DriverError, compile_textdump  # noqa: E402
+except ImportError as error:  # pragma: no cover - 恢复 harness 之前必然走到这里
+    print(
+        f'FAILED: 这个断言脚本依赖 verification/ui/driver.py（已随 harness 删除）：{error}\n'
+        '        见 memoh-ios-dev.md §9。恢复方法写在文件头注释里。',
+        file=sys.stderr,
+        flush=True,
+    )
+    raise SystemExit(2)
 
 
 def fail(message):

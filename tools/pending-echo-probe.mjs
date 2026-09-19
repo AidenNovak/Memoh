@@ -141,7 +141,7 @@ async function main() {
   );
   const password = env.MEMOH_ADMIN_PASSWORD;
   if (!password) {
-    console.error(`需要 ${ENV_PATH} 里的 MEMOH_ADMIN_PASSWORD（见 docs/environment.md）`);
+    console.error(`需要 ${ENV_PATH} 里的 MEMOH_ADMIN_PASSWORD（联调环境的起法与能力矩阵：memoh-ios-dev.md §2 / §4.5）`);
     process.exit(2);
   }
 

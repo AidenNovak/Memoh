@@ -35,8 +35,11 @@
 
 ```bash
 pnpm install                  # 根安装（含上游依赖；iOS 侧的依赖也在这里）
-pnpm ios:check                # 类型 + i18n + 三元 + 按压态 + lint + 格式（30 秒量级）
+pnpm ios:check                # Swift 类型检查 + 类型/i18n/三元/按压态/lint/格式
+pnpm ios:typecheck:foundation # 只查 Foundation-only 的 Swift（macOS SDK，几秒）
+pnpm ios:typecheck:kit        # 查 UIKit 那批 Swift（要 iOS SDK，几秒）
 pnpm ios:test                 # node 721 例 + 验收基建自测 + MemohKit 纯逻辑测试（后者在 vultr-sg 上跑）
+pnpm ios:test:swift           # 只跑上面那条 MemohKit 纯逻辑测试（丢给构建机）
 pnpm ios:bundle               # expo export（证明 JS bundle 能产出，不碰 Xcode）
 pnpm ios:run                  # 装到模拟器/真机（要 Xcode）
 pnpm ios:prebuild && pnpm ios:pods   # 从 app config 生成原生工程 + 装 Pods
@@ -60,17 +63,19 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 | 检查 | 覆盖 | 本机可跑 |
 | --- | --- | --- |
-| `ios:check` | TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅ |
+| `ios:check` | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
+| `ios:typecheck:foundation` | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK） | ✅ |
+| `ios:typecheck:kit` | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释） | ✅（要 Xcode） |
 | `ios:test` | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift） | ✅（Swift 那半在 vultr-sg） |
 | `ios:bundle` | Metro 能出 iOS bundle | ✅ |
 | `ios:verify:build` | 真的能编出一个 Debug App | ✅（要 Xcode） |
-| `ios:test:hosted` | UIKit cell 复用/颜色映射/无障碍 | ✅（要 Xcode） |
-| `ios:verify:native` | 生产 Swift 类型的行为 | ✅（要 Xcode） |
+| `ios:test:hosted` | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target） | ✅（要 Xcode） |
+| `ios:verify:native` | 生产 Swift 类型的行为（模拟器里 `simctl spawn`） | ✅（要 Xcode） |
 
 **没有自动化 UI 行为检查**：UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）
 已于 2026-09-19 从 memoh-ios 整体删除，**重写形态待定**——旧文档里提这些脚本的段落都是删除前的
-历史记录，别照着去跑。视觉正确目前只能靠人看截图 —— **截图证视觉状态，录屏证时序行为**，
-只有截图不算证据。
+历史记录，别照着去跑。§9 记了这次删除留下的断口。
+视觉正确目前只能靠人看截图 —— **截图证视觉状态，录屏证时序行为**，只有截图不算证据。
 
 ---
 
@@ -375,7 +380,7 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 | --- | --- | --- |
 | `AGENTS.md`（`CLAUDE.md` 是指向它的软链） | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口 |
 | `pnpm-workspace.yaml` | `packages` 加一行 `apps/mobile/modules/*` | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
-| `package.json` | 加 14 个 `ios:*` 脚本 | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动** |
+| `package.json` | 加 17 个 `ios:*` 脚本 | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动** |
 | `eslint.config.mjs` | `ignores` 加 `apps/mobile/**` | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题 |
 | `.gitignore` | 追加 iOS 段 + `/.verify/` | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库 |
 | `pnpm-lock.yaml` | 重新解析 | 加入 iOS 依赖后 pnpm 重解了一次依赖图。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）。这是加工作区项目的正常后果，不是我们选的 |
@@ -394,11 +399,13 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ---
 
-## 7. 相对 memoh-ios，客户端自己改了 5 处
+## 7. 相对 memoh-ios，客户端自己改了 6 处
 
 1. **Prettier 配置搬进 `apps/mobile/`**（原来是仓库根），并在 `apps/mobile/package.json` 里补了
    `format` / `format:check` / `check` 三个脚本。理由：这份配置只属于 iOS 客户端，
    放根上会把上游的 web / desktop / 服务端一起卷进"我们的排版范围"。
+   （根上的 `ios:check` 在它前面又串了两条 Swift 类型检查——memoh-ios 的 `check` 本来就有这两条，
+   只是它的入口在根上。）
 2. **补了 3 个"幽灵依赖"**：`expo-file-system`（运行时 import）、`sf-symbols-typescript`
    （type-only）、`ws`（测试用）。它们以前靠 memoh-ios 的 `nodeLinker: hoisted` 布局 +
    根 `devDependency` 兜住；本仓库用 pnpm 默认的 isolated 布局，解析不到就是解析不到。
@@ -423,6 +430,20 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
    **`out/` 不进 Git**（`tests/schedule-keyboard.test.mjs` 的注释里明写着），而且引用它们的
    那批 `docs/` 本来也没带过来 —— 带过来就是一批没有出处的孤图。新轮次要留档照旧
    `git add -f` 某一轮。
+6. **`tools/` 与注释里的适配**（memoh-ios 的路径/脚本名在这个仓库里不再成立）：
+   - `tools/spec-drift.mjs`：默认 A 从"笔记本上的上游只读副本"改成**本仓库的 `spec/swagger.json`**
+     ——上游现在就在这个仓库里，写死别人的绝对路径等于默认跑不了。
+   - `tools/frame-probe/run-battery{,-long}-leased.sh`：App 路径的默认值同样从写死的绝对路径
+     改成**按脚本位置推出来的本仓库构建产物**。
+   - `tools/docs-links.mjs`：默认扫描范围收成 **iOS 侧**（`AGENTS.md` + 本文 + `apps/mobile/`）。
+     上游那几百份 Markdown 不归我们管，扫进来只会刷噪声。
+   - **22 处注释/提示里的脚本名对齐**（`pnpm test:swift` → `pnpm ios:test:swift`、
+     `pnpm typecheck:kit` → `pnpm ios:typecheck:kit`、`pnpm check` → `pnpm ios:check`、
+     `pnpm dev:env` → `pnpm ios:dev-env`、`pnpm prebuild` → `pnpm ios:prebuild`）。
+     只动注释与提示字符串，没有一行逻辑改动。
+   - `modules/memoh-kit/README.md`：把"UIKit 那半**尚未接入** XCTest target"改成事实
+     （早就接了，跑 `pnpm ios:test:hosted`），并把已随 harness 删除的截图/量色入口改成
+     "现在只能人工看图 + 重写时要补回来"。
 
 ---
 
@@ -445,6 +466,16 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
 - **UI 行为检查是空的**（harness 已删、重写待定）。视觉正确现在只能靠人看。
+- **harness 删除留下的三个断口**（都做成了"明确失败 + 说清怎么取回"，不是静默降级；
+  重写 harness 时要一起收）：
+  - `verification/push/assert-text.py` 与 `verification/system-alerts.sh` 都依赖
+    `verification/ui/{driver.py,textdump.swift}`（已删）。blob：
+    `driver.py` = `1131ed46380f9abb7b6e9e1f67eaef42b51dc74d`、
+    `textdump.swift` = `5ff398467c42b206eeb721609e00549053360ccb`、
+    `measure_surfaces.py` = `9c38826f38b8d0872a6e0c5cf1dfdb5952e2194d`
+    （取回：`git cat-file -p <blob> > <路径>`）。
+  - `verification/device.sh` 里打印的"怎么拿设备"示例原来指向 `verify:e2e` /
+    `verification/navigation`，已换成现存入口（`verify:native` / `files/run.sh`）。
 - **推送在模拟器上验不了**：点系统通知卡片与动作按钮、徽标、真实 APNs 送达都只能真机手点。
 - **设备 token 上报端点还不存在**（`POST /devices` 只是形状）。
 - **没实测过的**（照抄 memoh-ios 的标注，别升级成已完成）：只有 `chat` 权限是否真 403；

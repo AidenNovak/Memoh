@@ -56,16 +56,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, MemohClient } from '../api/client.ts';
 import { getFreshToken, saveSession } from '../api/credentials.ts';
-import { hostOf, serverProblemOf } from '../features/auth/server.ts';
+import {
+  discoverMemohServer,
+  hostOf,
+  normalizeServer,
+  serverProblemOf,
+} from '../features/auth/server.ts';
 import { presentError } from '../features/errors/present.ts';
 import { useAnnounceOnAppear } from '../lib/accessibility.ts';
 import { useT } from '../lib/i18n/useT.ts';
-import {
-  PRESS_OPACITY,
-  radiusStyle,
-  spacing as space,
-  typography as type,
-} from '../lib/theme/tokens.ts';
+import { PRESS_OPACITY, radiusStyle } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 import type { SessionSeed } from '../features/session/store.tsx';
 
@@ -129,12 +129,13 @@ export function LoginScreen({
 
   const submit = useCallback(async () => {
     if (busy) return;
-    const baseUrl = server.trim();
-    const problem = serverProblemOf(baseUrl);
-    if (problem !== null) {
+    const normalized = normalizeServer(server);
+    if (!normalized.ok) {
       // 地址不合法就别发请求：发出去只会得到一个"连不上"，而那句话会把用户引到错误的方向。
       setEditingServer(true);
-      setError({ key: problem === 'empty' ? 'login.server.empty' : 'login.server.invalid' });
+      setError({
+        key: normalized.problem === 'empty' ? 'login.server.empty' : 'login.server.invalid',
+      });
       return;
     }
     // 缺哪一格说哪一格。笼统的"登录失败"对用户没有可操作的信息：他不知道要回去补什么。
@@ -151,6 +152,15 @@ export function LoginScreen({
     setError(null);
 
     try {
+      /* 先探明那台真是 Memoh，再把口令发出去——顺序不能反：地址写错时把用户名/密码
+         POST 给一台陌生服务器，等于替它收集凭据。候选优先级（公网先试 /api、本机/内网
+         先试裸根）在 features/auth/server.ts，登录成功存的是**探测命中的那个** base URL。 */
+      const baseUrl = await discoverMemohServer(normalized.server);
+      if (baseUrl === null) {
+        setEditingServer(true);
+        setError({ key: 'login.server.notMemoh' });
+        return;
+      }
       const client = new MemohClient({
         baseUrl,
         // 登录前还没有 token；登录成功后这个闭包换成读 Keychain。

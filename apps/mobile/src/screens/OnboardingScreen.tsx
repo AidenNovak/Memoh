@@ -47,7 +47,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Easing,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,

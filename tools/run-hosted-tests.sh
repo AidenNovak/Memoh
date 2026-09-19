@@ -36,9 +36,10 @@ else
 fi
 
 cd "$MOBILE"
+DERIVED_DATA="${MEMOH_HOSTED_DERIVED_DATA:-/tmp/memoh-hosted-dd}"
 xcodebuild test \
   -workspace ios/Memoh.xcworkspace \
   -scheme Memoh \
   -destination "id=$UDID" \
   -only-testing:MemohKitTests \
-  -derivedDataPath /tmp/memoh-hosted-dd
+  -derivedDataPath "$DERIVED_DATA"

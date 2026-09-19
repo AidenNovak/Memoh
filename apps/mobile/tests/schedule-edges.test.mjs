@@ -25,11 +25,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { safeTimezone, DEPLOYMENT_DEFAULT_TIMEZONE } from '../src/features/schedule/describe.ts';
-import { normalizeLog } from '../src/features/schedule/model.ts';
+import {
+  dayDelta,
+  lastRunLabelKey,
+  nextRunLabel,
+  safeTimezone,
+  DEPLOYMENT_DEFAULT_TIMEZONE,
+} from '../src/features/schedule/describe.ts';
+import { lastRunState, normalizeLog } from '../src/features/schedule/model.ts';
 import { nextRunAt } from '../src/features/schedule/cron.ts';
-import { dayDelta, lastRunLabelKey, nextRunLabel } from '../src/features/schedule/describe.ts';
-import { lastRunState } from '../src/features/schedule/model.ts';
 
 /** 测试里的时刻一律写 UTC ISO，不依赖跑测试的机器在哪个时区。 */
 const utc = (iso) => new Date(iso);

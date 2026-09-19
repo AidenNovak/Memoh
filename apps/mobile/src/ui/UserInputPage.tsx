@@ -21,7 +21,7 @@
  * 这个组件只管画和收集草稿：把校验写在组件里，出错的代价是服务端拒收 + run 卡住，
  * 而那种错误在界面上看不出来。
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -396,13 +396,3 @@ function InlineInput({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    maxHeight: '85%',
-  },
-});

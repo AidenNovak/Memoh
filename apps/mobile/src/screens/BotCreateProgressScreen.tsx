@@ -22,7 +22,6 @@ import {
   createTimedOut,
   phaseFor,
   pollDelayMs,
-  stageFor,
   type CreatePhase,
 } from '../features/bots/create.ts';
 import { useSession } from '../features/session/store.tsx';

@@ -420,10 +420,10 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | ---------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AGENTS.md`（`CLAUDE.md` 是指向它的软链）      | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口                                          |
 | `pnpm-workspace.yaml`                          | `packages` 加一行 `apps/mobile/modules/*`                       | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
-| `package.json`                                 | 加 17 个 `ios:*` 脚本                                           | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动**                                                                                                                                                          |
+| `package.json`                                 | 加 17 个 `ios:*` 脚本；补 Worklets 的 Babel package extension   | 脚本与上游不重名；Worklets 0.10.1 的插件会直接加载 `@babel/generator` 却没有声明它，显式钉在 Expo 使用的 Babel 7.28.5，防止干净安装误捡 Babel 8。**上游脚本一个没动**                                                                         |
 | `eslint.config.mjs`                            | `ignores` 加 `apps/mobile/**`                                   | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题                                                                                                   |
 | `.gitignore`                                   | 追加 iOS 段 + `/.verify/`                                       | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库                                                                                                                                              |
-| `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）。这是加工作区项目的正常后果，不是我们选的                                             |
+| `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图；另记录 Worklets 的 `@babel/generator@7.28.5` package extension。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）                              |
 | `.github/scripts/contribution-policy.test.mjs` | 普通 PR workflow 计数 9 → 10                                    | 新增 `ios-ci.yml` 后，治理测试仍遍历全部 PR workflow，确认它们没有 format 依赖且权限都是 read-only                                                                                                                                      |
 
 **新增的目录（不改上游任何文件）：**
@@ -458,6 +458,10 @@ hosted XCTest。
    根 `devDependency` 兜住；本仓库用 pnpm 默认的 isolated 布局，解析不到就是解析不到。
    **这是门禁抓到的真缺陷**（`tsc` 报 `TS2307`、3 个测试文件 `ERR_MODULE_NOT_FOUND`），
    不是配置问题 —— 版本与 memoh-ios 实际用到的一致（`57.0.7` / `2.2.0` / `^8.21.3`）。
+   根 `package.json` 还用 pnpm `packageExtensions` 补了 Worklets 0.10.1 漏声明的
+   `@babel/generator@7.28.5`：干净安装曾解析到 Babel 8，导致 Reanimated 的
+   `interpolateColor.ts` 在 Worklets 插件里 bundle 失败；显式补依赖后，React Compiler 保持开启且
+   `expo export` 可正常产出 iOS bundle。
 3. **`tools/` 里 5 处死绑定删掉**（3 个未使用的 import + 2 个从没被读过的计数器）。
    上游根 ESLint 现在会扫 `tools/`，它报的是真问题。**没有为了让门禁变绿而放宽任何规则。**
 4. **`apps/mobile/package.json` 里加了一份自己的 `lint-staged` 配置**，命令是

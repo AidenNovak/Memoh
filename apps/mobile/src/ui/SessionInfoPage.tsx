@@ -26,7 +26,7 @@
  * 数据从 store 按 `params.sessionId` 取，自己拉一次最新状态，关闭交给契约。
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { useT as useTranslate } from '../lib/i18n/useT.ts';
+import { useT } from '../lib/i18n/useT.ts';
 import {
   ActivityIndicator,
   Pressable,
@@ -61,7 +61,6 @@ import {
   reasonKeyOf,
   type ErrorPresentation,
 } from '../features/errors/present.ts';
-import { useT } from '../lib/i18n/useT.ts';
 import { definePage, usePageRuntime } from '../lib/presentation/index.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 
@@ -103,7 +102,7 @@ export function SessionInfoView({
   };
 }) {
   const palette = usePalette();
-  const { spacing, radius, typography } = useTheme();
+  const { spacing, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const t = useT();
@@ -316,7 +315,6 @@ function SessionInfoPresentedView() {
   const runtime = usePageRuntime<SessionInfoParams>();
   const { sessionId } = runtime.params;
   const { sessionStatusFor, refreshSessionStatus, state: sessionState, currentBot } = useSession();
-  const t = useT();
   const [state, setState] = useState<{ loading: boolean; failed: boolean }>({
     loading: true,
     failed: false,
@@ -465,10 +463,7 @@ export const SessionInfoPage = definePage<SessionInfoParams>({
 
 /** 压缩结果那一行。文案 key 由纯逻辑给（见 `features/session/compaction.ts`）。 */
 /** `useT()` 的返回类型：直接取自它自己，别手写一个形状（手写的迟早对不上）。 */
-type Translate = ReturnType<typeof useTranslate>;
-
-/** 语义化的插值参数：与 `compactSummaryText` 返回的 `values` 同一形状。 */
-type CompactValues = { count?: number };
+type Translate = ReturnType<typeof useT>;
 
 function compactTextOf(outcome: CompactOutcome, t: Translate): string {
   const line = compactSummaryText(outcome);

@@ -124,6 +124,10 @@ jobs:
 
       - name: Run hosted MemohKit tests
         shell: bash
+        env:
+          # Reuse the preceding Simulator build. run-hosted-tests.sh keeps its
+          # isolated /tmp cache by default for local invocations.
+          MEMOH_HOSTED_DERIVED_DATA: ${{ github.workspace }}/apps/mobile/verification/.artifacts/derived-data
         run: |
           set -euo pipefail
           runtime=$(xcrun simctl list runtimes --json | jq -r '.runtimes | map(select(.isAvailable and (.identifier | contains("iOS")))) | last | .identifier')

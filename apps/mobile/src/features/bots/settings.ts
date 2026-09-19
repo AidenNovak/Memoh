@@ -22,7 +22,7 @@ import type { Bot, BotSettings } from '../../api/types.ts';
 import { DEFAULT_CHOICE, findModel, verifiedChoice, type ModelSection } from '../chat/models.ts';
 import { normalizeAvatarUrl } from './avatar.ts';
 import { AUTO_LANGUAGE, normalizeLanguage } from './languages.ts';
-import { INHERIT_TIMEZONE, normalizeTimezone } from './timezones.ts';
+import { normalizeTimezone } from './timezones.ts';
 
 /** 页面上会被改的东西。 */
 export interface BotSettingsDraft {

@@ -65,6 +65,13 @@
     ]
   },
   "pnpm": {
+    "packageExtensions": {
+      "react-native-worklets@0.10.1": {
+        "dependencies": {
+          "@babel/generator": "7.28.5"
+        }
+      }
+    },
     "peerDependencyRules": {
       "ignoreMissing": [
         "@algolia/client-search"

@@ -4,6 +4,8 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+packageExtensionsChecksum: sha256-uWfDMu6rNeH/0N/e9yjqHniX5Y34s3QPiNv4tmJ31gY=
+
 patchedDependencies:
   dockview-core@7.0.2:
     hash: 8195455b5e4bc151ac7c9ca7beae0706d3f9bc46cddcceb43d4ece5ca47f6f61
@@ -16324,6 +16326,7 @@ snapshots:
   react-native-worklets@0.10.1(@babel/core@7.28.5)(@react-native/metro-config@0.86.3(@babel/core@7.28.5))(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.3(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@babel/core': 7.28.5
+      '@babel/generator': 7.28.5
       '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-class-properties': 7.29.7(@babel/core@7.28.5)
       '@babel/plugin-transform-classes': 7.29.7(@babel/core@7.28.5)

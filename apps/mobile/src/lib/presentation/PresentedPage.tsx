@@ -14,7 +14,7 @@
  */
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Text } from 'react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import {
   type PageFinish,
@@ -199,7 +199,6 @@ export function PresentedPageRoute() {
           {settleNote}
         </Text>
       )}
-      {/* eslint-disable-next-line */}
     </PageRuntimeProvider>
   );
 }

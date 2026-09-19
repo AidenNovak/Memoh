@@ -27,11 +27,6 @@ const NATIVE_KEYS = [
   'chat.placeholder',
 ];
 
-const LOCALE_DIRS = {
-  en: 'en',
-  'zh-Hans': 'zh-Hans',
-};
-
 function readCatalog(projectRoot, file) {
   const filePath = path.join(projectRoot, 'locales', file);
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));

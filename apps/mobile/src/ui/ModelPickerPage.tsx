@@ -65,7 +65,7 @@ import {
 import { ErrorNotice } from './ErrorNotice.tsx';
 
 /** 打开时带进来的当前选择；选完返回新的选择。取消 = `cancelled`（调用方不动现状）。 */
-export interface ModelPickerParams extends ComposerChoice {}
+export type ModelPickerParams = ComposerChoice;
 
 function ModelPickerPresentedView() {
   const palette = usePalette();

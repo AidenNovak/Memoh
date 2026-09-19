@@ -45,7 +45,6 @@ import {
   radiusStyle,
   spacing,
   TAB_BAR_CLEARANCE,
-  typography,
 } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 import { Breadcrumbs } from '../ui/Breadcrumbs.tsx';

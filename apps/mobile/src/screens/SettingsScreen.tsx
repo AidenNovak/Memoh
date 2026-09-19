@@ -37,13 +37,7 @@ import { Alert, ScrollView, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getSession } from '../api/credentials.ts';
-import {
-  getLocale,
-  localeDisplayName,
-  setLocale,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from '../lib/i18n/index.ts';
+import { localeDisplayName, setLocale, SUPPORTED_LOCALES, type Locale } from '../lib/i18n/index.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { useLocale } from '../lib/i18n/useLocale.ts';
 import {

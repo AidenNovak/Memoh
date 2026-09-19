@@ -47,7 +47,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { Bot, BotCheck, BotSettings, SkillSummary } from '../api/types.ts';
+import type { Bot, BotCheck, BotSettings } from '../api/types.ts';
 import {
   draftFrom,
   effortsFor,

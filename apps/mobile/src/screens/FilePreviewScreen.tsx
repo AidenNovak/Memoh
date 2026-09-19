@@ -31,7 +31,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { canRetry, reasonKeyOf } from '../features/errors/present.ts';
-import { GROUP_INSET, radius, radiusStyle, spacing, typography } from '../lib/theme/tokens.ts';
+import { GROUP_INSET, radius, radiusStyle, typography } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 import { ErrorNotice } from '../ui/ErrorNotice.tsx';
 import { Breadcrumbs } from '../ui/Breadcrumbs.tsx';

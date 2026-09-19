@@ -246,7 +246,7 @@ function ApprovalPresentedView() {
 
 function ChoiceButton({ choice, onPress }: { choice: ApprovalChoice; onPress: () => void }) {
   const palette = usePalette();
-  const { spacing, radius, typography } = useTheme();
+  const { radius, typography } = useTheme();
   const t = useT();
 
   /**

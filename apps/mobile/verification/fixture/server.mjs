@@ -33,7 +33,6 @@
  */
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

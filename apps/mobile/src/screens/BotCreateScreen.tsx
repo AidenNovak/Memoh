@@ -53,7 +53,7 @@ import { avatarFor, avatarValueKey } from '../features/bots/avatar.ts';
 import { useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { present } from '../lib/presentation/index.ts';
-import { GROUP_INSET, MIN_TOUCH_TARGET, radius, spacing, typography } from '../lib/theme/tokens.ts';
+import { GROUP_INSET, radius, spacing, typography } from '../lib/theme/tokens.ts';
 import { usePalette } from '../lib/theme/context.tsx';
 import { AvatarPickerSheet } from '../ui/AvatarPickerPage.tsx';
 import { BackButton } from '../ui/BackButton.tsx';

@@ -7,7 +7,7 @@
  */
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActionSheetIOS, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { present } from '../lib/presentation/present.ts';
 import { useT } from '../lib/i18n/useT.ts';
@@ -32,7 +32,7 @@ import { useSession } from '../features/session/store.tsx';
  */
 export function useAgentSwitcher(): () => void {
   const router = useRouter();
-  const { state, currentBot, selectBot } = useSession();
+  const { currentBot, selectBot } = useSession();
   const [busy, setBusy] = useState(false);
 
   const open = useCallback(() => {

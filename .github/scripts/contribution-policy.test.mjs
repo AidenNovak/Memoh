@@ -127,7 +127,7 @@ test('ordinary PR CI has no format job or dependency', () => {
     }
     assert.ok(Object.values(workflow.permissions).every(value=>value==='read'),file);
   }
-  assert.equal(checked,9);
+  assert.equal(checked,10);
 });
 
 test('both the read-only gate and privileged controller check out default-branch rules', () => {

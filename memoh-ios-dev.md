@@ -10,13 +10,13 @@
 
 `felinics/Memoh` 的 fork：**上游整仓 + 我们的 iOS 客户端（`apps/mobile`）**。
 
-| | 是什么 | 谁在改 |
-| --- | --- | --- |
-| `apps/mobile/` | iOS 客户端（**唯一交付物**） | 我们 |
-| `apps/mobile/modules/memoh-kit/` | 一方原生能力与原生 UI（Swift） | 我们 |
-| `tools/` | iOS 侧的探针、门禁、发布脚本 | 我们 |
-| `infra/` | 联调隧道与 dev 栈脚本 | 我们 |
-| 其余（Go 服务端 / `apps/web` / `apps/desktop` / `packages/`） | 上游 | 上游，**我们尽量不动** |
+|                                                               | 是什么                         | 谁在改                 |
+| ------------------------------------------------------------- | ------------------------------ | ---------------------- |
+| `apps/mobile/`                                                | iOS 客户端（**唯一交付物**）   | 我们                   |
+| `apps/mobile/modules/memoh-kit/`                              | 一方原生能力与原生 UI（Swift） | 我们                   |
+| `tools/`                                                      | iOS 侧的探针、门禁、发布脚本   | 我们                   |
+| `infra/`                                                      | 联调隧道与 dev 栈脚本          | 我们                   |
+| 其余（Go 服务端 / `apps/web` / `apps/desktop` / `packages/`） | 上游                           | 上游，**我们尽量不动** |
 
 - **上游基线**：`22752cd`（2026-09-19 上游 `main`），`spec/swagger.json` **267 条路径**。
 - **客户端来源**：`AidenNovak/memoh-ios`（同一份代码，换了落点）。
@@ -38,7 +38,7 @@ pnpm install                  # 根安装（含上游依赖；iOS 侧的依赖�
 pnpm ios:check                # Swift 类型检查 + 类型/i18n/三元/按压态/lint/格式
 pnpm ios:typecheck:foundation # 只查 Foundation-only 的 Swift（macOS SDK，几秒）
 pnpm ios:typecheck:kit        # 查 UIKit 那批 Swift（要 iOS SDK，几秒）
-pnpm ios:test                 # node 721 例 + 验收基建自测 + MemohKit 纯逻辑测试（后者在 vultr-sg 上跑）
+pnpm ios:test                 # node 纯逻辑 + 验收基建自测 + MemohKit 纯逻辑（后者在 vultr-sg 上跑）
 pnpm ios:test:swift           # 只跑上面那条 MemohKit 纯逻辑测试（丢给构建机）
 pnpm ios:bundle               # expo export（证明 JS bundle 能产出，不碰 Xcode）
 pnpm ios:run                  # 装到模拟器/真机（要 Xcode）
@@ -61,16 +61,16 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ### 门禁到底覆盖了什么
 
-| 检查 | 覆盖 | 本机可跑 |
-| --- | --- | --- |
-| `ios:check` | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
-| `ios:typecheck:foundation` | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK） | ✅ |
-| `ios:typecheck:kit` | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释） | ✅（要 Xcode） |
-| `ios:test` | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift） | ✅（Swift 那半在 vultr-sg） |
-| `ios:bundle` | Metro 能出 iOS bundle | ✅ |
-| `ios:verify:build` | 真的能编出一个 Debug App | ✅（要 Xcode） |
-| `ios:test:hosted` | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target） | ✅（要 Xcode） |
-| `ios:verify:native` | 生产 Swift 类型的行为（模拟器里 `simctl spawn`） | ✅（要 Xcode） |
+| 检查                       | 覆盖                                                                                                            | 本机可跑                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `ios:check`                | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
+| `ios:typecheck:foundation` | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
+| `ios:typecheck:kit`        | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
+| `ios:test`                 | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
+| `ios:bundle`               | Metro 能出 iOS bundle                                                                                           | ✅                                        |
+| `ios:verify:build`         | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
+| `ios:test:hosted`          | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
+| `ios:verify:native`        | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
 
 **没有自动化 UI 行为检查**：UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）
 已于 2026-09-19 从 memoh-ios 整体删除，**重写形态待定**——旧文档里提这些脚本的段落都是删除前的
@@ -135,6 +135,8 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 - 动效取消后信息必须还在，且不许让人等动画播完才能操作。
 - 流式不闪不跳三条铁律：追加只改文本、不重建 cell；自动滚动只调 `contentOffset`、不动画；
   正文不换字体。
+- 整份转录的 JS 投影/序列化与原生 prop 合并同步限制为约 30fps；审批、错误、
+  pending 与连接态不经这条节流。离开会话会释放该会话的历史/队列/状态缓存。
 - 错误不自动消失，不做 time-boxed。
 - Reduce Motion 每个动效点都要有答案；判定 `'unknown'` 时先不启动动画。
 - 按压 scale 0.97 / 150ms（继承自 Web 基线）。
@@ -156,29 +158,29 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ### 3.3 已经裁决过的取舍（桌面端有什么 → iOS 怎么做 → 为什么）
 
-| 桌面端 | iOS | 为什么 |
-| --- | --- | --- |
-| 审批在 composer panel | 做成系统级体验：推送 → 一键进审批 | 手机最大的差异化价值 |
-| 容器桌面串流（WebRTC 键鼠回传） | 砍。远期可"看"，不做"控" | 小屏远程桌面是伪需求 |
-| 终端 xterm pane | 砍。远期只读 tail | 手机打字进终端体验极差 |
-| dockview 六 pane 分屏 | 砍，改全屏页间切换 | 手机没有多窗格空间 |
-| 会话/文件/定时三 panel | 保留；文件只读浏览 + 预览 | 三视图是同一 agent 的三种看法 |
-| 会话信息 = 上下文环 | 用 `chart.bar.xaxis`；服务端给 `context_window` 再改回环 | 环只能空着等于骗人 |
-| 助手消息是内容 | 全宽裸文本，不加气泡 | Messages 就是全宽文本 |
-| 用户气泡有尾巴 | 只靠底色区分，排版与助手一致 | 尾巴是拟物残留 |
-| 明暗切换要做 | 什么都不用做（asset catalog 变体 + 设置三档） | 跟随系统 |
-| 配置面（providers 等 6 页） | **不砍**，给同等能力：可 push 的栈、list↔detail、schema 驱动表单 | 取舍原则是"手机能不能把 memoh 的形态表达清楚" |
-| 逐页表单 | 写**一个** schema → 原生表单渲染器 | 上游加字段自动跟上 |
-| provider 密钥 | 照接口写，但**本地不落任何 provider 密钥**（Keychain 只放登录 token） | 密钥不落客户端 |
-| 5 步建 bot 向导 | 不做向导；单页表单 + 轮询 | 建 bot 是重决策 |
-| 定时任务只读 | **完整编辑** | 与桌面同结构 |
-| 登录仅 username+password | 保持"服务器 + 用户名 + 密码"，不做第三方登录 | 上游没有 oidc/google 路由 |
-| 工具卡完成态贴 "Done" | 只在 running/failed 贴状态词 | 完成态不贴 |
-| 工具失败 = 正文标红 | 标题保持中性，正文照实标红 | 两个不同对象 |
-| running 用静态沙漏 | 用系统 spinner | 静止会被读成卡住 |
-| 每条回复 7 个动作图标 | 一枚可见 `⋯`：复制 / 分享 / 从这一轮分叉 | 其余是死按钮 |
-| 列表第二行放消息预览 | 第二行**状态优先**：等你批准 / 在跑 / 兜底"来源·类型" | 接口不返回最后一条消息，且手机扫列表问的是"哪个有事" |
-| iPad 分栏 | 先单列 + 写死 + 有 case | 同时做两件会互相掩盖失败 |
+| 桌面端                          | iOS                                                                   | 为什么                                                                 |
+| ------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 审批在 composer panel           | 做成系统级体验：推送 → 一键进审批                                     | 手机最大的差异化价值                                                   |
+| 容器桌面串流（WebRTC 键鼠回传） | 砍。远期可"看"，不做"控"                                              | 小屏远程桌面是伪需求                                                   |
+| 终端 xterm pane                 | 砍。远期只读 tail                                                     | 手机打字进终端体验极差                                                 |
+| dockview 六 pane 分屏           | 砍，改全屏页间切换                                                    | 手机没有多窗格空间                                                     |
+| 会话/文件/定时三 panel          | 保留；文件只读浏览 + 预览                                             | 三视图是同一 agent 的三种看法                                          |
+| 会话信息 = 上下文环             | 用 `chart.bar.xaxis`；服务端给 `context_window` 再改回环              | 环只能空着等于骗人                                                     |
+| 助手消息是内容                  | 全宽裸文本，不加气泡                                                  | Messages 就是全宽文本                                                  |
+| 用户气泡有尾巴                  | 只靠底色区分，排版与助手一致                                          | 尾巴是拟物残留                                                         |
+| 明暗切换要做                    | 什么都不用做（asset catalog 变体 + 设置三档）                         | 跟随系统                                                               |
+| 配置面（providers 等 6 页）     | **不砍**，给同等能力：可 push 的栈、list↔detail、schema 驱动表单      | 取舍原则是"手机能不能把 memoh 的形态表达清楚"                          |
+| 逐页表单                        | 写**一个** schema → 原生表单渲染器                                    | 上游加字段自动跟上                                                     |
+| provider 密钥                   | 照接口写，但**本地不落任何 provider 密钥**（Keychain 只放登录 token） | 密钥不落客户端                                                         |
+| 5 步建 bot 向导                 | 不做向导；单页表单 + 轮询                                             | 建 bot 是重决策                                                        |
+| 定时任务只读                    | **完整编辑**                                                          | 与桌面同结构                                                           |
+| 自托管登录仅 username+password  | 保持"服务器 + 用户名 + 密码"，不做假的第三方按钮                      | OSS 服务端没有账号型 OIDC/Google 路由；Cloud 是另一个鉴权边界，见 §4.7 |
+| 工具卡完成态贴 "Done"           | 只在 running/failed 贴状态词                                          | 完成态不贴                                                             |
+| 工具失败 = 正文标红             | 标题保持中性，正文照实标红                                            | 两个不同对象                                                           |
+| running 用静态沙漏              | 用系统 spinner                                                        | 静止会被读成卡住                                                       |
+| 每条回复 7 个动作图标           | 一枚可见 `⋯`：复制 / 分享 / 从这一轮分叉                              | 其余是死按钮                                                           |
+| 列表第二行放消息预览            | 第二行**状态优先**：等你批准 / 在跑 / 兜底"来源·类型"                 | 接口不返回最后一条消息，且手机扫列表问的是"哪个有事"                   |
+| iPad 分栏                       | 先单列 + 写死 + 有 case                                               | 同时做两件会互相掩盖失败                                               |
 
 ### 3.4 明确不做
 
@@ -311,12 +313,12 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 同时存在**四个版本的"Memoh"**，日期和内容都不一样。分不清这一层是这里最大的坑。
 
-| 层 | 在哪 | 唯一能回答 |
-| --- | --- | --- |
-| 上游 `felinics/Memoh` | 本仓库（基线 `22752cd`，swagger **267** 路径） | 「上游把它设计成什么样、为什么」 |
-| 我们的 fork `AidenNovak/Memoh` | `vultr-sg:/opt/memoh-dev/src`（`05b8491`，**266** 路径，**无自有补丁**） | 服务端改动的唯一落点 |
-| 部署实例（dev 栈） | `vultr-sg` 的 `memoh-dev` compose，经隧道 `127.0.0.1:18080` | **「这个功能现在到底能不能用」——只有它能回答** |
-| 本仓库的 iOS 客户端 | `apps/mobile` | 交付物本身 |
+| 层                             | 在哪                                                                     | 唯一能回答                                     |
+| ------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------- |
+| 上游 `felinics/Memoh`          | 本仓库（基线 `22752cd`，swagger **267** 路径）                           | 「上游把它设计成什么样、为什么」               |
+| 我们的 fork `AidenNovak/Memoh` | `vultr-sg:/opt/memoh-dev/src`（`05b8491`，**266** 路径，**无自有补丁**） | 服务端改动的唯一落点                           |
+| 部署实例（dev 栈）             | `vultr-sg` 的 `memoh-dev` compose，经隧道 `127.0.0.1:18080`              | **「这个功能现在到底能不能用」——只有它能回答** |
+| 本仓库的 iOS 客户端            | `apps/mobile`                                                            | 交付物本身                                     |
 
 - 三层的 swagger 路径数真的不一样（历史上 254 / 266 / 236）。**任何写进文档的条数、版本号、
   日期都要带来源**（哪台机器、哪条命令、哪一天）。
@@ -325,18 +327,56 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ### 4.6 客户端有意偏离桌面端/上游
 
-| # | 偏离点 | 桌面端 / 上游 | iOS | 理由 |
-| --- | --- | --- | --- | --- |
-| 1 | 不做 Android | 只有 Web 与桌面端 | 只有 iOS，无 stub、无 Android 构建脚本 | 产品定位；加 Android 会让原生面变成两套几乎无法共享的实现 |
-| 2 | 不向上游提交 | 上游接受 PR | 服务端改动一律走 fork | 独立维护的第三方客户端 |
-| 3 | 切换器选中后的落点 | 进该 bot 的设置页 | **切到那个 bot**（设置走另外一行） | 切换器是"换一个来聊"的语境 |
-| 4 | GUI 工具不自动开桌面分屏 | 会开着（上游自己也在收） | 只有按需浮窗 | 每次 GUI 调用都会把用户从对话里拽走 |
-| 5 | 思考强度 | 下拉选择 | 点一下换下一个 | 可选项通常两三个 |
-| 6 | bot 设置只做手机上意义的几组 | 十几个 tab | 基本信息 / 对话 / 桌面 / 运行检查 / 危险操作 | 手机装不下；那是"产房"里的活 |
-| 7 | 不做多面板工作台 | 可拖拽分割的 8 种面板 | 单栈导航 + 按需浮窗 | 手机装不下 |
-| 8 | 不做桌面配置向导 | 5 步向导 | 三屏说明页 | 小屏填 API key 体验极差 |
-| 9 | Web 的 CSS 手法不搬 | 卡片阴影、hover、居中 dialog | HIG：语义色、动态字号、原生 sheet/列表 | 系统有现成的就用现成的 |
-| 10 | 队列能力按探测降级 | 新版有会话队列/插话 | 404 就记 `support:'no'`，发送键回到"停止" | 不探测等于给用户一个必然失败的入口 |
+| #   | 偏离点                       | 桌面端 / 上游                | iOS                                          | 理由                                                      |
+| --- | ---------------------------- | ---------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| 1   | 不做 Android                 | 只有 Web 与桌面端            | 只有 iOS，无 stub、无 Android 构建脚本       | 产品定位；加 Android 会让原生面变成两套几乎无法共享的实现 |
+| 2   | 不向上游提交                 | 上游接受 PR                  | 服务端改动一律走 fork                        | 独立维护的第三方客户端                                    |
+| 3   | 切换器选中后的落点           | 进该 bot 的设置页            | **切到那个 bot**（设置走另外一行）           | 切换器是"换一个来聊"的语境                                |
+| 4   | GUI 工具不自动开桌面分屏     | 会开着（上游自己也在收）     | 只有按需浮窗                                 | 每次 GUI 调用都会把用户从对话里拽走                       |
+| 5   | 思考强度                     | 下拉选择                     | 点一下换下一个                               | 可选项通常两三个                                          |
+| 6   | bot 设置只做手机上意义的几组 | 十几个 tab                   | 基本信息 / 对话 / 桌面 / 运行检查 / 危险操作 | 手机装不下；那是"产房"里的活                              |
+| 7   | 不做多面板工作台             | 可拖拽分割的 8 种面板        | 单栈导航 + 按需浮窗                          | 手机装不下                                                |
+| 8   | 不做桌面配置向导             | 5 步向导                     | 三屏说明页                                   | 小屏填 API key 体验极差                                   |
+| 9   | Web 的 CSS 手法不搬          | 卡片阴影、hover、居中 dialog | HIG：语义色、动态字号、原生 sheet/列表       | 系统有现成的就用现成的                                    |
+| 10  | 队列能力按探测降级           | 新版有会话队列/插话          | 404 就记 `support:'no'`，发送键回到"停止"    | 不探测等于给用户一个必然失败的入口                        |
+
+### 4.7 Cloud 与自托管的连接边界
+
+**已验证的事实（2026-09-19）：**
+
+- OSS/self-host 是一个 Memoh Server：`/auth/login` 换 JWT，手机直接调 REST +
+  WebSocket。iOS 先用 `<base>/ping` 确认 `status: "ok"`，再发送口令。公网裸域名
+  优先探测 `/api`，本地/内网与明示 8080/18080 先探测根路径；发现到的确切
+  base URL 与 JWT 一起进 Keychain。非内网 `http://` 被拒绝，避免口令明文上网。
+- Memoh Cloud 不是"把 Cloud 域名填进自托管登录框"：`app.memoh.net/api/ping`
+  是 Cloud 健康端点，当前 Web 客户端的账号鉴权走 `/api/v1`（email code / OAuth /
+  password / MFA）与 secure cookie，实例的 Memoh API 走 `/api/memoh`，并带 team 上下文。
+  当前 iOS 的 JWT 合同无法安全复用这份浏览器 cookie。
+- 公开材料能证明 Cloud 给 bot 持久卷、独立文件/桌面/网络与持续运行的
+  compute；OSS 的官方 server image 默认用 containerd + CNI。**没有公开证据证明
+  Cloud 用 Firecracker/其他 microVM**，所以不把这个猜测写进客户端契约。
+
+**Cloud 原生登录的预留（服务端合同先行，手机端不猜端点）：**
+
+1. 用 `ASWebAuthenticationSession` 走 Authorization Code + PKCE，复用 Cloud 的 email/OAuth/MFA
+   页面；不把 Google token 或 Web cookie 偷进 App。
+2. Cloud 用一次性 code 回调 App，App 换可撤销的移动端 access/refresh credential；回应
+   明确给 `apiBaseUrl` / `teamId` / `authMode`，不让 App 猜某个租户或沙箱在哪。
+3. self-host 也可在将来提供同一套 device authorization/PKCE 端点；在那之前，就保持
+   当前的显式 server + username + password，不做 WebView 填密码或长期 pairing secret。
+
+**手机 ↔ 用户 VPS 的推荐路径：**手机连的是 Memoh Server，不是 bot workspace。
+VPS 有公网 IP 时用普通 HTTPS 反代暴露 `/api` 与 WebSocket；无入站条件时再用
+outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflare Tunnel 适合要稳定
+公网域名又不想开入站端口的部署。Tailscale Funnel 为公网临时共享，不作为默认
+生产入口。无论哪条路，鉴权都留在 Memoh；tunnel 不发明第二套账号。
+
+公开依据：[Memoh Cloud / Quick Start](https://docs.memoh.ai/guides/quick-start)、
+[Workspace Backends](https://docs.memoh.ai/self-hosted/workspace-backends.html)、
+[Computers / Remote Runtimes](https://docs.memoh.ai/guides/computers.html)、
+[Apple `ASWebAuthenticationSession`](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession)、
+[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) 与
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)。
 
 ---
 
@@ -344,18 +384,18 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 依赖方向**单向**：`app → screens → features → models/api → lib`。反过来就是错的。
 
-| 目录 | 放什么 |
-| --- | --- |
-| `src/app/` | 路由（Expo Router）。只导出 `page.Route`，不放逻辑 |
-| `src/screens/` | 只放 `*Screen` 文件 |
-| `src/features/` | 领域逻辑（12 个：activity / auth / bots / chat / errors / files / machine / notifications / onboarding / schedule / session / verify） |
-| `src/models/` | 数据形状 |
-| `src/api/` | REST + 实时协议（client / realtime / protocol / cursor / credentials / types） |
-| `src/ui/` | 共享 UI 组件（29 个） |
-| `src/lib/` | 基础设施（presentation / i18n / theme / accessibility） |
-| `modules/memoh-kit/ios/` | Swift：Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support |
-| `tests/` | node --test 单测（65 个文件、721 例） |
-| `verification/` | 验收脚本（build / simulator / native / clean + fixture） |
+| 目录                     | 放什么                                                                                                                                 |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/`               | 路由（Expo Router）。只导出 `page.Route`，不放逻辑                                                                                     |
+| `src/screens/`           | 只放 `*Screen` 文件                                                                                                                    |
+| `src/features/`          | 领域逻辑（12 个：activity / auth / bots / chat / errors / files / machine / notifications / onboarding / schedule / session / verify） |
+| `src/models/`            | 数据形状                                                                                                                               |
+| `src/api/`               | REST + 实时协议（client / realtime / protocol / cursor / credentials / types）                                                         |
+| `src/ui/`                | 共享 UI 组件（29 个）                                                                                                                  |
+| `src/lib/`               | 基础设施（presentation / i18n / theme / accessibility）                                                                                |
+| `modules/memoh-kit/ios/` | Swift：Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support       |
+| `tests/`                 | node --test 纯逻辑单测（总数随功能增长，不在文档固定易过期数字）                                                                       |
+| `verification/`          | 验收脚本（build / simulator / native / clean + fixture）                                                                               |
 
 规矩：
 
@@ -376,26 +416,30 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 **改上游的现有文件（6 个）：**
 
-| 文件 | 改了什么 | 为什么 |
-| --- | --- | --- |
-| `AGENTS.md`（`CLAUDE.md` 是指向它的软链） | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口 |
-| `pnpm-workspace.yaml` | `packages` 加一行 `apps/mobile/modules/*` | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
-| `package.json` | 加 17 个 `ios:*` 脚本 | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动** |
-| `eslint.config.mjs` | `ignores` 加 `apps/mobile/**` | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题 |
-| `.gitignore` | 追加 iOS 段 + `/.verify/` | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库 |
-| `pnpm-lock.yaml` | 重新解析 | 加入 iOS 依赖后 pnpm 重解了一次依赖图。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）。这是加工作区项目的正常后果，不是我们选的 |
+| 文件                                      | 改了什么                                                        | 为什么                                                                                                                                                                                                                                  |
+| ----------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`（`CLAUDE.md` 是指向它的软链） | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口                                          |
+| `pnpm-workspace.yaml`                     | `packages` 加一行 `apps/mobile/modules/*`                       | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
+| `package.json`                            | 加 17 个 `ios:*` 脚本                                           | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动**                                                                                                                                                          |
+| `eslint.config.mjs`                       | `ignores` 加 `apps/mobile/**`                                   | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题                                                                                                   |
+| `.gitignore`                              | 追加 iOS 段 + `/.verify/`                                       | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库                                                                                                                                              |
+| `pnpm-lock.yaml`                          | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）。这是加工作区项目的正常后果，不是我们选的                                             |
 
 **新增的目录（不改上游任何文件）：**
 
-| 路径 | 是什么 |
-| --- | --- |
+| 路径           | 是什么                                                                             |
+| -------------- | ---------------------------------------------------------------------------------- |
 | `apps/mobile/` | iOS 客户端（372 个文件，含 65 个测试文件、`modules/memoh-kit` 12 个 Swift 源文件） |
-| `tools/` | iOS 侧探针、门禁、发布脚本（46 个） |
-| `infra/` | 联调隧道与 dev 栈脚本（7 个） |
+| `tools/`       | iOS 侧探针、门禁、发布脚本（46 个）                                                |
+| `infra/`       | 联调隧道与 dev 栈脚本（7 个）                                                      |
+
+**新增的上游目录内文件：** `.github/workflows/ios-ci.yml`。它不改上游 workflow，
+只在 iOS 相关路径变更时跑 JS/TS 合同与 bundle、Linux Swift 纯逻辑、macOS 原生构建与
+hosted XCTest。
 
 **没搬的**：memoh-ios 的 `docs/`（见 §8）、`.verify/`（每轮证据，产物）、
-`.github/workflows/`（CI 没搬 —— memoh-ios 那份 `verify.yml` 的 ui job 在 harness 删除后已经
-过期，搬过来就是搬一份跑不了的东西；要 CI 时重写，见 §9）。
+旧 `.github/workflows/verify.yml`（它的 ui job 在 harness 删除后已经过期）。本 fork 改为
+重写一份不依赖已删 harness 的 `ios-ci.yml`。
 
 ---
 
@@ -464,7 +508,9 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ## 9. 还没做 / 没验
 
-- **CI 没搬**。上游自己的 workflows 照常跑；iOS 侧目前只有本地门禁。
+- **iOS CI 已重写，但仍要看当前 PR 的真实结果**：`.github/workflows/ios-ci.yml`
+  不依赖已删的 UI harness，三个 job 分别覆盖 JS/bundle、Swift 纯逻辑、原生构建 +
+  hosted XCTest。它不代替真机、截图或人工 QA。
   ⚠️ 顺带注意上游的 `.github/workflows/agents-md-updater.yml`：它**每两天重新生成
   `AGENTS.md` 并开一个 PR**。它会看不到我们加的「iOS Client」那节，所以**别直接把那个 PR
   合进来**——合之前先看它有没有把 iOS 那段删掉。真要被反复打扰，就在那个 workflow 的

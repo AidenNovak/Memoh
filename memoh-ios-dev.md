@@ -463,6 +463,11 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 ## 9. 还没做 / 没验
 
 - **CI 没搬**。上游自己的 workflows 照常跑；iOS 侧目前只有本地门禁。
+  ⚠️ 顺带注意上游的 `.github/workflows/agents-md-updater.yml`：它**每两天重新生成
+  `AGENTS.md` 并开一个 PR**。它会看不到我们加的「iOS Client」那节，所以**别直接把那个 PR
+  合进来**——合之前先看它有没有把 iOS 那段删掉。真要被反复打扰，就在那个 workflow 的
+  `extra_instructions` 里加一句"保留 iOS 客户端那一节"（那会是第 7 个被改的上游文件，
+  所以先按现状看着）。
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
 - **UI 行为检查是空的**（harness 已删、重写待定）。视觉正确现在只能靠人看。

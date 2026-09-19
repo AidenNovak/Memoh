@@ -47,7 +47,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          # Expo 57 / Worklets 0.10 is validated on Node 22; Node 24 currently
+          # crashes inside the Worklets Babel plugin while bundling.
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
@@ -102,7 +104,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies

@@ -23,7 +23,7 @@
  * bot；订阅只覆盖最近活跃的少数会话；拿不到状态时只是少显示一个提示，不会让首页变空。
  * 复用 `MemohRealtime`（那条连接已被集成测试验证过），不另写探针。
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { MemohClient } from '../../api/client.ts';
 import type { Bot, Session } from '../../api/types.ts';
@@ -69,24 +69,29 @@ interface SessionRef {
 export function useSessionActivity(client: MemohClient | null, bots: Bot[]): ActivityResult {
   const [statuses, setStatuses] = useState<Record<string, RunStatus>>({});
   const [connected, setConnected] = useState(false);
-  /**
-   * sessionId → 归属。放 ref 不放 state：它只在异步流程里被填充，改动它不需要
-   * 触发渲染（statuses 的更新已经会触发），放 state 反而会多一轮渲染。
-   */
-  const refsRef = useRef<Map<string, SessionRef>>(new Map());
+  /** sessionId → 归属。渲染会直接读它，所以它就是 state，不用可变 ref 偷渡。 */
+  const [sessionRefs, setSessionRefs] = useState<Map<string, SessionRef>>(() => new Map());
 
   /** 用 bot 列表的稳定标识做依赖，避免每次渲染都重连。 */
   const botKey = useMemo(() => bots.map((bot) => `${bot.id}:${bot.name}`).join(','), [bots]);
-  const botListRef = useRef(bots);
-  botListRef.current = bots;
+  // botKey 没变就复用上一份快照：同内容的列表换了数组引用不应重连。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const botSnapshot = useMemo(() => bots, [botKey]);
 
   useEffect(() => {
-    const currentBots = botListRef.current;
+    const currentBots = botSnapshot;
     if (client === null || currentBots.length === 0) {
       setStatuses({});
       setConnected(false);
+      setSessionRefs(new Map());
       return;
     }
+
+    // 这是一轮新的订阅集：旧会话的运行态与“曾经连上过”都不能
+    // 在新的 bot/client 上冒充当前事实。新连接会用 snapshot 重建这两份状态。
+    setStatuses({});
+    setConnected(false);
+    setSessionRefs(new Map());
 
     let cancelled = false;
     const realtimes: MemohRealtime[] = [];
@@ -111,6 +116,7 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
         } catch {
           continue; // 单个 bot 拉不到不影响其他 bot。
         }
+        if (cancelled) return;
 
         const recent = sessions.filter((session) => isRecent(session.updated_at));
         if (recent.length === 0) continue;
@@ -125,6 +131,9 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
             title: session.title,
           });
         }
+        // 用新 Map 发布这一批归属；后续 snapshot 到达时，渲染能同时拿到
+        // status 与对应的会话标题，不依赖“碰巧又有一次渲染”。
+        setSessionRefs(new Map(refs));
 
         const realtime = new MemohRealtime({
           baseUrl: client.url,
@@ -163,14 +172,12 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
       }, 5_000);
     })();
 
-    refsRef.current = refs;
-
     return () => {
       cancelled = true;
       for (const realtime of realtimes) realtime.dispose();
       realtimes.length = 0;
     };
-  }, [client, botKey]);
+  }, [botKey, botSnapshot, client]);
 
   // 派生在渲染时做，不额外存一份 state（两份状态一定会不同步）。
   const { active, pending } = useMemo(() => {
@@ -178,7 +185,7 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
     const pendingRows: SessionActivity[] = [];
     for (const [sessionId, status] of Object.entries(statuses)) {
       if (status !== 'running' && status !== 'waiting_decision' && status !== 'admitting') continue;
-      const ref = refsRef.current.get(sessionId);
+      const ref = sessionRefs.get(sessionId);
       if (ref === undefined) continue; // 状态有了但归属表还没填好，下一轮渲染会补上。
       const row: SessionActivity = {
         sessionId,
@@ -195,7 +202,7 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
       (a, b) => Number(b.status === 'waiting_decision') - Number(a.status === 'waiting_decision'),
     );
     return { active: activeRows, pending: pendingRows };
-  }, [statuses]);
+  }, [sessionRefs, statuses]);
 
   return { active, pending, connected };
 }

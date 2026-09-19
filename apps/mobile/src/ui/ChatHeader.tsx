@@ -15,7 +15,7 @@
  *
  * ## 三个入口的位置
  *
- * - 返回：系统蓝（导航是系统控件，品牌色克制使用）；
+ * - 返回：复用 `BackButton`，统一 44pt 命中区、读屏语义与深链栈底兜底；
  * - 机器（显示器图标）："bot 那台机器"，桌面端顶栏 New panel 里的 Desktop 用的是同一个符号；
  * - 会话信息（带轴的柱状图）："这里有这次会话的读数"。
  *
@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useT } from '../lib/i18n/useT.ts';
 import { PRESS_OPACITY } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
+import { BackButton } from './BackButton.tsx';
 
 export function ChatHeader({
   title,
@@ -39,7 +40,6 @@ export function ChatHeader({
   stale,
   showMachine,
   showInfo,
-  onBack,
   onOpenInfo,
   onOpenMachine,
 }: {
@@ -51,7 +51,6 @@ export function ChatHeader({
   stale: boolean;
   showMachine: boolean;
   showInfo: boolean;
-  onBack: () => void;
   onOpenInfo: () => void;
   onOpenMachine: () => void;
 }) {
@@ -74,16 +73,7 @@ export function ChatHeader({
         backgroundColor: palette.card,
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('common.close')}
-        onPress={onBack}
-        hitSlop={12}
-        style={styles.back}
-      >
-        {/* 系统蓝：导航是系统控件，品牌色克制使用。 */}
-        <Text style={[typography.title3, { color: '#007AFF' }]}>‹</Text>
-      </Pressable>
+      <BackButton testID="chat-back" fallback="/" />
       {/* 标题即入口：点它看会话信息（设计基线里"标题可点=会话信息"）。 */}
       <Pressable
         accessibilityRole="button"
@@ -165,12 +155,6 @@ const styles = StyleSheet.create({
   headerAction: {
     width: 44,
     height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  back: {
-    width: 32,
-    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },

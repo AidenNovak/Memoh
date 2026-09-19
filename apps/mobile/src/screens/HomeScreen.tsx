@@ -57,15 +57,8 @@ export function HomeScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const insets = useSafeAreaInsets();
   const t = useT();
   const router = useRouter();
-  const {
-    state,
-    refreshBots,
-    refreshSessions,
-    loadMoreSessions,
-    openSession,
-    selectBot,
-    currentBot,
-  } = useSession();
+  const { state, refreshBots, refreshSessions, loadMoreSessions, openSession, selectBot } =
+    useSession();
   /**
    * agent 7x24 在跑，所以首页要能看到"谁在等我"——这是移动端最该做的事。
    *
@@ -216,6 +209,15 @@ export function HomeScreen({ embedded = false }: { embedded?: boolean } = {}) {
     [forkSession, renameSession, scheme, t],
   );
 
+  /**
+   * 重试必须先重拉 bot：离线时最先失败的是 /bots，没有 botId 时
+   * `refreshSessions` 会直接早退。
+   */
+  const onRetry = useCallback(async () => {
+    await refreshBots();
+    await refreshSessions();
+  }, [refreshBots, refreshSessions]);
+
   const header = useMemo(
     () => (
       <View style={{ paddingTop: spacing.sm }}>
@@ -304,18 +306,23 @@ export function HomeScreen({ embedded = false }: { embedded?: boolean } = {}) {
       embedded,
       onNew,
       onOpenActivity,
+      onRetry,
       palette.accent,
-      refreshSessions,
+      palette.card,
       sessions.length,
       loadError,
       loadErrorReason,
       loadErrorRetry,
       palette.label,
+      palette.secondaryLabel,
+      palette.tertiaryLabel,
       pending,
       spacing.md,
       spacing.lg,
       spacing.sm,
       t,
+      typography.caption,
+      typography.footnote,
       typography.title2,
     ],
   );
@@ -334,18 +341,6 @@ export function HomeScreen({ embedded = false }: { embedded?: boolean } = {}) {
    * 凭据失效在这里**不需要**额外挂一个"重新登录"：那句话本身已经说了（`error.unauthorized`），
    * 而且客户端 401 的统一处理会直接把人送回登录页——再放一个按钮是把同一件事说两遍。
    */
-
-  /**
-   * 重试。
-   *
-   * **必须先重拉 bot 列表**：离线时最先失败的是 /bots，而 `refreshSessions` 在拿不到
-   * botId 时直接早退（`currentBotId === null`）——只重试会话列表的话，点一百次也不会好
-   * （2026-09-15 实测就是这样：隧道恢复了、点 Retry 屏幕没变）。
-   */
-  const onRetry = useCallback(async () => {
-    await refreshBots();
-    await refreshSessions();
-  }, [refreshBots, refreshSessions]);
 
   const empty = (
     <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xxl, alignItems: 'center' }}>
@@ -516,7 +511,7 @@ function ActiveRuns({ entries }: { entries: SessionActivity[] }) {
             style={[typography.footnote, { color: palette.secondaryLabel, flex: 1 }]}
             numberOfLines={1}
           >
-            {entry.sessionTitle} · {t('chat.thinking')}
+            {sessionDisplayTitle({ title: entry.sessionTitle }, t)} · {t('chat.thinking')}
           </Text>
         </View>
       ))}

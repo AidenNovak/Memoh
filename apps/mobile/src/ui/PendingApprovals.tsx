@@ -10,6 +10,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { SessionActivity } from '../features/activity/useSessionActivity.ts';
+import { sessionDisplayTitle } from '../features/session/displayTitle.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 
@@ -37,38 +38,41 @@ export function PendingApprovals({
         {t('home.approvals.title')}
       </Text>
       <View style={{ backgroundColor: palette.card, borderRadius: radius.md, overflow: 'hidden' }}>
-        {entries.map((entry, index) => (
-          <Pressable
-            key={entry.sessionId}
-            accessibilityRole="button"
-            accessibilityLabel={`${entry.botName} · ${entry.sessionTitle} · ${t('approval.title')}`}
-            onPress={() => onOpen(entry)}
-            style={({ pressed }) => [
-              styles.row,
-              {
-                backgroundColor: pressed ? palette.field : palette.card,
-                borderBottomColor: palette.separator,
-                borderBottomWidth: index === entries.length - 1 ? 0 : StyleSheet.hairlineWidth,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.md,
-              },
-            ]}
-          >
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[typography.callout, { color: palette.label }]} numberOfLines={1}>
-                {entry.sessionTitle}
-              </Text>
-              <Text
-                style={[typography.footnote, { color: palette.secondaryLabel }]}
-                numberOfLines={1}
-              >
-                {entry.botName}
-              </Text>
-            </View>
-            {/* 右侧的箭头说明"点进去有事要做"，而不是一个装饰。 */}
-            <Text style={[typography.body, { color: palette.tertiaryLabel }]}>›</Text>
-          </Pressable>
-        ))}
+        {entries.map((entry, index) => {
+          const title = sessionDisplayTitle({ title: entry.sessionTitle }, t);
+          return (
+            <Pressable
+              key={entry.sessionId}
+              accessibilityRole="button"
+              accessibilityLabel={`${entry.botName} · ${title} · ${t('approval.title')}`}
+              onPress={() => onOpen(entry)}
+              style={({ pressed }) => [
+                styles.row,
+                {
+                  backgroundColor: pressed ? palette.field : palette.card,
+                  borderBottomColor: palette.separator,
+                  borderBottomWidth: index === entries.length - 1 ? 0 : StyleSheet.hairlineWidth,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.md,
+                },
+              ]}
+            >
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[typography.callout, { color: palette.label }]} numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text
+                  style={[typography.footnote, { color: palette.secondaryLabel }]}
+                  numberOfLines={1}
+                >
+                  {entry.botName}
+                </Text>
+              </View>
+              {/* 右侧的箭头说明"点进去有事要做"，而不是一个装饰。 */}
+              <Text style={[typography.body, { color: palette.tertiaryLabel }]}>›</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

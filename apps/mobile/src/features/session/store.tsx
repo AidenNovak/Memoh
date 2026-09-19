@@ -33,13 +33,9 @@ import { uuid } from '../../lib/uuid.ts';
 import { sessionSourceFromApi } from './sourceLabel.ts';
 import { prependSession, uniqueSessions } from './sessionList.ts';
 import { SESSION_PAGE_LIMIT, appendSessionPage, cursorFromResponse } from './paging.ts';
-import {
-  composerActionWithSupport,
-  QueueSubmissionGate,
-  visibleQueueItems,
-  type QueueSupport,
-} from '../chat/queue.ts';
+import { QueueSubmissionGate, visibleQueueItems, type QueueSupport } from '../chat/queue.ts';
 import { approvalResponseFor } from '../chat/approval.ts';
+import { closeSessionCache, clearedSessionMaps } from '../chat/streamScheduler.ts';
 import {
   isRunActive,
   settleAbandonedRun,
@@ -209,7 +205,11 @@ type Action =
   | { type: 'sessionsError'; error: ErrorPresentation }
   | { type: 'botsError'; error: ErrorPresentation }
   | { type: 'openSession'; sessionId: string }
-  | { type: 'closeSession' }
+  /**
+   * 关会话**必须带预期 id**：reducer 只在它仍是当前会话时才清理——旧屏幕迟到的
+   * unmount 不能把用户新打开的会话清掉。
+   */
+  | { type: 'closeSession'; sessionId: string }
   | { type: 'chat'; sessionId: string; update: (chat: ChatState) => ChatState }
   | { type: 'queue'; sessionId: string; view: QueueView }
   | { type: 'sessionStatus'; sessionId: string; status: SessionStatus }
@@ -272,6 +272,8 @@ function reducer(state: UiState, action: Action): UiState {
         sessionsMoreLoading: false,
         sessionsMoreError: null,
         currentSessionId: null,
+        // 三份按会话索引的缓存整个属于旧 bot：留着只会越攒越多（判据是纯逻辑，有单测）。
+        ...clearedSessionMaps<ChatState, QueueView, SessionStatus>(),
       };
     case 'sessionsLoading':
       // 重试时不清错误：错误行要一直在，直到真的成功——否则点重试的那一瞬间
@@ -317,8 +319,13 @@ function reducer(state: UiState, action: Action): UiState {
         currentSessionId: action.sessionId,
         chats: { ...state.chats, [action.sessionId]: initialChatState },
       };
-    case 'closeSession':
-      return { ...state, currentSessionId: null };
+    case 'closeSession': {
+      // 只在"要关的还是当前会话"时清，并把该 id 在三份缓存里的条目一起删掉
+      // （只增不清会让长会话的整份转录永远留在内存里）。判据是纯逻辑，有单测。
+      const released = closeSessionCache(state.currentSessionId, action.sessionId, state);
+      if (released === null) return state;
+      return { ...state, ...released };
+    }
     case 'chat': {
       const current = state.chats[action.sessionId] ?? initialChatState;
       return { ...state, chats: { ...state.chats, [action.sessionId]: action.update(current) } };
@@ -383,7 +390,12 @@ interface SessionContextValue {
    */
   loadMoreSessions: () => Promise<void>;
   openSession: (sessionId: string) => void;
-  closeSession: () => void;
+  /**
+   * 关会话并释放它的缓存条目。**必须带预期 id**（路由实际指向的那个稳定 id）：
+   * 只有它仍是当前会话时才真的清理，防止旧屏幕延迟 unmount 把新打开的会话清掉。
+   * `/chat/new` 的空/合成 id 不会匹配任何真实会话（调用方应直接跳过）。
+   */
+  closeSession: (expectedSessionId: string) => void;
   chatFor: (sessionId: string) => ChatState;
   /**
    * 提交一句话。**运行中会入队**（follow-up），空闲时才真的开一轮——这是
@@ -986,10 +998,11 @@ export function SessionProvider({
     (sessionId: string) => dispatch({ type: 'openSession', sessionId }),
     [],
   );
-  const closeSession = useCallback(() => {
-    const sessionId = stateRef.current.currentSessionId;
-    if (sessionId !== null) realtimeRef.current?.unsubscribe(sessionId);
-    dispatch({ type: 'closeSession' });
+  const closeSession = useCallback((expectedSessionId: string) => {
+    // 迟到 unmount 护栏：要关的已经不是当前会话，就什么都不做（连退订都不做）。
+    if (stateRef.current.currentSessionId !== expectedSessionId) return;
+    realtimeRef.current?.unsubscribe(expectedSessionId);
+    dispatch({ type: 'closeSession', sessionId: expectedSessionId });
   }, []);
 
   const chatFor = useCallback(

@@ -27,6 +27,11 @@ import {
 import { useSession } from '../features/session/store.tsx';
 import { sessionDisplayTitle } from '../features/session/displayTitle.ts';
 import { hasContent, turnsForDisplay, type ChatState } from '../features/chat/reducer.ts';
+import type { RenderTurn } from '../models/chat.ts';
+import {
+  createSnapshotScheduler,
+  TRANSCRIPT_SNAPSHOT_INTERVAL_MS,
+} from '../features/chat/streamScheduler.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { hasTranslation } from '../lib/i18n/index.ts';
 import { announceForAccessibility, useAnnounceOnAppear } from '../lib/accessibility.ts';
@@ -97,7 +102,6 @@ export function ChatScreen() {
     promoteQueueItem,
     abort,
     chatFor,
-    respondApproval,
     retryConnection,
     discardFailedSend,
     realtimeEnabled,
@@ -137,17 +141,42 @@ export function ChatScreen() {
     router.replace(target);
   }, [isNew, router, state.currentSessionId]);
 
-  useEffect(() => () => closeSession(), [closeSession]);
+  useEffect(
+    () => () => {
+      // 带**路由实际指向的稳定 id** 去关：只有它仍是当前会话时 store 才会清。
+      // `/chat/new` 的空/合成 id 不得误删刚建好的真会话——直接跳过。
+      if (isNew) return;
+      closeSession(sessionId);
+    },
+    [closeSession, isNew, sessionId],
+  );
 
   /**
    这一屏读哪个会话的数据：`new` 时是空串（服务端在第一次发送时建会话）。
 
-   ⚠️ 这两处**故意各写一次** `chatSessionId(...)`，不提取成中间变量：React Compiler
+   ⚠️ 这几处**故意各写一次** `chatSessionId(...)`，不提取成中间变量：React Compiler
    会把"来自函数调用的中间变量、又用在两处"判成"这个依赖之后可能被改"，于是整屏的
    自动记忆化被跳过（`react-hooks/preserve-manual-memoization`，实测 7 条警告）。
    判据本身仍然是纯函数、有单测（`features/chat/route.ts`）。
   */
   const chat: ChatState = chatFor(chatSessionId({ isNew, routeSessionId: sessionId }));
+
+  /**
+   原生列表的转录投影：**节流的**（最多每 33ms 一份快照，leading + trailing）。
+
+   高频 delta 期间 `turnsForDisplay(chat)` + `JSON.stringify` 对长转录是 O(整份转录)，
+   每个 delta 做一次会把桥前的 JS 线程占满——原生 `NativeMessageList` 已经在 30fps
+   合并 prop，JS 侧不跟上同样的节奏，桥前的开销就没有被抑制。
+
+   节流的只有"原生列表用的转录投影 + 序列化"（含 `pendingText` / `onErrorAction`
+   对同一份投影的查找）：审批、错误、pending、按钮语义、连接态仍直读 `chat`。
+   发布节奏是纯逻辑（`features/chat/streamScheduler.ts`，有单测），hook 只接线。
+   */
+  const { turns, turnsJson } = useThrottledTranscript(
+    chat,
+    chat.running,
+    chatSessionId({ isNew, routeSessionId: sessionId }),
+  );
 
   /**
    run 失败那一块的文案（视觉两行 + 读屏一句，同一个来源）。
@@ -163,7 +192,6 @@ export function ChatScreen() {
   );
   // run 失败是**自己出现的**（用户没按任何东西），所以读屏要念一次（规则 R28）。
   useAnnounceOnAppear(runFailure === null ? null : runFailure.label);
-  const turns = useMemo(() => turnsForDisplay(chat).filter(hasContent), [chat]);
 
   /**
    刚发出去的那一句现在在哪儿（`null` = 没有待发的东西，界面不该出现这一块）。
@@ -263,7 +291,6 @@ export function ChatScreen() {
    ——分四处算就会出现"字形是停止、标签是发送"这种错位。
    */
   const composer = composerView({ draft, running: chat.running, support: queue.support });
-  const turnsJson = useMemo(() => JSON.stringify(turns), [turns]);
 
   /**
    * 副标题：谁在说话 · 现在在干什么。
@@ -414,10 +441,12 @@ export function ChatScreen() {
          */
         // 存 **key** 而不是译文：`sendError` 是状态，不是一句话。存译文的话下面渲染时
         // 还会再 `t()` 一次（`t(t(...))` 只是碰巧因为"查不到就原样返回"才没露馅）。
-        setSendError(result === 'busy' ? 'chat.send.busy' : 'chat.send.failed');
+        const key = result === 'busy' ? 'chat.send.busy' : 'chat.send.failed';
+        setSendError(key);
+        announceForAccessibility(t(key));
       });
     },
-    [choice.modelId, choice.reasoningEffort, skills, submit],
+    [choice.modelId, choice.reasoningEffort, skills, submit, t],
   );
 
   const onSend = useCallback(() => {
@@ -463,7 +492,6 @@ export function ChatScreen() {
         stale={chat.stale}
         showMachine={currentBot !== null}
         showInfo={!isNew}
-        onBack={() => router.back()}
         onOpenInfo={openInfo}
         onOpenMachine={openMachine}
       />
@@ -597,3 +625,61 @@ export function ChatScreen() {
 `copiedBadgeHide`）——两处确认同时出现、同时消失，才不会一个还在、另一个已经没了。
  */
 const COPY_NOTICE_MS = 1600;
+
+/** 原生列表那一帧要的东西：投影出来的轮次 + 它的 JSON（两者必须出自同一次计算）。 */
+interface TranscriptSnapshot {
+  turns: RenderTurn[];
+  turnsJson: string;
+}
+
+function transcriptSnapshotOf(chat: ChatState): TranscriptSnapshot {
+  const turns = turnsForDisplay(chat).filter(hasContent);
+  return { turns, turnsJson: JSON.stringify(turns) };
+}
+
+/**
+ * 原生列表转录的**节流投影**。
+ *
+ * 发布节奏（leading/trailing、33ms 上限、flush/reset 语义）在
+ * `features/chat/streamScheduler.ts`（纯逻辑、有单测），这里只做三件接线：
+ *
+ *   1. 每次 `chat` 变化把最新值喂给调度器——运行中走 33ms 窗口，run 一停立即
+ *      `flush()` 出最终值；
+ *   2. 换会话先 `reset()`——旧会话没发出去的 trailing 值不许泄漏进新会话，
+ *      新会话的当前整份立即发布（leading）；
+ *   3. 卸载 `reset()`——定时器必须清掉，组件没了之后不再发布。
+ *
+ * 投影与序列化只在**发布时**做一次（`transcriptSnapshotOf`），不为每个 delta 都做。
+ */
+function useThrottledTranscript(
+  chat: ChatState,
+  running: boolean,
+  sessionKey: string,
+): TranscriptSnapshot {
+  const [snapshot, setSnapshot] = useState<TranscriptSnapshot>(() => transcriptSnapshotOf(chat));
+  const [scheduler] = useState(() =>
+    createSnapshotScheduler<ChatState>({
+      intervalMs: TRANSCRIPT_SNAPSHOT_INTERVAL_MS,
+      publish: (latest) => setSnapshot(transcriptSnapshotOf(latest)),
+    }),
+  );
+
+  // 换会话：丢掉旧会话没发出去的 trailing，新会话的当前整份立即发布。
+  useEffect(() => {
+    scheduler.reset();
+    scheduler.push(chat);
+    // 只认"换了会话"这条边沿；`chat` 的持续前馈在下面那条 effect。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduler, sessionKey]);
+
+  // 持续前馈：运行中走节流窗口；run 一停立即把最终值发出去。
+  useEffect(() => {
+    scheduler.push(chat);
+    if (!running) scheduler.flush();
+  }, [scheduler, chat, running]);
+
+  // 卸载：定时器清掉（不发布——组件已经没了）。
+  useEffect(() => () => scheduler.reset(), [scheduler]);
+
+  return snapshot;
+}

@@ -1,0 +1,31 @@
+# 场景③：sheet 转场（打开 + 系统交互式下拉关掉）。
+#
+# ## 这一条能证明什么、不能证明什么
+#
+# 能证明：这段窗口里**主线程有没有被卡住**（探针量的是帧投递节奏）。
+# 不能证明：sheet 自己的升起曲线与 detent 行为——那是系统 `formSheet`，不是我们的代码，
+# 而探针住在消息列表里，看不见上面那层 sheet 的几何。
+#
+# 所以结论只写"转场窗口的掉帧分布"，并与**同一负载窗口内的对照**比（compare.py）。
+#
+# 前提：由 `tools/frame-probe/measure.py --route '/chat/fixture-session-stream'` 准备。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible: 'Message'
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ① 打开会话信息（原生 formSheet：升起、抓手、detent 都是系统的）
+- tapOn:
+    id: 'session-info-button'
+- waitForAnimationToEnd:
+    timeout: 6000
+
+# ② 交互式下拉关掉它
+- swipe:
+    start: 50%, 40%
+    end: 50%, 96%
+- waitForAnimationToEnd:
+    timeout: 6000

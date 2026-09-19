@@ -399,7 +399,9 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ---
 
-## 7. 相对 memoh-ios，客户端自己改了 6 处
+## 7. 相对 memoh-ios，我们改了什么（6 类）
+
+（口径：`apps/mobile` 除下面这些外**逐字节相同**；`infra/` 逐字节相同。）
 
 1. **Prettier 配置搬进 `apps/mobile/`**（原来是仓库根），并在 `apps/mobile/package.json` 里补了
    `format` / `format:check` / `check` 三个脚本。理由：这份配置只属于 iOS 客户端，

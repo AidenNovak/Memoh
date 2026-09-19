@@ -6,22 +6,19 @@
  * 规则集用 Expo 官方的 `eslint-config-expo/flat`（`expo lint` 默认那一套）：
  * react / react-hooks / import / @typescript-eslint 都覆盖到了。
  *
- * ## 为什么有 6 条规则是 warn 而不是 error
+ * ## 为什么 `set-state-in-effect` 暂时是 warn
  *
- * `react-hooks/refs`、`set-state-in-effect`、`purity`、`immutability`、
- * `preserve-manual-memoization`、`static-components` 是 React Compiler 语义的检查，
- * 而这个 App `reactCompiler: true`（见 `app.config.ts`），所以它们报的是**真问题**。
+ * React Compiler 语义规则报的是**真问题**，而这个 App `reactCompiler: true`
+ *（见 `app.config.ts`）。`refs` / `purity` / `immutability` /
+ * `preserve-manual-memoization` / `static-components` 已完成重构，继续按 error 卡门禁。
  *
- * 现状是首轮 `eslint .` 报 47 个 error：25 个在 `OnboardingScreen.tsx`（reanimated
- * 的 shared value 在 render 里读），其余 22 个散在 17 个文件里（`stateRef.current`
- * 在 render 里读、effect 里同步 setState）。修它们是一次**重构**（照
- * `docs/research/code-quality-lody-vs-memoh.md` §4.B 的说法是"专门开一轮"），
- * 不是顺手改。
+ * 还剩 12 个 `set-state-in-effect`：都是“外部输入/路由/异步结果变化后重置本地状态”的
+ * 生命周期边界。它们不能机械挪到 render；正确修法分别是 keyed state、派生视图或把事件
+ * 收进 reducer，并且要带对应交互证据。当前先保持 warning，让债可见且不诱导一次危险的
+ * 批量改写。
  *
- * 降成 warn 的理由：如果现在就按 error 卡住，门禁从第一天起就是红的，红着红着就没人看了
- * ——那比没有门禁更糟。降级后 error 为 0，`pnpm lint` 立刻能挡住**新增**的错
- * （未使用的符号、重复 import、解析不到的模块……），同时这 47 条债一直可见。
- * **那一轮重构做完后，把这几条改回 error。**
+ * 新增的其它 Compiler 语义问题会直接失败；12 条存量重置点仍逐条显示具体文件与行号。
+ * 等它们各自有行为测试后，再把最后这一条升回 error。
  */
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
@@ -57,12 +54,12 @@ module.exports = defineConfig([
   },
   {
     rules: {
-      'react-hooks/refs': 'warn',
+      'react-hooks/refs': 'error',
       'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
-      'react-hooks/static-components': 'warn',
+      'react-hooks/purity': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
+      'react-hooks/static-components': 'error',
     },
   },
 ]);

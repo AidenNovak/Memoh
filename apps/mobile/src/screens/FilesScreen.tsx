@@ -295,6 +295,7 @@ export function FilesScreen({ path }: { path: string }) {
           first={index === 0}
           last={index === entries.length - 1}
           parent={normalized ?? ''}
+          now={directory.loadedAt}
           onPress={openEntry}
           onLongPress={showActions}
         />
@@ -315,6 +316,7 @@ function FileRow({
   first,
   last,
   parent,
+  now,
   onPress,
   onLongPress,
 }: {
@@ -322,6 +324,8 @@ function FileRow({
   first: boolean;
   last: boolean;
   parent: string;
+  /** 相对时间（"3 分钟前"）的基准：目录成功加载的那一刻，不是这一行 render 的那一刻。 */
+  now: number;
   onPress: (entry: WorkspaceEntry, path: string) => void;
   onLongPress: (entry: WorkspaceEntry, path: string) => void;
 }) {
@@ -334,7 +338,7 @@ function FileRow({
   const kind = fileKind(entry.name, entry.isDir);
   const subtitle = entry.isDir
     ? directorySubtitle(entryPath === null ? null : directoryCount(entryPath), t)
-    : fileSubtitle(entry, t, Date.now());
+    : fileSubtitle(entry, t, now);
 
   const corners = {
     borderTopLeftRadius: first ? radius.md : 0,

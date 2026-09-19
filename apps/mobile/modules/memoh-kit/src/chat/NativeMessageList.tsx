@@ -1,5 +1,5 @@
 import { requireNativeView, requireOptionalNativeModule } from 'expo';
-import React, { type ComponentType } from 'react';
+import React, { useState, type ComponentType } from 'react';
 import { Platform, Text, View, type ViewProps } from 'react-native';
 
 export interface NativeMessageListProps extends ViewProps {
@@ -63,7 +63,8 @@ export function NativeMessageList({
   unavailableLabel = 'Native messages unavailable. Rebuild the iOS app.',
   ...props
 }: NativeMessageListProps) {
-  const Component = resolveView();
+  // 首次 render 时 resolve 一次并固定下来：在 render 期现算会被当成"每次渲染新建组件"。
+  const [Component] = useState(() => resolveView());
   if (Component) {
     return (
       <Component

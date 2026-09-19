@@ -103,16 +103,16 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
   const lastPage = ONBOARDING_PAGES.length - 1;
 
   /** 入场进度 0 → 1；标记的缩放与透明度都由它插值。 */
-  const entrance = useRef(new Animated.Value(0)).current;
+  const [entrance] = useState(() => new Animated.Value(0));
   /** 待机呼吸 0 ↔ 1；只驱动一个很小的缩放。 */
-  const breath = useRef(new Animated.Value(0)).current;
+  const [breath] = useState(() => new Animated.Value(0));
   /**
    * 分页器当前的水平偏移（pt）。
    *
    * 它不是"第几页"，而是**手指现在到哪儿了**——页码点靠它连续变化。见文件头
    * "页码点跟着手指"。
    */
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const [scrollX] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (!shouldPlayEntrance(reduceMotion)) {
@@ -196,24 +196,24 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
           「跳过」在右上角：内容讲得再好也有人急着登录，不给出口只会逼人乱点。
           最后一页不显示——那时主按钮就是"开始使用"，再放一个跳过是自相矛盾。
         */}
-        <Pressable
-          testID="onboarding-skip"
-          accessibilityRole="button"
-          accessibilityLabel={t('onboarding.skip')}
-          accessibilityElementsHidden={last}
-          importantForAccessibility={last ? 'no-hide-descendants' : 'auto'}
-          onPress={onDone}
-          hitSlop={12}
-          style={({ pressed }) => ({
-            opacity: pressed ? PRESS_OPACITY.control : 1,
-            minHeight: 44,
-            justifyContent: 'center',
-          })}
-        >
-          <Text style={[typography.subhead, { color: palette.accent }]}>
-            {t('onboarding.skip')}
-          </Text>
-        </Pressable>
+        {last ? null : (
+          <Pressable
+            testID="onboarding-skip"
+            accessibilityRole="button"
+            accessibilityLabel={t('onboarding.skip')}
+            onPress={onDone}
+            hitSlop={12}
+            style={({ pressed }) => ({
+              opacity: pressed ? PRESS_OPACITY.control : 1,
+              minHeight: 44,
+              justifyContent: 'center',
+            })}
+          >
+            <Text style={[typography.subhead, { color: palette.accent }]}>
+              {t('onboarding.skip')}
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/*
@@ -363,9 +363,9 @@ function OnboardingPage({
 }) {
   const palette = usePalette();
   const { spacing, typography } = useTheme();
-  const reveal = useRef(new Animated.Value(0)).current;
+  const [reveal] = useState(() => new Animated.Value(0));
   /** 符号的一次"弹"（只有 EMPHASIS_PAGE 会用到）。 */
-  const emphasis = useRef(new Animated.Value(1)).current;
+  const [emphasis] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     if (!shouldPlayEntrance(motion)) {

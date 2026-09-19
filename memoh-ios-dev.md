@@ -27,7 +27,7 @@
   加一行之前先想想能不能不加。
 - **怎么跟上游**：`git fetch upstream && git merge upstream/main`（或 rebase）。
   远程约定：`upstream` = `felinics/Memoh`，`origin` = 我们在 GitHub 上的这个 fork。
-  冲突只会落在 §6 那 6 个文件上，其余是纯新增。
+  冲突只会落在 §6 那 7 个文件上，其余是纯新增。
 
 ---
 
@@ -71,11 +71,18 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 | `ios:verify:build`         | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
 | `ios:test:hosted`          | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
 | `ios:verify:native`        | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
+| onboarding/files Maestro  | 首启翻页与只出现一次、登录落点、文件三态预览与长按动作                                                         | ✅（要 Xcode + Maestro）                  |
+| `tools/frame-probe/`       | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                             | ✅（要 Xcode + Maestro）                  |
 
-**没有自动化 UI 行为检查**：UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）
-已于 2026-09-19 从 memoh-ios 整体删除，**重写形态待定**——旧文档里提这些脚本的段落都是删除前的
-历史记录，别照着去跑。§9 记了这次删除留下的断口。
-视觉正确目前只能靠人看截图 —— **截图证视觉状态，录屏证时序行为**，只有截图不算证据。
+旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
+2026-09-19 删除，但两条有明确行为判据的 Maestro 旅程仍保留：
+`verification/onboarding/run.sh` 与 `verification/files/run.sh`。它们必须通过 simulator lease
+运行，并把截图落进各自的 `out/`；截图仍要由人看，脚本成功不能替代视觉检查。
+
+2026-09-19 在 iPhone 17 Pro / iOS 26.5 上实跑并逐张看图（不等于 Human QA）：首启三页、第二次启动、登录页、
+文件列表/三态预览/长按动作，以及 light/dark、`accessibility-extra-large`。这轮由截图发现并修了
+“末页 Skip 只从无障碍树隐藏、视觉仍残留”与“notes.txt 被浮动 tab bar 挡住，flow 没真进预览”
+两处假通过。**截图证视觉状态，逐帧探针/交互旅程证时序行为；只有其中一边不算完整证据。**
 
 ---
 
@@ -511,11 +518,11 @@ hosted XCTest。
 
 ---
 
-## 9. 还没做 / 没验
+## 9. 当前验收与还没做的事
 
-- **iOS CI 已重写，但仍要看当前 PR 的真实结果**：`.github/workflows/ios-ci.yml`
-  不依赖已删的 UI harness，三个 job 分别覆盖 JS/bundle、Swift 纯逻辑、原生构建 +
-  hosted XCTest。它不代替真机、截图或人工 QA。
+- **PR #165 当前 head 的全套 CI 已通过**：`.github/workflows/ios-ci.yml` 三个 job 覆盖
+  JS/TS + Hermes bundle、Swift 纯逻辑、原生 Simulator build + hosted XCTest；上游的
+  Lint/Test、三平台 desktop/runtime 与 Docker 也全绿。它仍不代替真机和 Human QA。
   ⚠️ 顺带注意上游的 `.github/workflows/agents-md-updater.yml`：它**每两天重新生成
   `AGENTS.md` 并开一个 PR**。它会看不到我们加的「iOS Client」那节，所以**别直接把那个 PR
   合进来**——合之前先看它有没有把 iOS 那段删掉。真要被反复打扰，就在那个 workflow 的
@@ -523,7 +530,13 @@ hosted XCTest。
   所以先按现状看着）。
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
-- **UI 行为检查是空的**（harness 已删、重写待定）。视觉正确现在只能靠人看。
+- **UI 自动化是定向覆盖，不是全导航录制**：onboarding 与 files 两条旅程已实跑；聊天工具、
+  审批、错误态用场景台人工看图。设置、bot 新建/编辑、schedule 与完整跨页返回仍缺一条统一旅程。
+- **逐帧性能已实测**（iPhone 17 Pro Simulator / 60Hz）：17 / 101 / 601 行转录的追加主线程中位
+  约 `0.15–0.20 / 0.49 / 2.38 ms`，p95 最高约 `0.54 / 1.35 / 2.66 ms`；三档在阅读模式下
+  首行位移、距底收缩、停止增长后距底均为 `0pt`。25ms 人为 stall 的 hitch rate 为 `1.0`，
+  证明探针确实能抓到卡顿。不同长度档的宿主 load 不全可比，因此这些数是各档上界证据，
+  不拿来声称跨档线性加速。
 - **harness 删除留下的三个断口**（都做成了"明确失败 + 说清怎么取回"，不是静默降级；
   重写 harness 时要一起收）：
   - `verification/push/assert-text.py` 与 `verification/system-alerts.sh` 都依赖

@@ -138,8 +138,12 @@ export function useFilePreview(path: string | null, enabled = true): FilePreview
     }
   }, [botId, client, path]);
 
+  // 赋值在 effect 里做而不是 render 期：它声明在前，下面的 effect 取到的
+  // 永远是最新的 load，语义不变。
   const loadRef = useRef(load);
-  loadRef.current = load;
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     if (!enabled) {

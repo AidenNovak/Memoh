@@ -7,6 +7,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 MOBILE=$(cd "$HERE/../../apps/mobile" && pwd)
 # App 路径默认取本仓库的构建产物（不再写死某台机器上的绝对路径）。
 APP="${3:-$MOBILE/verification/.artifacts/derived-data/Build/Products/Debug-iphonesimulator/Memoh.app}"
+mkdir -p "$OUT"
 
 cd "$MOBILE"
 exec pnpm verify:simulator --name 'frame-probe' -- zsh -euc "

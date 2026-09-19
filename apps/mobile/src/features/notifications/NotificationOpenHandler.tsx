@@ -19,7 +19,7 @@
  * 这里只负责"什么时候问它"和"把它说的动作做掉"。
  */
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getSession } from '../../api/credentials.ts';
 import { useSession } from '../session/store.tsx';
@@ -57,11 +57,17 @@ export function NotificationOpenHandler() {
     userId: getSession()?.userId ?? null,
     approval: state.chats[state.currentSessionId ?? '']?.approval ?? null,
   });
-  liveRef.current = {
-    currentSessionId: state.currentSessionId,
-    userId: getSession()?.userId ?? null,
-    approval: state.chats[state.currentSessionId ?? '']?.approval ?? null,
-  };
+  const liveUserId = getSession()?.userId ?? null;
+  const liveApproval = state.chats[state.currentSessionId ?? '']?.approval ?? null;
+  // 通知回调可能在任意页面到达。commit 时先同步 latest-ref，再让系统有机会投递事件，
+  // 避免 render 期写 ref 暴露尚未提交的会话/账号状态。
+  useLayoutEffect(() => {
+    liveRef.current = {
+      currentSessionId: state.currentSessionId,
+      userId: liveUserId,
+      approval: liveApproval,
+    };
+  }, [liveApproval, liveUserId, state.currentSessionId]);
 
   useEffect(() => {
     const stop = startNotificationBridge(

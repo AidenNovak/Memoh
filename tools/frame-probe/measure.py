@@ -538,6 +538,17 @@ def geometry_stats(frames: list[dict], events: list[dict]) -> dict:
     }
 
 
+def reading_invalid_reason(geometry: dict, expected: bool) -> str | None:
+    """阅读模式没真正被行使时，给 runner 与报告共用的结构化无效原因。"""
+    if not expected or geometry['pairs_examined'] >= 20:
+        return None
+    return (
+        f'阅读模式里只有 {geometry["pairs_examined"]} 个带追加的帧对'
+        f'（阅读帧 {geometry["reading_frames"]} 个）——手势没落在流式进行中，'
+        'A/C 两条判据没被行使'
+    )
+
+
 def stream_window(events: list[dict]) -> tuple[float, float] | None:
     applies = [e for e in events if e.get('ev') == 'apply']
     if not applies:
@@ -703,9 +714,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if arguments.swipe_up and ready:
         flow = build_flow(arguments.out, [
-            '- swipe:\n    start: 50%, 20%\n    end: 50%, 80%\n',
-            '- swipe:\n    start: 50%, 20%\n    end: 50%, 80%\n',
-            '- swipe:\n    start: 50%, 20%\n    end: 50%, 80%\n',
+            '- swipe:\n    start: 50%, 45%\n    end: 50%, 80%\n',
+            '- swipe:\n    start: 50%, 45%\n    end: 50%, 80%\n',
+            '- swipe:\n    start: 50%, 45%\n    end: 50%, 80%\n',
         ])
         began, ended, code = run_maestro(arguments.udid, flow, arguments.out / 'gesture')
         marks.append({'step': 'swipe_up', 'wall': began, 'wall_end': ended, 'exit': code})
@@ -766,6 +777,12 @@ def main(argv: list[str] | None = None) -> int:
         invalid_reasons.append('没有任何 apply 事件，这一轮没进到场景里')
     if broken:
         invalid_reasons.append(f'探针文件有 {len(broken)} 行读不出来')
+    geometry = geometry_stats(frames, events)
+    reading_problem = reading_invalid_reason(
+        geometry, arguments.swipe_up or arguments.expect_reading
+    )
+    if reading_problem is not None:
+        invalid_reasons.append(reading_problem)
 
     result = {
         'label': arguments.label,
@@ -800,7 +817,7 @@ def main(argv: list[str] | None = None) -> int:
         # 判据用的是这个窗口：同长度、从场景起来算起，噪声地板与流式场景才可比。
         'during_stream': hitch_stats(frames, observe),
         'during_apply_window': hitch_stats(frames, window),
-        'geometry': geometry_stats(frames, events),
+        'geometry': geometry,
         # 每次追加的单价（按转录长度分档）：这是"每个 token 要重算整份转录"的直接读数。
         'append_cost': append_cost_stats(events),
     }
@@ -942,13 +959,11 @@ def report(result: dict, swiped: bool) -> list[str]:
             print(f"  ⚠️ 这一轮不作数：{reason}")
         violations.append('invalid: ' + '；'.join(result['invalid_reasons']))
         return violations
-    if swiped and geometry['pairs_examined'] < 20:
+    reading_problem = reading_invalid_reason(geometry, swiped)
+    if reading_problem is not None:
         # 这一轮**没在流式期间造出阅读模式**（方向翻错、手势落在流式之后）：不是通过，是没测到。
         # A/C 要求的是"读者在别处时来了追加"，一个样本都没有就无从谈起。
-        violations.append(
-            f"invalid: 阅读模式里只有 {geometry['pairs_examined']} 个带追加的帧对"
-            f"（阅读帧 {geometry['reading_frames']} 个）——手势没落在流式进行中，"
-            'A/C 两条判据没被行使')
+        violations.append(f'invalid: {reading_problem}')
         print(f"  ⚠️ {violations[-1]}")
         return violations
 

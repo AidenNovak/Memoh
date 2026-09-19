@@ -52,6 +52,8 @@ export interface DirectoryView {
   hidden: number;
   error: DirectoryError | null;
   refreshing: boolean;
+  /** 当前这份列表成功解析的时间戳（毫秒）；给"几分钟前"这类相对时间一个固定的基准。 */
+  loadedAt: number;
   reload: () => void;
   loadMore: () => void;
 }
@@ -68,6 +70,7 @@ export function useDirectory(path: string | null, enabled = true): DirectoryView
   const [error, setError] = useState<DirectoryError | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [limit, setLimit] = useState(MAX_VISIBLE_ENTRIES);
+  const [loadedAt, setLoadedAt] = useState(Date.now);
 
   /** 只认最后一次请求的结果：快速在两级目录间来回时，先发的响应可能后到。 */
   const requestId = useRef(0);
@@ -103,6 +106,7 @@ export function useDirectory(path: string | null, enabled = true): DirectoryView
         setEntries(sorted);
         setError(null);
         setStatus('ready');
+        setLoadedAt(Date.now());
         // 记下来给父级用：项数只有进过这个目录才知道（见 counts.ts）。
         rememberDirectoryCount(path, sorted.length);
       } catch (caught) {
@@ -117,8 +121,12 @@ export function useDirectory(path: string | null, enabled = true): DirectoryView
   );
 
   // 放进 ref：这样下面两个 effect 都不必依赖 load 的身份，避免"依赖一变就重取"。
+  // 赋值在 effect 里做而不是 render 期：它声明在前，下面的 effect 与焦点回调
+  // 取到的永远是最新的 load，语义不变。
   const loadRef = useRef(load);
-  loadRef.current = load;
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     setLimit(MAX_VISIBLE_ENTRIES);
@@ -158,6 +166,7 @@ export function useDirectory(path: string | null, enabled = true): DirectoryView
     hidden: visible.hidden,
     error,
     refreshing,
+    loadedAt,
     reload,
     loadMore,
   };

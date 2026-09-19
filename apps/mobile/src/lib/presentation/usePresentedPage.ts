@@ -22,7 +22,7 @@
  * 这里用 `inFlight` 按下钥匙去重：第二次调用看到钥匙在飞就直接返回。结算之后钥匙会被
  * 释放，所以同一个 id 之后仍然可以再打开（比如用户取消了再看一次）。
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { PageDefinition, PagePresentationOptions } from './page.tsx';
 import { present } from './present.ts';
@@ -37,7 +37,11 @@ export function usePresentedPage<TParams, TResult>(
   // 参数与形态只在"打开那一刻"用一次；放 ref 里是为了让它们不参与依赖比较——
   // 否则每次渲染一个新对象，effect 会被反复触发。
   const latest = useRef({ params, options });
-  latest.current = { params, options };
+  // layout effect 先于下面负责 present 的 passive effect：换 key 的同一次 commit
+  // 一定使用新参数，同时不会在 render 期把未提交的值暴露给 ref 读者。
+  useLayoutEffect(() => {
+    latest.current = { params, options };
+  }, [options, params]);
 
   useEffect(() => {
     if (key === null) return;

@@ -42,10 +42,18 @@ appId: ai.memoh.ios
 - takeScreenshot: files-06-actions-dismissed
 
 # ① 文本预览：点 notes.txt
+- swipe:
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: 'file-row-notes.txt'
 - tapOn:
     id: 'file-row-notes.txt'
-- waitForAnimationToEnd:
-    timeout: 6000
+- extendedWaitUntil:
+    visible: '出门前记得把手机充电器带上'
+    timeout: 10000
+- assertVisible: 'notes.txt'
 - takeScreenshot: files-02-preview-text
 # 返回用**系统边缘侧滑**：预览页的返回按钮位置随标题长度变，猜坐标会打偏
 # （实测有一次没回去，于是后面那条找不到行——看起来像"行点不到"，其实是没退出来）。

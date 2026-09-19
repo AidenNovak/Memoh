@@ -285,7 +285,12 @@ function CodeBlock({ state }: { state: Extract<PreviewState, { status: 'text' }>
               <Text
                 style={[
                   type.mono,
-                  { width: GUTTER_WIDTH, textAlign: 'right', color: palette.tertiaryLabel },
+                  {
+                    width: GUTTER_WIDTH,
+                    paddingRight: space.sm,
+                    textAlign: 'right',
+                    color: palette.tertiaryLabel,
+                  },
                 ]}
               >
                 {index + 1}

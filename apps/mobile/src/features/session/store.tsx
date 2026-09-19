@@ -930,18 +930,20 @@ export function SessionProvider({
   // 同session=true 同回调=true 第2次`）。所以它做的每件事都必须是幂等的：
   // `ensureSessionInList` 的写入要重新判断（见那里的注释）、`subscribe` 是可重复的
   // 幂等命令、其余三个都是纯读。别在这里放"只能发生一次"的动作——它会发生两次。
+  //
+  // 依赖的是两个具体值而不是整个 state：在 effect 外解构出来，依赖数组才能说真话。
+  const { client: openSessionClient, currentSessionId: openSessionId } = state;
   useEffect(() => {
-    const { client, currentSessionId } = state;
-    if (client === null || currentSessionId === null) return;
-    void ensureSessionInList(currentSessionId);
-    void refreshHistory(currentSessionId);
+    if (openSessionClient === null || openSessionId === null) return;
+    void ensureSessionInList(openSessionId);
+    void refreshHistory(openSessionId);
     // 队列与会话信息都是服务端持有的：换会话必须重新拉，不能用上一个会话的残留。
-    void refreshQueue(currentSessionId);
-    void refreshSessionStatus(currentSessionId).catch(() => {});
-    realtimeRef.current?.subscribe(currentSessionId);
+    void refreshQueue(openSessionId);
+    void refreshSessionStatus(openSessionId).catch(() => {});
+    realtimeRef.current?.subscribe(openSessionId);
   }, [
-    state.client,
-    state.currentSessionId,
+    openSessionClient,
+    openSessionId,
     refreshHistory,
     ensureSessionInList,
     refreshQueue,
@@ -1113,7 +1115,7 @@ export function SessionProvider({
         return 'failed';
       }
     },
-    [queueFailure, refreshQueue],
+    [gate, queueFailure, refreshQueue],
   );
 
   const removeQueueItem = useCallback(
@@ -1217,6 +1219,9 @@ export function SessionProvider({
     [],
   );
 
+  // 解构出来再依赖：依赖数组里的 `seed.endSession` 会让 exhaustive-deps 要求整个 seed。
+  const endSession = seed.endSession;
+
   /**
    * 用户按了"退出登录"。
    *
@@ -1229,8 +1234,8 @@ export function SessionProvider({
     realtimeRef.current?.dispose();
     realtimeRef.current = null;
     dispatch({ type: 'signedOut' });
-    seed.endSession?.();
-  }, [seed.endSession]);
+    endSession?.();
+  }, [endSession]);
 
   const dismissError = useCallback(() => dispatch({ type: 'error', message: null }), []);
 

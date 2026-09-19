@@ -25,6 +25,9 @@
   落点唯一、跟着上游走只差一次 rebase。
 - **rebase 的代价要记住**：我们改上游文件越少，rebase 越便宜。§6 那张表就是全部改动，
   加一行之前先想想能不能不加。
+- **怎么跟上游**：`git fetch upstream && git merge upstream/main`（或 rebase）。
+  远程约定：`upstream` = `felinics/Memoh`，`origin` = 我们在 GitHub 上的这个 fork。
+  冲突只会落在 §6 那 6 个文件上，其余是纯新增。
 
 ---
 
@@ -64,9 +67,10 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 | `ios:test:hosted` | UIKit cell 复用/颜色映射/无障碍 | ✅（要 Xcode） |
 | `ios:verify:native` | 生产 Swift 类型的行为 | ✅（要 Xcode） |
 
-**没有自动化 UI 行为检查**：UI/流程 harness 已于 2026-09-19 从 memoh-ios 整体删除，
-重写形态待定（`verify:ui` / `verify:e2e` / `verify:alerts` 三个入口保留在原地，重写后原地生效）。
-视觉正确目前只能靠人看截图 —— **截图证视觉状态，录屏证时序行为**，只有截图不算证据。
+**没有自动化 UI 行为检查**：UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）
+已于 2026-09-19 从 memoh-ios 整体删除，**重写形态待定**——旧文档里提这些脚本的段落都是删除前的
+历史记录，别照着去跑。视觉正确目前只能靠人看截图 —— **截图证视觉状态，录屏证时序行为**，
+只有截图不算证据。
 
 ---
 
@@ -342,10 +346,10 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 | `src/features/` | 领域逻辑（12 个：activity / auth / bots / chat / errors / files / machine / notifications / onboarding / schedule / session / verify） |
 | `src/models/` | 数据形状 |
 | `src/api/` | REST + 实时协议（client / realtime / protocol / cursor / credentials / types） |
-| `src/ui/` | 共享 UI 组件（28 个） |
+| `src/ui/` | 共享 UI 组件（29 个） |
 | `src/lib/` | 基础设施（presentation / i18n / theme / accessibility） |
 | `modules/memoh-kit/ios/` | Swift：Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support |
-| `tests/` | node --test 单测（66 个文件、721 例） |
+| `tests/` | node --test 单测（65 个文件、721 例） |
 | `verification/` | 验收脚本（build / simulator / native / clean + fixture） |
 
 规矩：
@@ -365,10 +369,11 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ## 6. 我们对上游做的改动（全部）
 
-**改上游的现有文件（5 个）：**
+**改上游的现有文件（6 个）：**
 
 | 文件 | 改了什么 | 为什么 |
 | --- | --- | --- |
+| `AGENTS.md`（`CLAUDE.md` 是指向它的软链） | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口 |
 | `pnpm-workspace.yaml` | `packages` 加一行 `apps/mobile/modules/*` | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
 | `package.json` | 加 14 个 `ios:*` 脚本 | 与上游脚本不重名，免得把"整仓门禁"和"iOS 门禁"混成一句话。**上游脚本一个没动** |
 | `eslint.config.mjs` | `ignores` 加 `apps/mobile/**` | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题 |
@@ -379,7 +384,7 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 | 路径 | 是什么 |
 | --- | --- |
-| `apps/mobile/` | iOS 客户端（433 个文件，含 66 个测试文件、`modules/memoh-kit` 12 个 Swift 源文件） |
+| `apps/mobile/` | iOS 客户端（372 个文件，含 65 个测试文件、`modules/memoh-kit` 12 个 Swift 源文件） |
 | `tools/` | iOS 侧探针、门禁、发布脚本（46 个） |
 | `infra/` | 联调隧道与 dev 栈脚本（7 个） |
 
@@ -389,7 +394,7 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 
 ---
 
-## 7. 相对 memoh-ios，客户端自己改了 4 处
+## 7. 相对 memoh-ios，客户端自己改了 5 处
 
 1. **Prettier 配置搬进 `apps/mobile/`**（原来是仓库根），并在 `apps/mobile/package.json` 里补了
    `format` / `format:check` / `check` 三个脚本。理由：这份配置只属于 iOS 客户端，
@@ -413,6 +418,11 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
    - **为什么不带 `--fix`**：实测它会干坏事 —— 把有意写的 `{/* eslint-disable-next-line */}`
      替换成 `{ }`，合并 import 后留下 Prettier 不接受的空格。iOS 侧的格式由 `prettier` 管，
      ESLint 只负责**发现**问题。
+5. **没搬 memoh-ios 里"历史上已入库"的 63 份验收产物**
+   （`apps/mobile/verification/files/out/**`，118MB 量级）。理由：客户端自己的约定就是
+   **`out/` 不进 Git**（`tests/schedule-keyboard.test.mjs` 的注释里明写着），而且引用它们的
+   那批 `docs/` 本来也没带过来 —— 带过来就是一批没有出处的孤图。新轮次要留档照旧
+   `git add -f` 某一轮。
 
 ---
 
@@ -432,6 +442,8 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 ## 9. 还没做 / 没验
 
 - **CI 没搬**。上游自己的 workflows 照常跑；iOS 侧目前只有本地门禁。
+- **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
+  `AGENTS.md` → 本文。
 - **UI 行为检查是空的**（harness 已删、重写待定）。视觉正确现在只能靠人看。
 - **推送在模拟器上验不了**：点系统通知卡片与动作按钮、徽标、真实 APNs 送达都只能真机手点。
 - **设备 token 上报端点还不存在**（`POST /devices` 只是形状）。

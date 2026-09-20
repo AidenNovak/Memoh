@@ -34,6 +34,23 @@ Memoh 是一个开源的多智能体平台。每个 Agent 都有一台自己的�
 
 通过 Telegram、Discord、飞书、微信、Web UI 等渠道与它们对话。它们能跨会话、跨平台记住上下文，操作浏览器，调用 MCP 工具，执行定时任务。给自己跑一个，给团队成员各分配一个，或一次拉起一组。
 
+## 原生 iOS 客户端
+
+这个分支为 Memoh Cloud 和自部署服务器增加了 iOS 客户端，支持账号与服务器登录、多 Bot 会话、流式聊天、模型选择、定时任务、Workspace 文件浏览和推送通知。开发与发布说明见 [iOS 开发指南](./memoh-ios-dev.md)。
+
+<table>
+  <tr>
+    <td align="center"><img src="./assets/ios/sign-in.png" alt="iOS 登录界面" width="230"><br><sub>Cloud 与自部署登录</sub></td>
+    <td align="center"><img src="./assets/ios/sessions.png" alt="iOS 会话界面" width="230"><br><sub>Bot 会话</sub></td>
+    <td align="center"><img src="./assets/ios/chat.png" alt="iOS 聊天界面" width="230"><br><sub>流式聊天</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/ios/model-picker.png" alt="iOS 模型选择界面" width="230"><br><sub>模型选择</sub></td>
+    <td align="center"><img src="./assets/ios/schedule-editor.png" alt="iOS 定时任务编辑界面" width="230"><br><sub>定时任务</sub></td>
+    <td align="center"><img src="./assets/ios/file-preview.png" alt="iOS Workspace 文件预览" width="230"><br><sub>Workspace 文件</sub></td>
+  </tr>
+</table>
+
 ## 开始使用
 
 ### Memoh Cloud

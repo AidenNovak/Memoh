@@ -1,0 +1,61 @@
+{
+  "name": "@memoh-ios/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --platform ios --no-install",
+    "pods": "cd ios && pod install",
+    "bundle": "EXPO_NO_BUNDLE_SPLITTING=1 expo export --platform ios --output-dir .expo/export-check",
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "node ./scripts/check-locales.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm i18n:check && pnpm ternary:check && pnpm press:check && pnpm lint && pnpm format:check",
+    "ternary:check": "node ./scripts/check-ternaries.mjs",
+    "press:check": "node ./scripts/check-press-opacity.mjs",
+    "icons:vendor": "node ./scripts/vendor-provider-icons.mjs"
+  },
+  "lint-staged": {
+    "*.{js,mjs,ts,tsx,json,md}": [
+      "pnpm exec eslint --concurrency=auto"
+    ]
+  },
+  "dependencies": {
+    "@memoh-ios/kit": "workspace:*",
+    "expo": "~57.0.22",
+    "expo-constants": "~57.0.18",
+    "expo-dev-client": "~57.0.19",
+    "expo-device": "~57.0.2",
+    "expo-file-system": "~57.0.7",
+    "expo-image": "~57.0.5",
+    "expo-linking": "~57.0.10",
+    "expo-localization": "~57.0.2",
+    "expo-router": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-symbols": "~57.0.3",
+    "expo-system-ui": "~57.0.4",
+    "expo-web-browser": "~57.0.3",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-worklets": "0.10.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
+    "globals": "^14.0.0",
+    "prettier": "^3.6.2",
+    "sf-symbols-typescript": "2.2.0",
+    "typescript": "~6.0.3"
+  }
+}

@@ -17,7 +17,18 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest",
     "prepare": "husky",
-    "postinstall": "node scripts/check-patched-deps.mjs"
+    "postinstall": "node scripts/check-patched-deps.mjs",
+    "ios:start": "pnpm --filter @memoh-ios/mobile start",
+    "ios:run": "pnpm --filter @memoh-ios/mobile ios",
+    "ios:prebuild": "pnpm --filter @memoh-ios/mobile prebuild",
+    "ios:pods": "pnpm --filter @memoh-ios/mobile pods",
+    "ios:bundle": "pnpm --filter @memoh-ios/mobile bundle",
+    "ios:check": "pnpm ios:typecheck:foundation && pnpm ios:typecheck:kit && pnpm --filter @memoh-ios/mobile check",
+    "ios:typecheck:foundation": "bash tools/typecheck-foundation.sh",
+    "ios:typecheck:kit": "bash tools/typecheck-kit.sh",
+    "ios:release:testflight": "python3 tools/release-testflight.py",
+    "ios:dev-env": "./infra/local/memoh-tunnel.sh start",
+    "ios:dev-env:stop": "./infra/local/memoh-tunnel.sh stop"
   },
   "keywords": [],
   "author": "",
@@ -47,6 +58,13 @@
     ]
   },
   "pnpm": {
+    "packageExtensions": {
+      "react-native-worklets@0.10.1": {
+        "dependencies": {
+          "@babel/generator": "7.28.5"
+        }
+      }
+    },
     "peerDependencyRules": {
       "ignoreMissing": [
         "@algolia/client-search"

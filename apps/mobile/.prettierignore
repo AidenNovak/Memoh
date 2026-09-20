@@ -1,0 +1,9 @@
+# Prettier 不碰的东西。判据是「这份文件是不是产物」，不是「它有没有进 git」。
+#
+# 放在 apps/mobile/ 里而不是仓库根：这份配置只属于 iOS 客户端。上游的 web/desktop/
+# 服务端各有自己的格式化约定，整仓一份 Prettier 配置会把它们一起改掉。
+
+# Expo prebuild 的产物，从不手改（见 memoh-ios-dev.md）。
+ios/
+.expo/
+expo-env.d.ts

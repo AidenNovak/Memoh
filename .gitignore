@@ -133,3 +133,20 @@ Design*.md
 design*.md
 detail-design-2.0-docs/
 .gemini/settings.json
+
+# iOS 客户端（apps/mobile）。其余约定见 memoh-ios-dev.md。
+# `ios/` 是 Expo prebuild 的产物：改动只能落在 app config、config plugin 或
+# MemohKit 里，永不只改生成物（生成物也不入库）。
+/apps/mobile/ios/
+/apps/mobile/.expo/
+/apps/mobile/expo-env.d.ts
+/apps/mobile/**/*.tsbuildinfo
+# 签名材料绝不入库。
+/apps/mobile/*.p8
+/apps/mobile/*.p12
+/apps/mobile/*.mobileprovision
+/apps/mobile/*.jks
+/apps/mobile/*.keystore
+
+# 本地构建、归档与发布产物。
+/.verify/

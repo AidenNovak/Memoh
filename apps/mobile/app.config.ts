@@ -53,8 +53,6 @@ const config = ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     './plugins/withLocales',
-    // hosted 单元测试 target（MemohKitTests），见 plugins/withKitTests.js
-    './plugins/withKitTests',
     // aps-environment（debug=development / release=production），见 plugins/withPushNotifications.js
     './plugins/withPushNotifications',
     // 去掉模板在 Release 里写死的开发签名身份（否则 CLI archive 会去找开发描述文件），

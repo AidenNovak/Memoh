@@ -12,7 +12,7 @@
  * 换成可用、并实现 `DownloadSink` 的那半支，UI 一个字都不用改。
  *
  * `attemptDownload` 仍然完整地走 `client.downloadTarget()`——URL 与鉴权头是原生下载器的
- * 入参，形状在这里定死（`tests/files.test.mjs` 覆盖两条分支）。
+ * 入参，形状在这里定死。
  */
 
 export type DownloadCapability = { available: true } | { available: false; reasonKey: string };

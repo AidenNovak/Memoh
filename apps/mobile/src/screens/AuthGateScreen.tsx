@@ -10,23 +10,17 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { useAuthGate } from '../features/auth/useAuthGate.ts';
 import type { SessionSeed } from '../features/session/store.tsx';
-import type { VerifyBootstrap } from '../features/verify/bootstrap.ts';
 import { usePalette } from '../lib/theme/context.tsx';
 import { LoginScreen } from './LoginScreen.tsx';
 import { OnboardingScreen } from './OnboardingScreen.tsx';
 
 interface GateProps {
-  /**
-   * 第二个参数是验收种子（只在开发构建里非 null）。外壳用它决定要不要自动跑
-   * 一段脚本化动作。
-   */
-  children: (seed: SessionSeed, verify: VerifyBootstrap | null) => React.ReactNode;
+  children: (seed: SessionSeed) => React.ReactNode;
 }
 
 export function AuthGateScreen({ children }: GateProps) {
   const palette = usePalette();
-  const { phase, seed, verify, showOnboarding, noticeKey, onSignedIn, onOnboardingDone } =
-    useAuthGate();
+  const { phase, seed, showOnboarding, noticeKey, onSignedIn, onOnboardingDone } = useAuthGate();
 
   if (phase === 'checking') {
     return (
@@ -55,5 +49,5 @@ export function AuthGateScreen({ children }: GateProps) {
     return <LoginScreen onSignedIn={onSignedIn} noticeKey={noticeKey} />;
   }
 
-  return <>{children(seed, verify)}</>;
+  return <>{children(seed)}</>;
 }

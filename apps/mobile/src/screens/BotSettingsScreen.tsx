@@ -410,17 +410,8 @@ export function BotSettingsScreen({ botId }: { botId: string }) {
 
           全局 `headerShown: false`，原生返回箭头不存在；改前 `BackButton` 只画在"读到了"
           那一支里，于是这一屏唯一的出路是 iOS 的边缘侧滑手势——不知道这个手势的人就卡在
-          这里。**这一支不是只有"连不上服务端"才会走到**：仓库自己那条错误矩阵里的
-          `bot-error`（服务端 500）走的也是它（`verification/navigation/
-          errors-botsettings-flow.yaml`），在改前同样退不出去。读不到不是用户的错，也不该
-          变成死路。加载中同样给（慢的时候更要能退）。
-
-          ⚠️ 2026-09-17 那张「Couldn't load this agent. / Can't reach the server / Retry」
-          的截图**不是**这一处改动的依据，它是**环境产物**：App 比固定服务端活得久，加上
-          dev client 热重载让那一屏重新挂载、重新发请求（机制与修法写在
-          `verification/navigation/bots-run.sh` 的 cleanup 注释里）。别拿它当验收证据；
-          这一屏的证据是 `bot-error` 那一支（`verification/navigation/
-          errors-botsettings-flow.yaml` 断言"有退路、说清是哪个 agent"）。
+          这里。服务端 500 也会走这一支；读不到不是用户的错，也不该变成死路。
+          加载中同样给（慢的时候更要能退）。
         */}
         <View
           style={{

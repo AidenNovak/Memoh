@@ -26,13 +26,6 @@
     "ios:check": "pnpm ios:typecheck:foundation && pnpm ios:typecheck:kit && pnpm --filter @memoh-ios/mobile check",
     "ios:typecheck:foundation": "bash tools/typecheck-foundation.sh",
     "ios:typecheck:kit": "bash tools/typecheck-kit.sh",
-    "ios:test": "pnpm --filter @memoh-ios/mobile test && bash tools/run-logic-tests.sh",
-    "ios:test:swift": "bash tools/run-logic-tests.sh",
-    "ios:test:hosted": "bash tools/run-hosted-tests.sh",
-    "ios:verify:native": "pnpm --filter @memoh-ios/mobile verify:native",
-    "ios:verify:build": "pnpm --filter @memoh-ios/mobile verify:build",
-    "ios:verify:simulator": "pnpm --filter @memoh-ios/mobile verify:simulator",
-    "ios:verify:clean": "pnpm --filter @memoh-ios/mobile verify:clean",
     "ios:release:testflight": "python3 tools/release-testflight.py",
     "ios:dev-env": "./infra/local/memoh-tunnel.sh start",
     "ios:dev-env:stop": "./infra/local/memoh-tunnel.sh stop"

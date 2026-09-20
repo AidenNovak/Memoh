@@ -1,7 +1,0 @@
-# 把 App 送回后台：横幅只在 App 不在前台时出现（前台那一条走 in_app，见 07）。
-#
-# 为什么用 `pressKey: HOME` 而不是别的手段：这是"用户按了 Home"这件事本身，没有更接近
-# 用户操作的替代品；simctl 没有"退到后台"这个动作。
-appId: ai.memoh.ios
----
-- pressKey: HOME

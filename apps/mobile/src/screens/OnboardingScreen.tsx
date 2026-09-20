@@ -229,7 +229,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
         外面这层纵向 ScrollView 是**辅助字号下的兜底**：正文放大到两三倍时这一组比屏幕
         还高，而横向分页器的溢出是**裁掉**（不是滚）——`accessibility-extra-large` 下
         正文第 5 行压在页码点上、句子断在 "…the work happens on your"，剩下的话没有出口
-        （冷启动实测，对照图见 `verification/onboarding/out/*-motion-and-a11y/`）。
+        （冷启动时必须按这条判据初始化）。
         纵向能滚之后，内容放得下就还是居中的一屏（`flexGrow: 1` + `justifyContent: 'center'`），
         放不下就能滚。`bounces={false}`：内容放得下时它不该像一张可以扯动的纸。
       */}

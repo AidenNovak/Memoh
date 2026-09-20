@@ -13,7 +13,7 @@
  *
  * 「太大」是一等结果，不是错误：给出原因 + 下载入口就是正确的降级。
  *
- * 纯函数模块（`fileTint` 只是查表），`tests/files.test.mjs` 直接跑。
+ * 这一层保持纯函数（`fileTint` 只是查表）。
  */
 
 import type { SFSymbol } from 'expo-symbols';

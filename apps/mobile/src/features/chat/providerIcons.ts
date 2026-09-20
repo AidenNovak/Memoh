@@ -39,12 +39,11 @@
 /**
  规则表：`slug` 是图标资源名（= `assets/images/providers/<slug>.png`），`aliases` 是认得出的名字。
 
- **顺序有意义**（见文件头），改顺序前先看 `tests/provider-icons.test.mjs`。
+ **顺序有意义**（见文件头）。
 
  放进来的是"自托管用户真会接的那些"：主流云 + 主流开源/推理服务 + 国内几家 + 几个常见的
  本地/自建网关。没进来的走中性兜底——加一家的成本是：这里加一行 + 按
- `scripts/vendor-provider-icons.mjs` 把图补进 `assets/images/providers/`（测试会盯着这两步
- 必须同时做完，少一步就红）。
+ `scripts/vendor-provider-icons.mjs` 把图补进 `assets/images/providers/`，两步必须同时完成。
 
  `as const` 是刻意的：`ProviderIconSlug` 这个联合类型直接从这张表推出来——**表就是资产清单**，
  不可能出现"类型里有一个名字但没人用"的死项。

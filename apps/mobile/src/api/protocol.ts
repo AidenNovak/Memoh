@@ -247,7 +247,7 @@ export interface CurrentRunView {
    *
    * ⚠️ 这是客户端判断"这个 run 是不是已经没人管了"的**唯一依据**。
    *
-   * 实测（`tools/orphan-run-probe.mjs`）：run 正常失败时投影会给出 `errored`，
+   * 部署实例中，run 正常失败时投影会给出 `errored`，
    * 重订阅也能拿到终态。但 owner 进程死掉（例如上游的 persistence fence 失效）时，
    * 投影会**永远停在 `running`**——不会报错、不会收敛。这时租约过期是唯一线索。
    *

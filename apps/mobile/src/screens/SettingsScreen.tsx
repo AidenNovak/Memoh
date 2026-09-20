@@ -4,14 +4,14 @@
  * ## 这一版为什么重排
  *
  * 上一版的顺序是：agent 卡片 / Account（组头"Account" + 行标题也是"Account"，值是 bot 名）
- * / Appearance（四项并列）/ Language / Sign Out / Debug。它"不太 make sense"的地方是具体的：
+ * / Appearance（四项并列）/ Language / Sign Out。它"不太 make sense"的地方是具体的：
  *
  * 1. **组头与行标题同名**：`Account` 分组里一行也叫 `Account`，读起来像个 bug。而且那一行
  *    的值给的是 **agent 名字**、副标题给的是**服务器地址**——"我是谁登录的"这件事整页都没说。
  * 2. **`True black` 与 System/Light/Dark 并列**：它不是第四种并列的明暗模式，它是**暗色的
  *    一个变体**。四个等权重的选项里混进一个修饰项，用户会以为选它就是"真黑模式"而丢掉明暗自动。
  * 3. **服务器地址是调试信息**，摆在 Account 的副标题上；而真正该在这里的版本号没有。
- * 4. **底部被悬浮 tab 栏压住**：Debug 分组半截在 tab 栏下面（`TAB_BAR_CLEARANCE` 漏抄）。
+ * 4. **底部会被悬浮 tab 栏压住**：滚动内容必须保留 `TAB_BAR_CLEARANCE`。
  *
  * 新的顺序按"用户在这一屏要回答的问题"排：
  *
@@ -22,7 +22,6 @@
  * | Notifications | 它什么时候来找我（入口，不是开关——见 `NotificationsScreen`） |
  * | Account | 我是谁（以及怎么登出） |
  * | About | 我在用哪个版本、连的是哪台服务器（Memoh 是自托管的，"连哪台"是真信息） |
- * | Development（仅 DEV） | 场景台与调试入口 |
  *
  * ## 形态
  *
@@ -224,25 +223,6 @@ export function SettingsScreen() {
           last
         />
       </Group>
-
-      {__DEV__ ? (
-        <Group header={t('settings.debug')}>
-          <Row
-            testID="settings-scenes"
-            title="Scenes"
-            subtitle="固定场景截图"
-            disclosure
-            onPress={() => router.push('/debug/scene')}
-          />
-          <Row
-            title="Debug"
-            testID="settings-debug"
-            last
-            disclosure
-            onPress={() => router.push('/debug')}
-          />
-        </Group>
-      ) : null}
     </ScrollView>
   );
 }

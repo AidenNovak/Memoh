@@ -4,7 +4,7 @@ import UIKit
  Markdown 的**视觉层**（UIKit）：把 `MarkdownBlock` 变成能画的东西。
 
  ## 分工
- `Markdown.swift` 负责"是什么"（Foundation-only，可在构建机上单测）；这里只负责"长什么样"。
+ `Markdown.swift` 负责"是什么"（Foundation-only）；这里只负责"长什么样"。
  一条纪律：**屏幕上画的字必须与 `MarkdownDocument.renderedText` 同源**——渲染只读
  `block.spans` / `block.lines`，绝不再去看原始字符。这样"不闪原始符号"那条断言才对着用户
  真看得见的东西（见 `docs/CHAT-RENDERING.md`）。
@@ -360,9 +360,7 @@ final class MarkdownCodeBlockView: UIView {
     scroll.alwaysBounceVertical = false
     scroll.layer.cornerRadius = 10
     scroll.layer.cornerCurve = .continuous
-    // 标识打在**块视图本身**上：它才是"一个代码块"，测试与 UI 查询都按它找。
-    // （内层 `scroll` 是横滚容器，属实现细节；标识留在那儿会让 `MarkdownCodeBlockView`
-    // 自己看起来没有标识——2026-09-17 实测：hosted 测试因此红了一条。）
+    // 标识放在块视图本身；内层 `scroll` 只是横滚实现细节。
     accessibilityIdentifier = "markdown-code-block"
     addSubview(scroll)
 

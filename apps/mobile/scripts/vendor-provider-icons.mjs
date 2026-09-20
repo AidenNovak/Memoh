@@ -23,8 +23,8 @@
  *
  *     pnpm --filter @memoh-ios/mobile icons:vendor
  *
- * 清单以 `src/features/chat/providerIcons.ts` 的规则表为准（`tests/provider-icons.test.mjs`
- * 盯着"表里的每个 slug 都有图、每张图都在表里"）。要加一家厂商：先改那张表，再跑这个脚本。
+ * 清单以 `src/features/chat/providerIcons.ts` 的规则表为准。要加一家厂商：先改那张表，
+ * 再跑这个脚本。
  */
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';

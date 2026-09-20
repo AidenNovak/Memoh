@@ -13,7 +13,6 @@
  *    false，所以"点按钮之后紧接着又被卸载"不会去 dismiss 两次（那会把下面那一屏也关掉）。
  */
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Text } from 'react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import {
@@ -37,10 +36,7 @@ import {
  */
 const mountCount = new Map<number, number>();
 
-function dismissPresentedPage(
-  router: ReturnType<typeof useRouter>,
-  report: (note: string) => void,
-): void {
+function dismissPresentedPage(router: ReturnType<typeof useRouter>): void {
   /**
    * 先 `back()`，再 `dismiss()`，最后 `replace('/')` 兜底。
    *
@@ -49,23 +45,15 @@ function dismissPresentedPage(
    * 最后那条 `replace('/')` 是保底：**这一屏无论如何都得关得掉**——一个关不掉的 sheet
    * 会把整个 App 卡在那（用户只能杀进程）。
    *
-   * 调试这条路径时别只看断言：`report()` 会把"走了哪一支、canGoBack/canDismiss 各是什么"
-   * 打到 Metro 日志（`[settle] ...`）。另见 `verification/presentation/README.md` 里
-   * "断言会骗人"那一条。
    */
-  const canGoBack = router.canGoBack();
-  const canDismiss = router.canDismiss();
-  if (canGoBack) {
-    report(`back()  canGoBack=${canGoBack} canDismiss=${canDismiss}`);
+  if (router.canGoBack()) {
     router.back();
     return;
   }
-  if (canDismiss) {
-    report(`dismiss()  canGoBack=${canGoBack} canDismiss=${canDismiss}`);
+  if (router.canDismiss()) {
     router.dismiss();
     return;
   }
-  report(`replace('/')  canGoBack=${canGoBack} canDismiss=${canDismiss}`);
   router.replace('/');
 }
 
@@ -95,17 +83,6 @@ export function PresentedPageRoute() {
    * 不订阅账本变化是有意的：这一屏的参数与形态在整个生命周期里是恒定的，重渲染只会
    * 让 sheet 闪一下。账本里没有它 = 该走了。
    */
-  /**
-   * 结算失败了要看得出原因。
-   *
-   * 关不掉的 sheet 是最难查的一类问题（"我点了，它没反应"），所以这里让**关的那条路
-   * 带一句说明**：哪一支结算、拿到什么结论、走 dismiss 还是 back。开发构建里它就挂在
-   * 屏幕底部，截图即证据——比翻 Metro 输出可靠（那段日志是块缓冲的，进程被杀才会落盘）。
-   */
-  const [settleNote] = useState('');
-  const report = useCallback((note: string) => {
-    if (__DEV__) console.warn(`[settle] ${note}`);
-  }, []);
   const [session] = useState<PresentationSession | null>(() =>
     presentationId === null ? null : (getPresentationSession(presentationId) ?? null),
   );
@@ -124,7 +101,7 @@ export function PresentedPageRoute() {
    */
   useEffect(() => {
     if (session === null) {
-      dismissPresentedPage(router, report);
+      dismissPresentedPage(router);
       return;
     }
     const id = session.id;
@@ -144,23 +121,21 @@ export function PresentedPageRoute() {
         cancelPresentationSession(id);
       }, 0);
     };
-  }, [navigation, report, router, session]);
+  }, [navigation, router, session]);
 
   const cancel = useCallback(() => {
     if (session === null) return;
     const settled = cancelPresentationSession(session.id);
-    report(`cancel 结算=${settled} id=${session.id}`);
-    if (settled) dismissPresentedPage(router, report);
-  }, [router, report, session]);
+    if (settled) dismissPresentedPage(router);
+  }, [router, session]);
 
   const finish = useCallback(
     (value?: unknown) => {
       if (session === null) return;
       const settled = completePresentationSession(session.id, value);
-      report(`finish 结算=${settled} id=${session.id}`);
-      if (settled) dismissPresentedPage(router, report);
+      if (settled) dismissPresentedPage(router);
     },
-    [report, router, session],
+    [router, session],
   );
 
   const runtime = useMemo<PageRuntime<unknown, unknown> | null>(
@@ -184,21 +159,6 @@ export function PresentedPageRoute() {
           这里只设挂载后仍会生效的部分（detent / 抓手 / 侧滑开关 / 标题）。 */}
       <SheetOptions options={session.presentation} />
       <session.page.Component />
-      {settleNote === '' ? null : (
-        <Text
-          testID="presentation-settle-note"
-          style={{
-            position: 'absolute',
-            left: 8,
-            right: 8,
-            bottom: 6,
-            fontSize: 11,
-            color: '#B25E00',
-          }}
-        >
-          {settleNote}
-        </Text>
-      )}
     </PageRuntimeProvider>
   );
 }

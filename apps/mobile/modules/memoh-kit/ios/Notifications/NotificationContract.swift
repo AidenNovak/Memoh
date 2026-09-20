@@ -4,15 +4,13 @@ import Foundation
 ///
 /// ## 为什么单独一层
 ///
-/// 真正碰 `UNUserNotificationCenter` 的那一半，只有整包构建才能在模拟器上验（分钟级
-/// 而且要在别人也在用这台机器的时候排队）。而"从负载里读什么、用户点了哪个动作、
-/// 回什么给 JS"这些**判断**没有理由跟着一起变贵——放在这一层，`pnpm test:swift`
-/// 在构建机上几秒就能把它们钉住。
+/// 真正碰 `UNUserNotificationCenter` 的那一半负责系统集成；而"从负载里读什么、用户点了
+/// 哪个动作、回什么给 JS"这些判断保持在这一层，避免和系统 API 耦合。
 ///
 /// ## 这一层不做策略判断
 ///
 /// **什么时候可以打扰、前台弹不弹**由 `apps/mobile/src/features/notifications/policy.ts`
-/// 说了算（判据来自 HIG，且被 18 项测试钉着）。原生只执行它给的结果：这里出现的函数
+/// 说了算（判据来自 HIG）。原生只执行它给的结果：这里出现的函数
 /// 全是"解析 / 编码 / 映射"，没有一个函数会自己决定"该不该发"。
 enum NotificationContract {
   // MARK: - 与服务端定死的键（见 docs/research/push-contract.md）
@@ -206,7 +204,7 @@ enum NotificationContract {
   /// `UNAuthorizationStatus` 的原始值表。Apple 定死：0 = notDetermined、1 = denied、
   /// 2 = authorized、3 = provisional、4 = ephemeral。
   ///
-  /// 数字放这一层是为了能被 `pnpm test:swift` 钉住。映射反了的形态不是崩溃，而是
+  /// 数字统一放在这一层。映射反了的形态不是崩溃，而是
   /// **"用户明明拒绝了，App 还在请求权限"**——那种 bug 只在别人手机上出现。
   static func permissionStatus(code: Int) -> PermissionStatus {
     switch code {
@@ -252,11 +250,4 @@ enum NotificationContract {
     return (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]]
   }
 
-  /// 字典数组 → JSON 字符串（跨桥只传字符串）。
-  static func jsonString(from objects: [[String: Any]]) -> String {
-    guard let data = try? JSONSerialization.data(withJSONObject: objects, options: []) else {
-      return "[]"
-    }
-    return String(data: data, encoding: .utf8) ?? "[]"
-  }
 }

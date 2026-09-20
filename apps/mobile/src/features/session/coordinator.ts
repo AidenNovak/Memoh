@@ -221,7 +221,7 @@ export function createSessionCoordinator(deps: {
   /**
    * 孤儿 run 巡检走一跳。
    *
-   * 实测（`tools/orphan-run-probe.mjs`）：run 正常失败时投影会给 `errored`，但 owner
+   * run 正常失败时投影会给 `errored`，但 owner
    * 进程死掉时投影永远停在 `running`——不报错、不收敛。这时**服务端给的租约到期时间**
    * 是唯一线索。没有这一跳，界面就是一直转圈，用户只能杀进程。
    */

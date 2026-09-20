@@ -170,8 +170,7 @@ export function updatePayload(input: {
 
  抽成纯函数是因为它是"界面会不会撒谎"的那一处判据：开关拨下去立刻要响应（等一个来回
  会显得卡），而**请求失败必须回到原值**——否则界面在撒谎。它原来是 `useSchedule` 里
- 两段内联的 `map`，而 hook 在这个仓库没有测试面（`pnpm test` 跑的是纯模块，没有渲染器），
- 所以判据抽到这里来，能在 node 侧钉住（见 `tests/schedule-toggle.test.mjs`）。
+ 两段内联的 `map`，所以把判据集中在这里，不让界面层各自猜。
 
  `items === null`（列表还没拉回来）时原样返回 `null`：那时候没有开关可拨。
  */

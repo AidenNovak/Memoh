@@ -67,7 +67,7 @@ export interface PendingApproval {
   /**
    * agent 定义的选项。**可能是空的**。
    *
-   * 实测（`tools/approval-shape.mjs`）：agent 没有定义权限选项时，服务端返回的
+   * agent 没有定义权限选项时，服务端返回的
    * approval 里根本没有 `options` 字段，只有
    * `{approval_id, short_id, status, can_approve}`。
    *

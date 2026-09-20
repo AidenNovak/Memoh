@@ -252,8 +252,7 @@ enum ErrorBlockRecovery: Equatable, Sendable {
  ## 为什么判据必须住在这一层（而不是写在 cell 里）
  
  它是**纯函数**：输入是服务端给的两个字符串（`code`、`text`），输出是"标题 / 原因 /
- 可展开的细节 / 能不能重试"。这样同一份判断能被 hosted 测试和 `pnpm ios:test:swift` 的
- 纯逻辑测试同时钉住，而 cell 只剩下"把四个字段摆上去"。
+ 可展开的细节 / 能不能重试"；cell 只负责把四个字段摆上去。
  
  ## 和 JS 侧那一份判据的关系
  
@@ -297,7 +296,6 @@ struct ErrorBlockPresentation: Equatable, Sendable {
    是因为**新 code 的默认答案必须是"不给"**——给错动作的代价是用户去做一件我们
    已知不会成的事（R19），而少给一次动作只是少一次方便。
    
-   ✅ 可测：`pnpm ios:test:swift` 的 `testErrorBlockRetryWhitelist`。
    */
   static let retryableCodes: Set<String> = [
     "agent.response_timeout",
@@ -429,7 +427,7 @@ enum SurfaceToken: Equatable, Sendable {
   case tertiary
 }
 
-// Foundation-only policy shared by production layout and non-hosted XCTest.
+// Foundation-only policy shared by the production layout.
 enum MessageListMetrics {
   static let blockSpacing: Double = 16
   /**
@@ -450,12 +448,8 @@ enum MessageListMetrics {
    **内容区里没有按钮的位置**——贴底时最后一行停在按钮停放带之上（真机几何：改前最后一行
    的底 y=703 落在按钮的 y 686..730 里，改后 y=651，与按钮顶留 35pt）。
 
-   放在 `MessageListMetrics` 而不是 `NativeMessageList` 里有两个原因：它是**政策**
-   （"按钮不许压正文"），不是那个视图的实现细节；而且 `NativeMessageList.swift` 因为
-   `import ExpoModulesCore` 不进测试 bundle，断言写在那边整份 hosted 测试根本编不过
-   （2026-09-17 实测：`cannot find 'NativeMessageList' in scope`）。
-
-   Debug 下 `-MemohLegacyBottomOverlay 1` 把它当 0 用，产"改前"那张图。
+   放在 `MessageListMetrics` 而不是 `NativeMessageList` 里，因为它是“按钮不许压正文”的
+   布局政策，不是某个视图的实现细节。
    */
   static let bottomReserve: Double = 52
   /**
@@ -586,7 +580,7 @@ enum MessageListMetrics {
  用户看折叠的思考盒子时，只能看到"这里想过"和预览的三行，看不出想了多久——而"想了 3 秒"
  和"想了 90 秒"对"要不要展开看"完全是两种判断。
 
- ## 判据（可断言）
+ ## 判据
 
  - 有 `duration_ms` 且 ≥ 1 秒 → 显示**整秒**（四舍五入）；
  - **没有 / 不是正数 / 不到 1 秒 → 什么都不显示**。不显示比显示"0 秒"诚实：不到一秒的思考
@@ -596,9 +590,7 @@ enum MessageListMetrics {
 
  ## 为什么是 Foundation-only 的纯函数
 
- 它是**政策**（什么时候该说、说到什么精度），不是画法。放在 `Transcript.swift` 才能进
- 构建机上那套纯逻辑测试（`MessageListTests.swift` 的 `MessageListLogicTests`），
- 不必为了一句文案起模拟器。
+ 它是**政策**（什么时候该说、说到什么精度），不是画法，因此不依赖 UIKit。
  */
 enum ReasoningDuration {
   /** 秒数；不到 1 秒或拿不到时长时是 `nil`（调用方据此不显示）。 */
@@ -771,8 +763,6 @@ struct TranscriptPayload: Sendable {
 
 /**
  diffable 快照要 `reconfigureItems` 的那些行——**只比 `Int`**。
-
- 单独拎出来是因为它的语义值得被钉住（`pnpm ios:test:swift` 在构建机上跑，不需要 UIKit）：
 
  - "内容变了"由指纹回答，不是由主线程上的深比较回答；
  - **首次出现的行不算 changed**（它会被 `insert`，不需要 reconfigure）——

@@ -7,8 +7,3 @@
 ios/
 .expo/
 expo-env.d.ts
-
-# 验收产物：截图/录屏/构建中间物、Maestro 的视图树 dump。它们按轮次显式 `git add -f`
-# 进库，改了就不再是当时那一棵树——而 `pnpm ios:format` 会把它们整份重排。
-verification/.artifacts/
-verification/**/out/

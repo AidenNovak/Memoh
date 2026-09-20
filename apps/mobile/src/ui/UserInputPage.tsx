@@ -17,7 +17,7 @@
  *
  * ## 答案构建在别处
  *
- * "能不能提交""答案长什么样"全部在 `features/chat/userInput.ts`（纯逻辑、有单测）。
+ * "能不能提交""答案长什么样"全部在 `features/chat/userInput.ts`。
  * 这个组件只管画和收集草稿：把校验写在组件里，出错的代价是服务端拒收 + run 卡住，
  * 而那种错误在界面上看不出来。
  */
@@ -46,7 +46,7 @@ export interface UserInputParams {
   sessionId: string;
 }
 
-/** 纯展示：一份提问 + 提交/取消两个回调。场景台渲染它。 */
+/** 纯展示：一份提问 + 提交/取消两个回调。 */
 export function UserInputView({
   userInput,
   onSubmit,

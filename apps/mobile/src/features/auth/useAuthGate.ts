@@ -24,9 +24,7 @@ import {
   getFreshToken,
   saveSession,
 } from '../../api/credentials.ts';
-import { bootstrapFromVerifySeed, type VerifyBootstrap } from '../verify/bootstrap.ts';
 import { hasSeenOnboarding, markOnboardingSeen } from '../onboarding/seen.ts';
-import { shouldShowOnboarding } from '../onboarding/pages.ts';
 import type { SessionSeed } from '../session/store.tsx';
 import { createSessionLoss } from './sessionLoss.ts';
 
@@ -36,10 +34,6 @@ export interface AuthGateState {
   phase: AuthPhase;
   /** 已登录时的凭据种子；`phase === 'signedIn'` 时必非 null。 */
   seed: SessionSeed | null;
-  /**
-   * 验收种子（只在开发构建里非 null）。外壳用它决定要不要自动跑一段脚本化动作。
-   */
-  verify: VerifyBootstrap | null;
   /**
    * 该不该给用户看首启引导。
    *
@@ -56,7 +50,6 @@ export interface AuthGateState {
 export function useAuthGate(): AuthGateState {
   const [phase, setPhase] = useState<AuthPhase>('checking');
   const [seed, setSeed] = useState<SessionSeed | null>(null);
-  const [verify, setVerify] = useState<VerifyBootstrap | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
    * 首启引导是否还没看过。
@@ -82,8 +75,6 @@ export function useAuthGate(): AuthGateState {
    * 还没过期，脏凭据会一直留在设备上，下次冷启动又直接进主界面。规则见 `AGENTS.md`。
    *
    * 手动退出（设置页那一行）走同一个出口，只是**不念原因**：那时候"登录已过期"是假话。
-   * 以前它是另一条路（设置页自己清凭据 + 重置 store），闸门的 `phase` 不跟着切，
-   * 于是退出之后落在空壳界面上而不是登录页。
    */
   const loss = useMemo(
     () =>
@@ -102,9 +93,8 @@ export function useAuthGate(): AuthGateState {
   /**
    * 交给 `SessionProvider` 的 client **一律**带上 401 处置。
    *
-   * 为什么不是"在构造处顺手传一下"：client 有三个来源（启动时读 Keychain、登录页
-   * 登录成功、验收种子），漏掉任何一个，那条路上的 401 就没人管——登录之后那个 client
-   * 就是这么漏的。这里包一层，规则就只有一处：**进 App 的 client 都接同一套处置**。
+   * 为什么不是"在构造处顺手传一下"：client 有两个来源（启动时读 Keychain、登录页
+   * 登录成功），这里包一层后，**进 App 的 client 都接同一套处置**。
    * token 来源保持原样（`client.token()` 就是它自己的 getter），不改变任何取 token 的行为。
    */
   const asSessionClient = useCallback(
@@ -121,16 +111,6 @@ export function useAuthGate(): AuthGateState {
     let cancelled = false;
 
     void (async () => {
-      // 验收种子优先：它只在开发构建里存在，且没有种子时立刻返回 null。
-      const bootstrap = await bootstrapFromVerifySeed();
-      if (cancelled) return;
-      if (bootstrap !== null) {
-        setVerify(bootstrap);
-        setSeed({ client: asSessionClient(bootstrap.seed.client), endSession: loss.signOut });
-        setPhase('signedIn');
-        return;
-      }
-
       // 有没有看过引导，与有没有凭据是两件事：没看过的人先看引导（不管有没有凭据，
       // 有凭据的话看完直接进主界面）。
       const seen = await hasSeenOnboarding();
@@ -187,7 +167,6 @@ export function useAuthGate(): AuthGateState {
       // 不复位的话这一次会话的 401 会被当成"处理过了"。
       loss.reset();
       setSeed({ client: asSessionClient(nextSeed.client), endSession: loss.signOut });
-      setVerify(null);
       setError(null);
       setPhase('signedIn');
     },
@@ -208,8 +187,7 @@ export function useAuthGate(): AuthGateState {
   return {
     phase,
     seed,
-    verify,
-    showOnboarding: shouldShowOnboarding({ seen: onboardingSeen, hasVerifySeed: verify !== null }),
+    showOnboarding: !onboardingSeen,
     noticeKey: error ?? undefined,
     onSignedIn,
     onOnboardingDone,

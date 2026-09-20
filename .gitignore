@@ -141,9 +141,6 @@ detail-design-2.0-docs/
 /apps/mobile/.expo/
 /apps/mobile/expo-env.d.ts
 /apps/mobile/**/*.tsbuildinfo
-# 验收产物（截图/录屏/构建中间物）。按轮次显式 `git add -f` 才留档。
-/apps/mobile/verification/.artifacts/
-/apps/mobile/verification/**/out/
 # 签名材料绝不入库。
 /apps/mobile/*.p8
 /apps/mobile/*.p12
@@ -151,5 +148,5 @@ detail-design-2.0-docs/
 /apps/mobile/*.jks
 /apps/mobile/*.keystore
 
-# 每轮的门禁日志与证据（`.verify/<日期>-<主题>/`）。产物，不入库。
+# 本地构建、归档与发布产物。
 /.verify/

@@ -560,7 +560,6 @@
   "settings.appearance.oled": "True black",
   "settings.appearance.oled.footer": "Uses pure black in dark mode to save power on OLED screens.",
   "settings.appearance.system": "System",
-  "settings.debug": "Development",
   "settings.language": "Language",
   "settings.notifications": "Notifications",
   "settings.notifications.footer": "Only three things can reach you, and only while you're away.",

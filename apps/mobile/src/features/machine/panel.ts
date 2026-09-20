@@ -31,7 +31,7 @@ export interface Row {
    *
    * 这一层是防「中文界面上出现『任务 | running』」的：协议里的枚举值一个都不许直接当
    * 显示值用，必须先映射成 key。行值原本只有 `label`/`value` 两个字段，看不出这个区别，
-   * 于是漏一步 `t()` 谁也不会发现（`tests/machine-panel.test.mjs` 现在钉住它）。
+   * 所以这里显式标出值的来源，避免漏掉 `t()`。
    */
   valueKind: 'key' | 'text';
 }

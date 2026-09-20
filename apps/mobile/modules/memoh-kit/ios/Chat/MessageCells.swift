@@ -91,9 +91,8 @@ class MessageBlockCell: UICollectionViewCell {
   /**
    机器活动的容器样式。
    
-   ⚠️ 这个表面必须与**用户气泡**不同色。曾经两者都是同一个系统灰，实测
-   （`verification/ui/tools/measure_surfaces.py`）一张工具场景截图里那种灰占了
-   49% 的像素——整屏是一片同色的板子，没有层级。
+   ⚠️ 这个表面必须与**用户气泡**不同色。两者同为系统灰时，整屏会变成一片
+   同色的板子，没有层级。
    
    现在两者的区分有两层，任一层单独成立：
    
@@ -115,7 +114,7 @@ class MessageBlockCell: UICollectionViewCell {
   /**
    语义表面 → 具体颜色。**唯一**的转换点，两边取值必须不同。
    
-   政策在 `SurfaceToken`（Foundation-only，可单测），这里只负责把它落到 UIColor。
+   政策在 `SurfaceToken`（Foundation-only），这里只负责把它落到 UIColor。
    */
   static func color(for surface: SurfaceToken, traits: UITraitCollection) -> UIColor {
     switch surface {
@@ -252,9 +251,8 @@ final class TextMessageCell: MessageBlockCell {
     let text = row.block.text ?? ""
     let isAssistant = row.id.role == "assistant"
     let tolerantNow = isAssistant && row.block.streaming == true
-    let plain = Self.plainTextRendering
-    let parsed = isAssistant && !plain ? markdownDocument(for: text, tolerant: tolerantNow)
-                                       : MarkdownDocument.literal(text)
+    let parsed = isAssistant ? markdownDocument(for: text, tolerant: tolerantNow)
+                             : MarkdownDocument.literal(text)
     render(parsed, tolerant: tolerantNow)
     updateAccessibility(row, content: [spokenText(for: row)])
     accessibilityCustomActions = customActions()
@@ -386,25 +384,6 @@ final class TextMessageCell: MessageBlockCell {
     return actions.isEmpty ? nil : actions
   }
 
-  // MARK: - 仅测试可见
-
-  /**
-   行为断言用的只读口子（不是实现快照）：画了几个块、块视图是哪几个、复制的那份文本是什么。
-
-   "流式追加时前面的块被复用"这件事只能这样验：同一批视图实例在两次 `configure` 之后
-   还是同一批。它对应的是"每个 token 不重建整条消息"。
-   */
-  var renderedBlockCount: Int { blockViews.count }
-  var renderedBlockViews: [UIView] { blockViews }
-  var renderedPlainText: String? { copyText }
-
-  #if DEBUG
-  /// 对照模式：不解析 Markdown（截"改前"图用，见 `MessageListFrameProbe.plainTextRendering`）。
-  static var plainTextRendering: Bool { MessageListFrameProbe.plainTextRendering }
-  #else
-  static let plainTextRendering = false
-  #endif
-
   @objc func copyMessage() -> Bool {
     guard let text = copyText, !text.isEmpty else { return false }
     onCopy?(text)
@@ -506,7 +485,7 @@ final class ReasoningMessageCell: MessageBlockCell {
     }
     card()
     // 标题带上时长（`Reasoning · 思考了 3 秒`）：折叠态也要看得见"想了多久"——
-    // 什么时候该说、说到什么精度在 `Transcript.swift` 的 `ReasoningDuration`（纯逻辑、有单测）。
+    // 什么时候该说、说到什么精度在 `Transcript.swift` 的 `ReasoningDuration`。
     setHeading(row.block.reasoningHeading, symbol: "text.bubble", color: MemohPalette.secondaryLabel(traitCollection))
     style(body, .callout, color: MemohPalette.secondaryLabel(traitCollection))
     body.numberOfLines = MessageListMetrics.reasoningLineLimit(expanded: expanded)

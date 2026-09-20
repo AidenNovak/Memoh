@@ -41,10 +41,7 @@ function submissionKey(input: { sessionId: string; mode: QueueMode; text: string
 export class QueueSubmissionGate {
   private active: QueueSubmission | null = null;
   private retry: QueueSubmission | null = null;
-  /**
-   写成显式字段而不是构造参数属性：Node 的类型剥离（测试用
-   `--experimental-strip-types`）不支持参数属性，而这段逻辑正是靠单测钉住的。
-   */
+  /** 显式字段让构造器只负责注入幂等 id 的来源。 */
   private readonly createInvocationId: () => string;
 
   constructor(createInvocationId: () => string) {
@@ -132,7 +129,7 @@ export function queuePreview(
 export type QueueSupport = 'unknown' | 'yes' | 'no';
 
 /**
- * 发送按钮在给定状态下该做什么（纯逻辑，可单测）。
+ * 发送按钮在给定状态下该做什么。
  *
  * - `send`：空闲且有文字 → 开一轮；
  * - `queue`：**运行中**、有文字、且服务端支持队列 → 排进队列（这轮跑完再跑）；

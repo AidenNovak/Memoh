@@ -11,7 +11,7 @@
  * ## ⚠️ 这里**不能**改成可选 catch-all（`[[...path]]`）来顺带接住根
  *
  * 必需型 catch-all 只匹配 `/files/...`，不匹配 `/files` 本身；而 `filesRoute('/data')`
- * 返回的正是 `/files`（那个函数的文档与单测都这么写——根就是 `/data`）。2026-09-16 实测
+ * 返回的正是 `/files`（那个函数的契约写明根就是 `/data`）。2026-09-16 实测
  * 踩到：`/files/docs` 上给"回到上一层"，点下去整屏变成 expo-router 的
  * "Unmatched Route / Page could not be found"。
  *

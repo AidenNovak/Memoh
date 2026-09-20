@@ -12,7 +12,7 @@
  * 分得开。判断"要不要给重试"仍然只有一处（`features/errors/present.ts`），所以这里
  * 存的也是呈现对象而不是一句话。
  *
- * 纯逻辑、不 import 任何 `.tsx`，所以能直接单测（`tests/chat-skills.test.mjs`）。
+ * 纯逻辑，不 import 任何 `.tsx`。
  */
 import type { SkillSummary } from '../../api/types.ts';
 import { presentError, type ErrorPresentation } from '../errors/present.ts';

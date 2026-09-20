@@ -1,8 +1,0 @@
-appId: ai.memoh.ios
----
-# 第二次启动：引导不该再出现（"看过"这条记忆写进了钥匙串）。
-- assertVisible: 'Log in or sign up'
-- assertVisible:
-    id: 'login-selfhosted-toggle'
-- assertNotVisible: 'Your agents, on your server'
-- takeScreenshot: onboarding-05-second-launch

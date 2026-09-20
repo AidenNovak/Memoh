@@ -95,13 +95,13 @@ export function NotificationOpenHandler() {
         onDelivery: () => {
           // 前台那条已经由 policy 判成 in_app / drop，系统侧不弹横幅；
           // in_app 的落点是**首页那份跨 bot 待审批聚合**（同一条实时通道喂它），
-          // 所以这里不需要再造一个界面。记录留在桥的快照里（debug 页可看）。
+          // 所以这里不需要再造一个界面。
         },
         onToken: () => {
           // 上报契约见 `bridge.reportDeviceRegistration`（服务端端点未上线，暂不调用）。
         },
         onRegistrationFailed: () => {
-          // 模拟器 / 无凭据下这是预期路径，不打扰用户；原因留在桥的快照里。
+          // 模拟器 / 无凭据下这是预期路径，不打扰用户。
         },
       },
     );

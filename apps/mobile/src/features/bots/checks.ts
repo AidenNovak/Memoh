@@ -18,7 +18,7 @@
  * 的 R23「绝不能把面向开发者的东西直接倒给用户」、R45「原文只有带着类型化 code 时才当补充
  * 说明上屏」、R47「技术细节默认收起，但要留着」）。
  *
- * 所以这一层做三件事，都在这里、都可单测（`tests/bot-checks.test.mjs`）：
+ * 所以这一层统一做三件事：
  *
  * 1. **认得的类型 → 我们自己的文案**（`botSettings.checks.item.*`，中英都写），一眼是
  *    "能用 / 不能用"，不是"某句话的原文"；
@@ -136,7 +136,7 @@ const CHECK_TONE: Record<string, CheckTone> = {
   ok: 'ok',
   warn: 'warn',
   error: 'bad',
-  // `failed` 不在服务端的枚举里，但我们自己的固定服务端（`verification/fixture`）用它表示
+  // `failed` 不在服务端的枚举里，但旧服务端可能用它表示
   // 同一档，而切换器上的文案是"未通过"。两种写法都认，别只认其中一种。
   failed: 'bad',
   unknown: 'unknown',

@@ -13,7 +13,7 @@ export interface NativeMessageListProps extends ViewProps {
    * `features/errors/present.ts` 同构；这里只负责**执行**：原生报上来是哪一轮，
    * 我们把那一轮的用户输入重发一次。
    *
-   * **不传 = 这个宿主没有能执行动作的东西**（例如只回放本地帧的场景台）。原生据此
+   * **不传 = 这个宿主没有能执行动作的东西**。原生据此
    * 不显示按钮：一个点了没反应的按钮比不给更糟。
    */
   onErrorAction?: (event: {

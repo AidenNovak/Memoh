@@ -14,7 +14,7 @@
 | ------------------------------------------------------------- | ------------------------------ | ---------------------- |
 | `apps/mobile/`                                                | iOS 客户端（**唯一交付物**）   | 我们                   |
 | `apps/mobile/modules/memoh-kit/`                              | 一方原生能力与原生 UI（Swift） | 我们                   |
-| `tools/`                                                      | iOS 侧的探针、门禁、发布脚本   | 我们                   |
+| `tools/`                                                      | iOS 侧编译检查、资产与发布脚本 | 我们                   |
 | `infra/`                                                      | 联调隧道与 dev 栈脚本          | 我们                   |
 | 其余（Go 服务端 / `apps/web` / `apps/desktop` / `packages/`） | 上游                           | 上游，**我们尽量不动** |
 
@@ -38,24 +38,15 @@ pnpm install                  # 根安装（含上游依赖；iOS 侧的依赖�
 pnpm ios:check                # Swift 类型检查 + 类型/i18n/三元/按压态/lint/格式
 pnpm ios:typecheck:foundation # 只查 Foundation-only 的 Swift（macOS SDK，几秒）
 pnpm ios:typecheck:kit        # 查 UIKit 那批 Swift（要 iOS SDK，几秒）
-pnpm ios:test                 # node 纯逻辑 + 验收基建自测 + MemohKit 纯逻辑（后者在 vultr-sg 上跑）
-pnpm ios:test:swift           # 只跑上面那条 MemohKit 纯逻辑测试（丢给构建机）
 pnpm ios:bundle               # expo export（证明 JS bundle 能产出，不碰 Xcode）
 pnpm ios:run                  # 装到模拟器/真机（要 Xcode）
 pnpm ios:prebuild && pnpm ios:pods   # 从 app config 生成原生工程 + 装 Pods
-pnpm ios:verify:build         # 构建 Debug 模拟器 App（要 Xcode；单独跑要先租设备，见下）
-pnpm ios:test:hosted          # UIKit 那一半断言，跑在真 App 宿主里（要 Xcode）
 pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签名、上传并挂内部组
 ```
 
 - 根脚本全部带 `ios:` 前缀，**与上游脚本不重名**：`pnpm lint` / `pnpm test` 仍然是上游的
   整仓门禁，`pnpm ios:*` 才是我们这一侧。两者都要绿。
-- 需要租模拟器的验收，从 `apps/mobile` 里跑：
-  `pnpm verify:simulator --name '<本轮名字>' -- pnpm verify:build`，脚本会把
-  `MEMOH_VERIFY_UDID` 传下去。**不要直接 `simctl create`。**
-- 重活一次只跑一个。Swift 那半纯逻辑测试默认丢给 `vultr-sg`
-  （`tools/run-logic-tests.sh`，可用 `MEMOH_BUILD_HOST` / `MEMOH_KIT_TEST_DIR` 换）。
 - **提交会走上游的 husky 钩子**（`check-large-files` / `check-go` / `check-go-test` / `check-web`）。
   本机没装 Go 工具链时那两条自己跳过；`check-web` 会跑 `lint-staged`，iOS 侧由
   `apps/mobile/package.json` 里那份配置接管（见 §7 第 4 条）。
@@ -76,45 +67,18 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
   决定，避免 Apple 在导出期悄悄改号。
 - Release 默认服务器是 `https://memoh.yetodawn.com`。TestFlight 身份与 Memoh 身份是两层：
   ASC 决定谁能装包，Memoh member 决定谁能登录与看哪个 Bot；内测账号只授予共享
-  `ios-dev` 的 Bot 级 `manage`（覆盖 App 的聊天/文件/schedule/设置验收），**不授予服务器
+  `ios-dev` 的 Bot 级 `manage`（覆盖 App 的聊天/文件/schedule/设置），**不授予服务器
   admin**。这个 Bot 是内测专用；增加第二位测试员前要给每人独立 Bot，避免彼此看见会话。
 
-### 门禁到底覆盖了什么
+### 构建检查
 
 | 检查                                           | 覆盖                                                                                                            | 本机可跑                                  |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `ios:check`                                    | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
 | `ios:typecheck:foundation`                     | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
-| `ios:typecheck:kit`                            | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
-| `ios:test`                                     | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
+| `ios:typecheck:kit`                            | UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                            | ✅（要 Xcode）                            |
 | `ios:bundle`                                   | Metro 能出 iOS bundle                                                                                           | ✅                                        |
-| `ios:verify:build`                             | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
-| `ios:test:hosted`                              | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
-| `ios:verify:native`                            | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
-| onboarding/login/files/session-actions/push/permissions Maestro | 首启与登录、文件、会话动作、通知闭环，以及 chat-only 的只读历史/受限深链/零 WS 请求 | ✅（要 Xcode + Maestro）                  |
-| `tools/frame-probe/`                           | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
-
-旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
-2026-09-19 删除，但六条有明确行为判据的 Maestro 旅程仍保留：
-`verification/onboarding/run.sh`、`verification/login/run.sh`、`verification/files/run.sh`、
-`verification/session-actions/run.sh`、`verification/push/push-run.sh` 与
-`verification/permissions/run.sh`。
-登录旅程覆盖 GitHub/Google/邮箱占位反馈、邮箱错误、自部署切换、地址编辑、第一次 401 与第二次成功；
-fixture 的 `/ping` + 空载荷 `/auth/login` 也照真实客户端的“先确认是 Memoh，再发口令”顺序实现。
-会话动作旅程覆盖长按原生 action sheet、rename PATCH、列表刷新、从最近助手轮次 fork、进入新会话、
-返回后新旧会话同时可见，并用请求账核对源会话、标题、助手 `turn_id` 与新 id。它顺带修正了 fixture
-普通历史曾错发内部 `RenderTurn[]` 的问题：现在 `/messages` 与真实 API 一样发 `UITurn[]`，既有
-WebSocket 内容不再掩盖 REST 历史解析和分叉锚点。
-权限旅程从一个无权 `?view=schedule` 深链启动，确认页面只挂载 Sessions、REST 历史正文真的可读、
-Files / Schedule / 新建 / 机器 / 模型 / composer 都不出现，再直接深链定时编辑页确认只显示权限说明；
-fixture 请求账必须同时为 **0 次 WS 尝试、0 次 Files/Schedule 请求**。
-它们必须通过 simulator lease
-运行，并把截图落进各自的 `out/`；截图仍要由人看，脚本成功不能替代视觉检查。
-
-2026-09-19 在 iPhone 17 Pro / iOS 26.5 上实跑并逐张看图（不等于 Human QA）：首启三页、第二次启动、Cloud/自部署登录页、
-文件列表/三态预览/长按动作，以及 light/dark、`accessibility-extra-large`。这轮由截图发现并修了
-“末页 Skip 只从无障碍树隐藏、视觉仍残留”与“notes.txt 被浮动 tab bar 挡住，flow 没真进预览”
-两处假通过。**截图证视觉状态，逐帧探针/交互旅程证时序行为；只有其中一边不算完整证据。**
+| Xcode Debug build                              | 生成工程、Pods、原生模块注册与 Swift/ObjC 链接                                                                  | ✅（要 Xcode）                            |
 
 ---
 
@@ -437,14 +401,12 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/`               | 路由（Expo Router）。只导出 `page.Route`，不放逻辑                                                                                     |
 | `src/screens/`           | 只放 `*Screen` 文件                                                                                                                    |
-| `src/features/`          | 领域逻辑（12 个：activity / auth / bots / chat / errors / files / machine / notifications / onboarding / schedule / session / verify） |
+| `src/features/`          | 领域逻辑（activity / auth / bots / chat / errors / files / machine / notifications / onboarding / schedule / session）                 |
 | `src/models/`            | 数据形状                                                                                                                               |
 | `src/api/`               | REST + 实时协议（client / realtime / protocol / cursor / credentials / types）                                                         |
 | `src/ui/`                | 共享 UI 组件（29 个）                                                                                                                  |
 | `src/lib/`               | 基础设施（presentation / i18n / theme / accessibility）                                                                                |
 | `modules/memoh-kit/ios/` | Swift：Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support       |
-| `tests/`                 | node --test 纯逻辑单测（总数随功能增长，不在文档固定易过期数字）                                                                       |
-| `verification/`          | 验收脚本（build / simulator / native / clean + fixture）                                                                               |
 
 规矩：
 
@@ -453,8 +415,7 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 - **只从 `@memoh-ios/kit` 导入原生 API**，typed facade / 原生 View wrapper / Swift 实现三者一一对应。
   模块事件订阅必须在 unmount 时移除；UIKit 工作跑在主队列。
 - 复杂结构体传给原生 View 用 **JSON 字符串 prop**，不要跨桥传嵌套对象。
-- 故障注入、运行时内部状态、Router 演示都放 dev-only 的 `/debug` 页（从设置进入）。
-  产品屏幕只暴露可操作的连接状态。
+- 产品屏幕只暴露用户可操作的连接状态，不携带故障注入或场景回放入口。
 - **不要嵌套三元表达式**：一个 `cond ? a : b` 可以，任一分支里再有 `?` 就不行。封闭集合用字典
   映射，有序或重叠条件用 `if` / `switch`（`pnpm ios:check` 里的 `ternary:check` 会拦）。
 - 只有在真的需要时才加状态库。
@@ -463,37 +424,31 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 
 ## 6. 我们对上游做的改动（全部）
 
-**改上游的现有文件（7 个）：**
+**改上游的现有文件（6 个）：**
 
 | 文件                                           | 改了什么                                                        | 为什么                                                                                                                                                                                                                                  |
 | ---------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AGENTS.md`（`CLAUDE.md` 是指向它的软链）      | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口                                          |
 | `pnpm-workspace.yaml`                          | `packages` 加一行 `apps/mobile/modules/*`                       | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
-| `package.json`                                 | 加 17 个 `ios:*` 脚本；补 Worklets 的 Babel package extension   | 脚本与上游不重名；Worklets 0.10.1 的插件会直接加载 `@babel/generator` 却没有声明它，显式钉在 Expo 使用的 Babel 7.28.5，防止干净安装误捡 Babel 8。**上游脚本一个没动**                                                                   |
+| `package.json`                                 | 加 11 个 `ios:*` 脚本；补 Worklets 的 Babel package extension   | 脚本与上游不重名；Worklets 0.10.1 的插件会直接加载 `@babel/generator` 却没有声明它，显式钉在 Expo 使用的 Babel 7.28.5，防止干净安装误捡 Babel 8。**上游脚本一个没动**                                                                   |
 | `eslint.config.mjs`                            | `ignores` 加 `apps/mobile/**`                                   | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题                                                                                                   |
-| `.gitignore`                                   | 追加 iOS 段 + `/.verify/`                                       | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库                                                                                                                                              |
+| `.gitignore`                                   | 追加 iOS 段 + `/.verify/`                                       | prebuild、归档与发布产物不入库；签名材料绝不入库                                                                                                                                                                                        |
 | `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图；另记录 Worklets 的 `@babel/generator@7.28.5` package extension。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）                       |
-| `.github/scripts/contribution-policy.test.mjs` | 普通 PR workflow 计数 9 → 10                                    | 新增 `ios-ci.yml` 后，治理测试仍遍历全部 PR workflow，确认它们没有 format 依赖且权限都是 read-only                                                                                                                                      |
 
 **新增的目录（不改上游任何文件）：**
 
 | 路径           | 是什么                                                                             |
 | -------------- | ---------------------------------------------------------------------------------- |
-| `apps/mobile/` | iOS 客户端（372 个文件，含 65 个测试文件、`modules/memoh-kit` 12 个 Swift 源文件） |
-| `tools/`       | iOS 侧探针、门禁、发布脚本（46 个）                                                |
+| `apps/mobile/` | iOS 客户端（254 个文件，`modules/memoh-kit` 11 个 Swift 源文件）                  |
+| `tools/`       | iOS 侧编译检查、资产与 TestFlight 发布脚本（7 个）                                |
 | `infra/`       | 联调隧道与 dev 栈脚本（7 个）                                                      |
 
-**新增的上游目录内文件：** `.github/workflows/ios-ci.yml`。它不改上游 workflow，
-只在 iOS 相关路径变更时跑 JS/TS 合同与 bundle、Linux Swift 纯逻辑、macOS 原生构建与
-hosted XCTest。
-
-**没搬的**：memoh-ios 的 `docs/`（见 §8）、`.verify/`（每轮证据，产物）、
-旧 `.github/workflows/verify.yml`（它的 ui job 在 harness 删除后已经过期）。本 fork 改为
-重写一份不依赖已删 harness 的 `ios-ci.yml`。
+**不提交的内容：** 单元测试、E2E/验收脚本、fixtures、截图证据、测试专用路由与原生探针。
+这些内容已在功能收口前完成验证；当前分支只保留产品、构建发布链与本文。
 
 ---
 
-## 7. 相对 memoh-ios，我们改了什么（6 类）
+## 7. 仓库集成说明
 
 （口径：`apps/mobile` 除下面这些外**逐字节相同**；`infra/` 逐字节相同。）
 
@@ -502,18 +457,13 @@ hosted XCTest。
    放根上会把上游的 web / desktop / 服务端一起卷进"我们的排版范围"。
    （根上的 `ios:check` 在它前面又串了两条 Swift 类型检查——memoh-ios 的 `check` 本来就有这两条，
    只是它的入口在根上。）
-2. **补了 3 个"幽灵依赖"**：`expo-file-system`（运行时 import）、`sf-symbols-typescript`
-   （type-only）、`ws`（测试用）。它们以前靠 memoh-ios 的 `nodeLinker: hoisted` 布局 +
-   根 `devDependency` 兜住；本仓库用 pnpm 默认的 isolated 布局，解析不到就是解析不到。
-   **这是门禁抓到的真缺陷**（`tsc` 报 `TS2307`、3 个测试文件 `ERR_MODULE_NOT_FOUND`），
-   不是配置问题 —— 版本与 memoh-ios 实际用到的一致（`57.0.7` / `2.2.0` / `^8.21.3`）。
+2. **显式声明移动端依赖**：`expo-file-system`（运行时 import）与 `sf-symbols-typescript`
+   （type-only）。本仓库用 pnpm 默认的 isolated 布局，不能依赖 hoisted 布局偶然兜底。
    根 `package.json` 还用 pnpm `packageExtensions` 补了 Worklets 0.10.1 漏声明的
    `@babel/generator@7.28.5`：干净安装曾解析到 Babel 8，导致 Reanimated 的
    `interpolateColor.ts` 在 Worklets 插件里 bundle 失败；显式补依赖后，React Compiler 保持开启且
    `expo export` 可正常产出 iOS bundle。
-3. **`tools/` 里 5 处死绑定删掉**（3 个未使用的 import + 2 个从没被读过的计数器）。
-   上游根 ESLint 现在会扫 `tools/`，它报的是真问题。**没有为了让门禁变绿而放宽任何规则。**
-4. **`apps/mobile/package.json` 里加了一份自己的 `lint-staged` 配置**，命令是
+3. **`apps/mobile/package.json` 里加了一份自己的 `lint-staged` 配置**，命令是
    `pnpm exec eslint --concurrency=auto`（**不带 `--fix`**）。两件事都必要：
    - **为什么要有这份配置**：上游根上的 ESLint 是 **10.x**，而 Expo 那套
      （`eslint-config-expo` → `eslint-plugin-react` 7.x）只支持 **9.x**。ESLint 10 会认领
@@ -525,25 +475,8 @@ hosted XCTest。
    - **为什么不带 `--fix`**：实测它会干坏事 —— 把有意写的 `{/* eslint-disable-next-line */}`
      替换成 `{ }`，合并 import 后留下 Prettier 不接受的空格。iOS 侧的格式由 `prettier` 管，
      ESLint 只负责**发现**问题。
-5. **没搬 memoh-ios 里"历史上已入库"的 63 份验收产物**
-   （`apps/mobile/verification/files/out/**`，118MB 量级）。理由：客户端自己的约定就是
-   **`out/` 不进 Git**（`tests/schedule-keyboard.test.mjs` 的注释里明写着），而且引用它们的
-   那批 `docs/` 本来也没带过来 —— 带过来就是一批没有出处的孤图。新轮次要留档照旧
-   `git add -f` 某一轮。
-6. **`tools/` 与注释里的适配**（memoh-ios 的路径/脚本名在这个仓库里不再成立）：
-   - `tools/spec-drift.mjs`：默认 A 从"笔记本上的上游只读副本"改成**本仓库的 `spec/swagger.json`**
-     ——上游现在就在这个仓库里，写死别人的绝对路径等于默认跑不了。
-   - `tools/frame-probe/run-battery{,-long}-leased.sh`：App 路径的默认值同样从写死的绝对路径
-     改成**按脚本位置推出来的本仓库构建产物**。
-   - `tools/docs-links.mjs`：默认扫描范围收成 **iOS 侧**（`AGENTS.md` + 本文 + `apps/mobile/`）。
-     上游那几百份 Markdown 不归我们管，扫进来只会刷噪声。
-   - **22 处注释/提示里的脚本名对齐**（`pnpm test:swift` → `pnpm ios:test:swift`、
-     `pnpm typecheck:kit` → `pnpm ios:typecheck:kit`、`pnpm check` → `pnpm ios:check`、
-     `pnpm dev:env` → `pnpm ios:dev-env`、`pnpm prebuild` → `pnpm ios:prebuild`）。
-     只动注释与提示字符串，没有一行逻辑改动。
-   - `modules/memoh-kit/README.md`：把"UIKit 那半**尚未接入** XCTest target"改成事实
-     （早就接了，跑 `pnpm ios:test:hosted`），并把已随 harness 删除的截图/量色入口改成
-     "现在只能人工看图 + 重写时要补回来"。
+4. **`tools/docs-links.mjs` 只扫描 iOS 侧**（`AGENTS.md` + 本文 + `apps/mobile/`），
+   不把上游几百份 Markdown 卷进移动端检查。
 
 ---
 
@@ -560,65 +493,16 @@ hosted XCTest。
 
 ---
 
-## 9. 当前验收与还没做的事
+## 9. 当前状态与剩余验收
 
-- **TestFlight 0.1.0 (build 6) 已可用**：从产品代码 head `f841b138d` 归档，包含
-  Cloud/self-host 登录页、会话动作、push，以及 chat-only 权限表面收敛与只读历史；ASC
-  `processingState=VALID`，已挂 `Internal Testers`（1 位）；
-  最低系统 iOS 26.0、`usesNonExemptEncryption=false`。最终 IPA 已核对发行签名链、Team、bundle、
-  两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement；本机归档在
-  `.verify/testflight-build-6-f841b138d/`。
-  `vultr-sg` 上相同邮箱的 Memoh member 已能登录并看见 `ready` 的 `ios-dev`，以非服务器管理员
-  身份实测 sessions/files/checks/schedule 均 HTTP 200；密码只在服务器 root-only secret 中。
-- **PR #165 产品 head `f841b138d` 的全套 CI 已通过**：19 项成功、2 项按规则跳过、0 失败；
-  `.github/workflows/ios-ci.yml` 三个 job 覆盖
-  JS/TS + Hermes bundle、Swift 纯逻辑、原生 Simulator build + hosted XCTest；上游的
-  Lint/Test、三平台 desktop/runtime 与 Docker 也全绿；原生 job 用时 33 分 55 秒。它仍不代替
-  真机和 Human QA。
-  ⚠️ 顺带注意上游的 `.github/workflows/agents-md-updater.yml`：它**每两天重新生成
-  `AGENTS.md` 并开一个 PR**。它会看不到我们加的「iOS Client」那节，所以**别直接把那个 PR
-  合进来**——合之前先看它有没有把 iOS 那段删掉。真要被反复打扰，就在那个 workflow 的
-  `extra_instructions` 里加一句"保留 iOS 客户端那一节"（那会是第 7 个被改的上游文件，
-  所以先按现状看着）。
-- **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
-  `AGENTS.md` → 本文。
-- **UI 自动化仍是定向覆盖，不是全导航录制**：保留在树里的 onboarding / login / files /
-  session-actions / push / permissions 六条旅程已实跑；会话动作真实完成了重命名→刷新→分叉→打开→
-  返回，权限旅程则覆盖 chat-only 的深链收敛、REST 历史、只读文案、隐藏写入口、定时编辑页自判与
-  0 次 WS/Files/Schedule 请求，并核对请求账。
-  2026-09-19 还把精简前 commit `c93589a` 的会话、bot、schedule、设置、语言、
-  通知旅程拿来对当前代码与当前 fixture 补跑：会话发送/流式/工具顺序与压缩端点、schedule
-  新建→编辑→删除及请求体、外观 light/dark/true-black、语言即时切换、通知三类事件、bot
-  创建→切换→消息发往新 bot 都取得了界面和服务端证据。旧断言里的三处文案已变化
-  （`Tasks: N · On: N`、`Run finished/failed`、`Messages compacted: N`），不能把陈旧文案红项算产品失败。
-  旧补跑中“返回 / 会话信息 / bot 保存偶尔首击无变化”的风险已做定向复现：真正稳定复现的是
-  Maestro 的 `hideKeyboard` 在 iOS 26.5 上误点了键盘后方的“默认模型”行并打开 model sheet，
-  后续 Save 自然不在无障碍树里；服务端也没有收到写请求。改用用户实际可做的 Return 收键盘并等待
-  布局稳定后，在同一当前构建上连续完成 **6 次修改→首击保存→返回→重新进入**（其中 3 次保持
-  键盘打开、3 次 Return 收起）、**6 次会话信息打开→关闭**及 chat 返回，全部不启用自动重试并
-  通过；fixture 最终收到第 6 次 `display_name` 补丁。这个结论排除了已观察到的产品点击丢失，
-  但 Simulator 自动化仍不冒充真机手感，人工验收前不标 Human QA。审批/错误态继续由场景台与
-  纯逻辑覆盖。
-- **逐帧性能已实测**（iPhone 17 Pro Simulator / 60Hz）：17 / 101 / 601 行转录的追加主线程中位
-  约 `0.15–0.20 / 0.49 / 2.38 ms`，p95 最高约 `0.54 / 1.35 / 2.66 ms`；三档在阅读模式下
-  首行位移、距底收缩、停止增长后距底均为 `0pt`。25ms 人为 stall 的 hitch rate 为 `1.0`，
-  证明探针确实能抓到卡顿。不同长度档的宿主 load 不全可比，因此这些数是各档上界证据，
-  不拿来声称跨档线性加速。
-- **旧 harness 删除留下的断口已收口**：push 截图断言与 `system-alerts.sh` 不再依赖已删的
-  `verification/ui/{driver.py,textdump.swift}`，改为共用独立的 `verification/ocr/textdump.py` +
-  `textdump.swift`；macOS CI 用合成图片实际编译并跑 Vision OCR，自测输出不是只查文件存在。
-  2026-09-19 又在 iPhone 17 Pro / iOS 26.5 Simulator 上重跑整条 push 旅程：未授权不显示、
-  用户触发授权、横幅、通知中心、审批提交、跨账号拒绝、同会话分组、前台 `in_app`、分类注册
-  都通过；`aps.badge=2` 的红色徽标与 App 按待审批聚合清成 0 也首次截到并由 OCR 精确行断言。
-  第二次打开通知中心时 Maestro 曾报告 swipe 成功但画面仍在主屏幕，脚本现改为看截图结果，
-  未打开时最多再下拉一次（本轮第二次成功），不再把手势回执当成页面状态。
-  `verification/device.sh` 打印的设备租约示例也只指向现存入口（`verify:native` / `files/run.sh`）。
-- **仍只能真机验**：点系统通知卡片与动作按钮、真实 APNs 送达、生产环境 token、触感与专注模式；
-  Simulator 的本地 `simctl push` 与事件注入不冒充这些结论。
-- **设备 token 上报端点还不存在**（`POST /devices` 只是形状）。
-- **没实测过的**（照抄 memoh-ios 的标注，别升级成已完成）：不同 provider 的 thinking 字段归一化
-  （在服务端）；真实蜂窝/Wi-Fi 切换；
-  `sessions/events` SSE 在 `URLSession` 下的分帧；键盘几何与"点空白收键盘"两条判据。
-- **本机 dev 环境没配**：`~/.config/memoh-ios/dev.env` 不存在，所以 `tools/` 里依赖它的探针
-  （`live-integration` / `api-scenarios` / `ask-user-e2e` / `*-probe`）**都还没在这台机器上跑过**。
-  要跑先 `pnpm ios:dev-env` 并把该文件补齐。
+- **TestFlight 0.1.0 (build 6) 已可用**：产品代码 head `f841b138d`，ASC 状态 `VALID`，
+  已挂 `Internal Testers`。发行签名、Team、bundle、build number、production APNs 与
+  Time Sensitive entitlement 都已核对。
+- Release 默认连接 `https://memoh.yetodawn.com`。TestFlight 只决定谁能安装；
+  Memoh member 决定谁能登录与访问哪个 Bot。内测账号只授予 `ios-dev` 的 Bot 级权限，
+  不授予服务器 admin；密码只保存在 `vultr-sg` 的 root-only secret 中。
+- 功能收口前已完成模拟器、协议、权限矩阵、原生构建与 TestFlight 发布验证。为保持提交克制，
+  仓库不保留单元测试、E2E、fixtures、截图证据、测试专用页面或探针。
+- **仍需真机 Human QA**：真实 APNs 送达、通知卡片与动作按钮、生产 device token、
+  触感、专注模式，以及蜂窝/Wi-Fi 切换。完成前 PR 保持 Draft，`Human QA passed` 不勾选。
+- **服务端缺口**：device token 上报端点还不存在；`POST /devices` 目前只是客户端预留合同。

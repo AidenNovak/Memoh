@@ -9,7 +9,7 @@
  *
  * ## 服务端没有现成的接口
  *
- * 实测确认（`tools/status-probe.mjs`、`tools/sse-probe.mjs`）：
+ * 部署实例确认：
  *   - `GET /sessions/{id}/status` 只给 message_count / context_usage / cache_stats /
  *     skills，**不含运行状态**；
  *   - `GET /sessions/events` 只推 `session_touched` / `ping`，**不含决策状态**。

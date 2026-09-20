@@ -52,7 +52,7 @@ export type AvatarPlan =
  请求。所以"这一次 open 里给过了"要记下来，只有**连接真正重开**（断开→再 open）
  才重置。两条合起来的语义是"每次网络恢复最多重试一次"。
 
- 断言在 `tests/settings-and-avatar.test.mjs`；`BotAvatar` 只负责把连接状态喂进来。
+ `BotAvatar` 只负责把连接状态喂进来。
  */
 export interface AvatarRetryState {
   /** 这一次加载是不是失败了（失败态才需要重试）。 */

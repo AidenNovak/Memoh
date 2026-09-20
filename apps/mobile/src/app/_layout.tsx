@@ -16,7 +16,6 @@ import { AuthGateScreen } from '../screens/AuthGateScreen.tsx';
 import { NotificationCategoryRegistrar } from '../features/notifications/NotificationCategoryRegistrar.tsx';
 import { NotificationOpenHandler } from '../features/notifications/NotificationOpenHandler.tsx';
 import { SessionProvider } from '../features/session/store.tsx';
-import { ScenePlanWatcher, VerifyPlanRunner } from '../features/verify/VerifyPlanRunner.tsx';
 import { useLocale } from '../lib/i18n/useLocale.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { ThemeProvider, useTheme } from '../lib/theme/context.tsx';
@@ -65,11 +64,9 @@ function ThemedRoot() {
       */}
       <NotificationCategoryRegistrar />
       <AuthGateScreen>
-        {(seed, verify) => (
+        {(seed) => (
           <View style={{ flex: 1, backgroundColor: palette.groupedBackground }}>
             <SessionProvider seed={seed}>
-              <VerifyPlanRunner verify={verify} />
-              <ScenePlanWatcher verify={verify} />
               {/*
                 推送的宿主：深链、审批动作、徽标。挂在 SessionProvider 里面是因为
                 "点通知要打开哪个会话、点了允许要回应哪次审批"只有 store 知道；

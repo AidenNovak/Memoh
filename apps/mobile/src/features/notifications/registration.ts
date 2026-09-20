@@ -174,17 +174,6 @@ export function serializeBound(bound: BoundRegistration): string {
 }
 
 /**
- * 日志里能出现的 token 形态：**只留长度**。
- *
- * token 本身不进日志、不进文档、不进 Git；但排查"注册没上去"时又需要确认"到底有没有
- * 拿到 token"。长度是这两者之间唯一安全的信息。
- */
-export function describeToken(token: string | null): string {
-  if (token === null || token === '') return 'none';
-  return `present(${token.length})`;
-}
-
-/**
  * 服务端实现这个端点时的硬要求（写在这里，因为它跟着契约走）。
  *
  * 三条都不是"建议"：

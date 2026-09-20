@@ -64,7 +64,7 @@ export interface ChatState {
    * owner 的租约到期时间（ISO 字符串）。
    *
    * 用来识别"owner 已经死了但投影还停在 running"——那是用户唯一能看到的线索，
-   * 没有它界面就永远转圈。见 `tools/orphan-run-probe.mjs`。
+   * 没有它界面就永远转圈。
    */
   runLeaseExpiresAt: string | null;
   /** 服务端权威：是否有活跃 run。 */
@@ -121,7 +121,7 @@ export interface ChatState {
    往前翻页的游标（`before_message_id`）：当前这一页里 **最老那一轮**的消息 id。
    `null` = 没有更早的（或还没有可翻的历史），界面据此不给"加载更早"入口。
 
-   规则与判据在 `features/chat/historyPage.ts`（纯函数、有单测）。
+   规则与判据在 `features/chat/historyPage.ts`。
    */
   olderCursor: string | null;
   /** 服务端已经明确回答"没有更早的了"（空页）。这时不许再请求。 */
@@ -336,7 +336,7 @@ function isPending(status: string | undefined): boolean {
 /**
  * 审批的兜底选项。
  *
- * ⚠️ 服务端**不保证**给 `options`。实测（`tools/approval-shape.mjs`）：当 agent 没有
+ * ⚠️ 服务端**不保证**给 `options`。当 agent 没有
  * 定义权限选项时，approval 里只有 `{approval_id, short_id, status, can_approve}`——
  * 没有 options。
  *
@@ -665,7 +665,7 @@ function turnText(turn: RenderTurn): string {
 
  ⚠️ 这条判据（除了比 invocation_id）不是多余的：服务端回显用户轮次的通道是
  `runtime_delta.user_turn_upserts`，而**那一帧里没有 `invocation_id`**
- （形状见 `verification/fixture/server.mjs` 的回显分支与 `docs/research/memoh-api.md`）。
+ （协议形状见 `docs/research/memoh-api.md`）。
  只按 id 认的话，这一类回显会让同一句话在屏幕上出现**两个气泡**。
 
  正文相同时丢掉本地那份**不会让任何内容消失**——权威那份已经在同一帧里画出来了
@@ -857,8 +857,7 @@ function mergeUserTurns(existing: UITurn[], incoming: UITurn[]): UITurn[] {
  *   清掉的话，打开一个正在跑的会话、历史比快照先回来时，流式正文会闪没。
  *
  * ⚠️ 另外**本地那条乐观消息不能无条件清**（本轮修的第二处）：判据与 snapshot/delta
- * 同一套——**历史里真的出现了这一句**才让位（`coverOptimistic`）。实测
- * （`tools/pending-echo-probe.mjs`，部署实例）：发出去之后、这一轮还没落盘的时候拉一次
+ * 同一套——**历史里真的出现了这一句**才让位（`coverOptimistic`）。发出去之后、这一轮还没落盘的时候拉一次
  * 历史，本地那条如果被清掉，屏幕上就**一句话都没有**了。
  */
 export function applyHistory(state: ChatState, turns: UITurn[]): ChatState {
@@ -1008,7 +1007,7 @@ export function markStale(state: ChatState, stale: boolean): ChatState {
  *
  * ## 为什么必须有这个判断
  *
- * 实测（`tools/orphan-run-probe.mjs`）：run **正常失败**时投影会给出 `errored`，
+ * 部署实例中，run **正常失败**时投影会给出 `errored`，
  * 重订阅也能拿到终态。但 owner 进程死掉时（上游偶发，见
  * `docs/research/verified-behaviour.md`），投影会**永远停在 `running`**：
  * 不报错、不收敛、也不再有任何帧。
@@ -1103,8 +1102,8 @@ function liveAssistantMessage(state: ChatState): RenderMessage | null {
  * 1. **本地乐观消息必须排在助手输出之前。** 早期版本把它 push 到最后，结果屏幕上是
  *    "助手回复在上、用户提问在下"——顺序反了，看起来像模型抢答。
  *
- * 2. **run 期间服务端不一定给 `user_turns`。** 实测（`tools/turn-probe.mjs`）：
- *    run 跑到 `admitting` 时 `current_run_view.user_turns` 是 `null`，权威的用户轮次
+ * 2. **run 期间服务端不一定给 `user_turns`。** 在 `admitting` 阶段，
+ *    `current_run_view.user_turns` 是 `null`，权威的用户轮次
  *    要等 REST 历史才有。所以当 `liveUserTurns` 为空时，**乐观消息就是这一轮的用户
  *    输入**，不能当成"多余的东西"丢掉。
  *
@@ -1112,7 +1111,7 @@ function liveAssistantMessage(state: ChatState): RenderMessage | null {
  *    这一条）。之前的写法是二选一（`liveUserTurns.length > 0 ? liveUser : optimistic`），
  *    于是只要会话里已经有一条带 `user_turns` 的轮次（比如上一轮、或一个 steer 轮次），
  *    刚发出去、服务端还没回显的那句话就**从屏幕上消失**——输入框已经清空，屏幕上什么
- *    都没有，用户完全无法判断话到底出去没有（`docs/research/e2e-suite.md` §4.3 的现场）。
+ *    都没有，用户完全无法判断话到底出去没有。
  *
  *    正确的规则是**"这条被覆盖了没有"**，不是"服务端有没有给过用户轮次"：本地那条要留到
  *    覆盖它的权威轮次出现为止。覆盖判断在 reducer 里做（`hasServerTurn` 比 invocation_id），

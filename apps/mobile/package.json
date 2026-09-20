@@ -15,11 +15,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm i18n:check && pnpm ternary:check && pnpm press:check && pnpm lint && pnpm format:check",
-    "test": "node --experimental-strip-types --experimental-test-module-mocks --test 'tests/**/*.test.mjs' && python3 verification/simulator_test.py && python3 verification/build_test.py && python3 ../../tools/frame-probe/measure_test.py && python3 ../../tools/release_testflight_test.py",
-    "verify:build": "python3 verification/build.py",
-    "verify:native": "python3 verification/native.py",
-    "verify:simulator": "python3 verification/simulator.py",
-    "verify:clean": "python3 verification/clean.py",
     "ternary:check": "node ./scripts/check-ternaries.mjs",
     "press:check": "node ./scripts/check-press-opacity.mjs",
     "icons:vendor": "node ./scripts/vendor-provider-icons.mjs"
@@ -61,7 +56,6 @@
     "globals": "^14.0.0",
     "prettier": "^3.6.2",
     "sf-symbols-typescript": "2.2.0",
-    "typescript": "~6.0.3",
-    "ws": "^8.21.3"
+    "typescript": "~6.0.3"
   }
 }

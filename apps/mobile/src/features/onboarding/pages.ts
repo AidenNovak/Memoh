@@ -16,7 +16,7 @@
  * ## 为什么页定义是纯数据
  *
  * 页数、每页用哪个符号、文案 key——这些是**内容**，与怎么渲染无关。放在纯模块里，
- * 就能在没有模拟器的地方跑测试（`tests/onboarding.test.mjs`）：页 id 不重复、
+ * 就能保持页面 id、顺序与文案 key 的单一来源：
  * 文案 key 在两份语言文件里都存在、符号名不是空串。这些正是"改内容时最容易写坏、
  * 而肉眼看截图看不出来"的东西。
  */
@@ -61,17 +61,3 @@ export const ONBOARDING_PAGES: readonly OnboardingPage[] = [
     bodyKey: 'onboarding.selfHosted.body',
   },
 ];
-
-/**
- * 这一屏该不该出现。
- *
- * 两个输入都是"事实"，判断只有一行——但正因为只有一行，写反了也没人看得出来，
- * 所以它有一个测试（见 `tests/onboarding.test.mjs`）。
- *
- * - `seen`：本机是否已经看过（存在 Keychain 的那条标记）。
- * - `hasVerifySeed`：这台机器上是否有验收种子。种子代表"已经配好的状态"，是给
- *   验收和演示用的，不是首次启动——那种情况下必须先到种子指定的地方去。
- */
-export function shouldShowOnboarding(input: { seen: boolean; hasVerifySeed: boolean }): boolean {
-  return !input.seen && !input.hasVerifySeed;
-}

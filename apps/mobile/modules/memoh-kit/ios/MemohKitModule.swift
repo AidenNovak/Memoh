@@ -58,14 +58,6 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       await MemohNotifications.shared.setBadgeCount(count)
     }
 
-    AsyncFunction("notificationsDelivered") { () async -> String in
-      await MemohNotifications.shared.delivered()
-    }
-
-    AsyncFunction("notificationsRegisteredCategories") { () async -> String in
-      await MemohNotifications.shared.registeredCategories()
-    }
-
     AsyncFunction("notificationsTakePendingOpen") { () -> [String: Any]? in
       MemohNotifications.shared.takePendingOpen()
     }

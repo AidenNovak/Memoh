@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- 聊天正文的 Markdown：**解析层**（Foundation-only，能在构建机上单测）。
+ 聊天正文的 Markdown：**解析层**（Foundation-only）。
  视觉那一半在 `MarkdownText.swift`（UIKit）。
 
  ## 为什么是自己写的子集解析器
@@ -799,11 +799,8 @@ struct MarkdownDocument: Sendable {
  "点一下就执行"的入口。这不是洁癖——远程内容能决定我们调起什么 URL，白名单是这一层唯一
  守得住的边界。
 
- **为什么住在 Foundation 这一半**（2026-09-18 从 `MarkdownText.swift` 搬过来）：判据全是
- 字符串（scheme 白名单 + 半截 URL 那两个 case），与 UIKit 无关。住在 UIKit 文件里的时候，
- 它的测试只能放进 `#if canImport(UIKit)` 那一段——也就是**只有装了 Xcode 的 hosted 测试
- 跑得到**；搬过来之后同一批断言进了 `MessageListLogicTests`，`pnpm test:swift` 在
- `vultr-sg` 的 Linux 容器里也跑得动（用例见 `verification/MessageListTests.swift`）。
+ 放在 Foundation 层，因为判据全是字符串规则（scheme 白名单与不完整 URL），与 UIKit
+ 无关。
  */
 enum MarkdownLinkPolicy {
   static func openableURL(_ destination: String) -> URL? {

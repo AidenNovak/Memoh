@@ -560,7 +560,6 @@
   "settings.appearance.oled": "纯黑",
   "settings.appearance.oled.footer": "深色模式下使用纯黑背景，OLED 屏幕更省电。",
   "settings.appearance.system": "跟随系统",
-  "settings.debug": "开发",
   "settings.language": "语言",
   "settings.notifications": "通知",
   "settings.notifications.footer": "只有三种情况会通知你，而且只在你离开 App 时。",

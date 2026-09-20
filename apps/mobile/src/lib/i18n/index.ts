@@ -12,8 +12,7 @@
  * `Every {{count}} minutes`：那样 `count = 1` 时就是 `1 minutes` / `1 items` 这种病句，
  * 而且只在参数恰好是 1 的那一次出现，人肉 review 基本抓不住。
  *
- * 这条有测试守着：`apps/mobile/tests/locale-copy.test.mjs`（同一份文件里还有一条：中文值
- * 里不许出现英文单词）。写新文案前先看一眼它，别把这句注释当成"英文也不用管"的许可。
+ * 中文值里也不许混入英文单词。写新文案时要同时维护两份语言文件。
  */
 import { getLocales } from 'expo-localization';
 

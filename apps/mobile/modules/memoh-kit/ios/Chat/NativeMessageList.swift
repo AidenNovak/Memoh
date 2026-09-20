@@ -1,5 +1,4 @@
 import ExpoModulesCore
-import QuartzCore
 import UIKit
 
 private final class MessageCollectionView: UICollectionView {
@@ -8,10 +7,6 @@ private final class MessageCollectionView: UICollectionView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    #if DEBUG
-    // 只加计数：量"每个 apply 之后列表被重新布局了几次"。改的是尺子，不是几何。
-    MessageListFrameProbe.shared.recordLayoutPass()
-    #endif
     didLayout?()
   }
 
@@ -23,19 +18,9 @@ private final class MessageCollectionView: UICollectionView {
 
 final class NativeMessageList: ExpoView, UICollectionViewDelegate {
   /**
-   列表底部**常驻**的余量。政策与判据在 `MessageListMetrics.bottomReserve`（那个文件能进
-   测试 bundle，断言写得出来）；这里只负责取出来用。
-
-   Debug 下可以用 `-MemohLegacyBottomOverlay 1` 把它当 0 用（产"改前"截图用，见
-   `MessageListFrameProbe.legacyBottomOverlay`）。
+   列表底部**常驻**的余量。政策与判据在 `MessageListMetrics.bottomReserve`；这里只负责使用。
    */
   static let bottomReserve = CGFloat(MessageListMetrics.bottomReserve)
-
-  #if DEBUG
-  static var legacyBottomOverlay: Bool { MessageListFrameProbe.legacyBottomOverlay }
-  #else
-  static let legacyBottomOverlay = false
-  #endif
 
   let onReachTop = EventDispatcher()
   /**
@@ -57,7 +42,6 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
    宿主（RN）有没有接上 `onErrorAction`。
    
    没接上就不显示动作按钮：一个点了没反应的按钮比不给动作更糟（判据 R19/R45）。
-   场景台（`SceneScreen`）就是这种宿主——它只回放本地帧，没有会话可重发。
    */
   var errorActionEnabled = false {
     didSet {
@@ -99,15 +83,6 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
    键集合与 `rows` 严丝合缝——两者只在 `apply` 里一起换。
    */
   private var rowHashes: [TranscriptRow.ID: Int] = [:]
-  /**
-   量测对照开关（仅 Debug）：`true` 时 `changedSet` 走**改动前**那条逐行深比较的路。
-   口径与理由见 `MessageListFrameProbe.deepCompareEnabled`；Release 里恒为 `false`。
-   */
-  #if DEBUG
-  private let deepCompare = MessageListFrameProbe.deepCompareEnabled
-  #else
-  private let deepCompare = false
-  #endif
   private var following = true
   private var applying = false
   private var decoding = false
@@ -123,12 +98,8 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
   private var readingAnchor: (TranscriptRow.ID, CGFloat)?
   private var interactionRevision = 0
   private var restoringAnchor = false
-  /** 等下一次 `apply` 收尾后再发布的载荷。连解码耗时一起带着，别把已经量到的数字丢掉。 */
-  private struct PendingRows {
-    let payload: TranscriptPayload
-    let decodeMs: Double
-  }
-  private var pendingRows: PendingRows?
+  /** 等下一次 `apply` 收尾后再发布的载荷。 */
+  private var pendingRows: TranscriptPayload?
 
   required init(appContext: AppContext? = nil) {
     let layout = UICollectionViewCompositionalLayout { _, _ in
@@ -192,10 +163,7 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
     var buttonConfiguration = UIButton.Configuration.filled()
     // 半透明 + 描边：它是一个**浮在内容上**的东西，得让人看出它是浮的，而不是内容的一部分。
     // 真正保证它不盖住正文的是下面那条 contentInset（列表底部常驻 52pt 余量）。
-    // 对照模式下换成不透明底，把"改前"那个形态原样复现出来。
-    buttonConfiguration.baseBackgroundColor = Self.legacyBottomOverlay
-      ? .secondarySystemBackground
-      : UIColor.secondarySystemBackground.withAlphaComponent(0.92)
+    buttonConfiguration.baseBackgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.92)
     buttonConfiguration.baseForegroundColor = .systemBlue
     buttonConfiguration.background.strokeColor = MemohPalette.separator(traitCollection)
     buttonConfiguration.background.strokeWidth = 1
@@ -258,34 +226,15 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
     // 为什么常驻而不是"按钮出现时再加"：inset 一变，贴底时的偏移跟着变，用户点完
     // "回到底部"内容会自己再跳一下。常驻的代价只是每个会话底部多一段空白。
     //
-    // `MemohLegacyBottomOverlay`（仅 Debug）把这条余量关掉，用来产"改前"那张截图：
-    // 同一个二进制、同一份内容，只差这一个数字。
-    collection.contentInset.bottom = Self.legacyBottomOverlay ? 0 : NativeMessageList.bottomReserve
+    collection.contentInset.bottom = NativeMessageList.bottomReserve
     collection.didLayout = { [weak self] in
       guard let self, !self.applying, !self.isInteracting else { return }
       // Estimated heights settle over more than one layout pass, especially on first load.
       if self.following { self.pinBottom() } else { self.restoreReadingAnchor() }
     }
     collection.willAccessibilityScroll = { [weak self] in self?.beginReading() }
-    #if DEBUG
-    // 逐帧几何探针（仅 Debug，且要启动参数打开）。口径、用途与"为什么不用 Instruments"
-    // 见 MessageListFrameProbe；关掉时探针每一处都是早返回，这个闭包根本不会被调。
-    MessageListFrameProbe.shared.attach(collection: collection) { [weak self] in
-      guard let self else {
-        // `rows: -1` 是"宿主没了"的哨兵：探针据此停采，而不是继续记一堆零。
-        return MessageListProbeMetrics(
-          offsetY: 0, contentHeight: 0, viewportHeight: 0, gap: 0, firstVisibleIndex: -1,
-          firstVisibleTop: 0, rows: -1, following: false, dragging: false, decelerating: false,
-          tracking: false)
-      }
-      return self.probeMetrics()
-    }
-    #endif
     registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) {
       (view: NativeMessageList, _: UITraitCollection) in
-      #if DEBUG
-      MessageListFrameProbe.shared.recordInvalidation()
-      #endif
       view.collection.collectionViewLayout.invalidateLayout()
       view.bottomButton.setNeedsUpdateConfiguration()
       view.setNeedsLayout()
@@ -297,9 +246,6 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
     collection.frame = bounds
     if lastSize != bounds.size {
       lastSize = bounds.size
-      #if DEBUG
-      MessageListFrameProbe.shared.recordInvalidation()
-      #endif
       collection.collectionViewLayout.invalidateLayout()
       collection.layoutIfNeeded()
       if following { pinBottom() }
@@ -325,11 +271,7 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
       // 解码这件事的优先级是 `userInitiated`（与改前 `Task.detached(priority:)` 逐字一致）——
       // 现在它写在**包住解码的那个任务**上，由 `@concurrent` 的函数继承下去。见 `decodeTranscript`。
       Task(priority: .userInitiated) { @MainActor [weak self] in
-        // 解码往返（排队 + 后台解析 + 取回）也算一次追加的花费：整份转录越大越贵，
-        // 这是「每个 token 的成本是 O(整份转录)」在原生这一侧的可见部分。
-        let decodeStarted = CACurrentMediaTime()
         let result = await Self.decodeTranscript(json)
-        let decodeMs = (CACurrentMediaTime() - decodeStarted) * 1000
         guard let self else { return }
         self.decoding = false
         // Publish this completed frame even if newer JSON is waiting; otherwise a busy
@@ -337,7 +279,7 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
         switch result {
         case .success(let payload):
           self.decodeFailed = false
-          self.apply(payload, decodeMs: decodeMs)
+          self.apply(payload)
         case .failure:
           // Keep the last valid transcript; never log potentially private message data.
           self.decodeFailed = true
@@ -371,44 +313,25 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
   /**
    这一帧要 reconfigure 哪些行（`apply` 的同步段里最贵的那一步的**入口**）。
 
-   两条路：
-
-   - 默认（改动后）：只比 `Int`——内容变没变由后台解码任务算好的指纹回答
-     （口径与碰撞的代价写在 `TranscriptPayload`）。
-   - 量测对照（`MemohFrameProbeDeepCompare`，仅 Debug）：**逐行深比较**整棵 JSON 树，
-     也就是改动前那一行**原样**。留着它是为了"同一个二进制、同一个场景"下能拿到配对数字
-     （见 `MessageListFrameProbe.deepCompareEnabled`）。
-
-   两者的**语义必须一致**：只有展开状态变更（`expansionUpdates`）时内容没变也要 reconfigure，
-   首次出现的行走 insert 不算 changed——`pnpm ios:test:swift` 那条 `testChangedSetKeepsTheOldDeepCompareSemantics` 钉的就是这个。
+   内容变没变由后台解码任务算好的指纹回答（口径与碰撞的代价写在 `TranscriptPayload`）。
+   只有展开状态变更时内容没变也要 reconfigure；首次出现的行走 insert，不算 changed。
    */
-  private func changedSet(ids: [TranscriptRow.ID],
-                          next: [TranscriptRow.ID: TranscriptDisplayRow],
-                          hashes: [TranscriptRow.ID: Int]) -> [TranscriptRow.ID] {
-    #if DEBUG
-    if deepCompare {
-      return ids.filter { rows[$0] != nil && (rows[$0] != next[$0] || expansionUpdates.contains($0)) }
-    }
-    #endif
+  private func changedSet(ids: [TranscriptRow.ID], hashes: [TranscriptRow.ID: Int]) -> [TranscriptRow.ID] {
     return TranscriptDiff.changedIDs(ids: ids, previous: rowHashes, next: hashes,
                                      expansionUpdates: expansionUpdates)
   }
 
-  private func apply(_ payload: TranscriptPayload, decodeMs: Double = 0) {
+  private func apply(_ payload: TranscriptPayload) {
     // A decode can finish while a disclosure-triggered snapshot is still applying.
-    guard !applying else { pendingRows = PendingRows(payload: payload, decodeMs: decodeMs); return }
-    // 同步段从这里算起：建行表 + 变更集合 + 组装快照。这是"每个 token 在主线程上的单价"。
-    let applyStarted = CACurrentMediaTime()
+    guard !applying else { pendingRows = payload; return }
     let old = source.snapshot()
     let incoming = payload.rows
     let hashes = payload.hashes
     let ids = incoming.map(\.id)
     let next = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
     expansionUpdates.formIntersection(ids)
-    let changed = changedSet(ids: ids, next: next, hashes: hashes)
+    let changed = changedSet(ids: ids, hashes: hashes)
     guard old.itemIdentifiers != ids || !changed.isEmpty else { return }
-    let previousIds = Set(old.itemIdentifiers)
-    let added = ids.filter { !previousIds.contains($0) }.count
     let anchor = visibleAnchor()
     let revision = interactionRevision
     expansion.retain(ids)
@@ -424,8 +347,6 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
     snapshot.appendItems(ids)
     snapshot.reconfigureItems(changed)
     applying = true
-    // 同步段到此为止（`source.apply` 只是提交，diff 与布局在后面的 runloop 上）。
-    let applyMs = (CACurrentMediaTime() - applyStarted) * 1000
     // No reloadData and no insertion/height animations on streaming updates.
     source.apply(snapshot, animatingDifferences: false) { [weak self] in
       guard let self else { return }
@@ -440,19 +361,9 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
       }
       self.applying = false
       self.updateBottomButton()
-      #if DEBUG
-      MessageListFrameProbe.shared.recordApply(
-        rows: ids.count, added: added, changed: changed.count,
-        offsetY: Double(self.collection.contentOffset.y),
-        contentHeight: Double(self.collection.contentSize.height),
-        gap: Double(self.bottomOffset - self.collection.contentOffset.y),
-        applyMs: applyMs, decodeMs: decodeMs)
-      // 一次性（只报一次）：系统对滚动边缘到底做了什么。见 recordEdgeState 的说明。
-      MessageListFrameProbe.shared.recordEdgeState(self.collection)
-      #endif
       if let pending = self.pendingRows {
         self.pendingRows = nil
-        self.apply(pending.payload, decodeMs: pending.decodeMs)
+        self.apply(pending)
       } else {
         self.refreshExpansionIfNeeded()
       }
@@ -580,13 +491,8 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
       topInset: Double(collection.adjustedContentInset.top), bottomOffset: Double(bottomOffset)))
     guard abs(collection.contentOffset.y - offset) > 0.5 else { return }
     restoringAnchor = true
-    let before = collection.contentOffset.y
     collection.contentOffset.y = offset
     restoringAnchor = false
-    #if DEBUG
-    MessageListFrameProbe.shared.recordOffsetChange(
-      "anchor", from: Double(before), to: Double(offset), distance: Double(distance))
-    #endif
   }
 
   private func visibleAnchor() -> (TranscriptRow.ID, CGFloat)? {
@@ -609,37 +515,8 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
   private func pinBottom(force: Bool = false) {
     guard force || !isInteracting else { return }
     guard abs(collection.contentOffset.y - bottomOffset) > 0.5 else { return }
-    let before = collection.contentOffset.y
     collection.setContentOffset(CGPoint(x: 0, y: bottomOffset), animated: false)
-    #if DEBUG
-    MessageListFrameProbe.shared.recordOffsetChange(
-      "pin", from: Double(before), to: Double(bottomOffset))
-    #endif
   }
-
-  #if DEBUG
-  /**
-   每帧被探针读一次的几何。**必须常数时间**：这里每多一次布局，量的就是探针自己了。
-   `layoutAttributesForItem` 在布局已到期时是查表，不会触发重排。
-   */
-  private func probeMetrics() -> MessageListProbeMetrics {
-    let path = collection.indexPathsForVisibleItems.sorted().first
-    let attributes = path.flatMap { collection.layoutAttributesForItem(at: $0) }
-    return MessageListProbeMetrics(
-      offsetY: Double(collection.contentOffset.y),
-      contentHeight: Double(collection.contentSize.height),
-      viewportHeight: Double(collection.bounds.height),
-      gap: Double(bottomOffset - collection.contentOffset.y),
-      // 只有一个 section，所以 `path.item` 就是快照里的序号——不用再回查 identity。
-      firstVisibleIndex: path?.item ?? -1,
-      firstVisibleTop: Double((attributes?.frame.minY ?? 0) - collection.contentOffset.y),
-      rows: rows.count,
-      following: following,
-      dragging: collection.isDragging,
-      decelerating: collection.isDecelerating,
-      tracking: collection.isTracking)
-  }
-  #endif
 
   @objc private func returnToBottom() {
     interactionRevision += 1

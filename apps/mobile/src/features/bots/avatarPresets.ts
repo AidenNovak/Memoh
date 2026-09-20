@@ -95,8 +95,7 @@ export interface BuiltinAvatar {
  * 都是"某个几何图形"就分不出来了；动物的爪印、鸟、乌龟是全仓库其它地方没有的剪影，
  * 天体与物件（星光、月夜、闪电、叶子、火焰、方块）互相也不会看混。
  *
- * `nameKey` 都在 `locales/{en,zh-Hans}.json` 里有值——`tests/settings-and-avatar.test.mjs`
- * 会拿真文案表核一遍（少一条就会红），所以增删一项必须连文案一起改。
+ * `nameKey` 都必须在 `locales/{en,zh-Hans}.json` 里有值，所以增删一项必须连文案一起改。
  */
 export const BUILTIN_AVATARS: readonly BuiltinAvatar[] = [
   { slug: 'sparkles', symbol: 'sparkles', nameKey: 'avatar.preset.sparkles' },

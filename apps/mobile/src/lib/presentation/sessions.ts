@@ -12,11 +12,7 @@
  * 代价说清楚：**进程被杀之后这些会话就没了**——那时深链打开的 `presented/7` 找不到账本，
  * 路由层要 dismiss 掉它（`PresentedPageRoute` 就是这么做的），而不是渲染一个空壳。
  *
- * ## 为什么要单独一个模块（而不是和 present() 写在一起）
- *
- * `present()` 要导航，导航要 `expo-router`，而 `expo-router` 在 Node 里跑不起来。
- * 把纯账本拆出来，它就能在没有模拟器、没有 RN 的地方被试（`tests/presentation.test.mjs`）：
- * 一次结算、重复结算、未知 id、取消与完成的区分——这些都是"看截图看不出来"的规则。
+ * 账本与导航分开：`present()` 负责入栈，这里只保证一次结算以及取消/完成的区分。
  */
 
 import type { PageDefinitionBase, PagePresentationOptions } from './page.ts';
@@ -90,15 +86,4 @@ export function completePresentationSession(id: number, value: unknown): boolean
 
 export function cancelPresentationSession(id: number): boolean {
   return settlePresentationSession(id, { status: 'cancelled' });
-}
-
-/** 账本里还有几个会话。给测试用，也给"这一屏还该不该在"的判断用。 */
-export function presentationSessionCount(): number {
-  return sessions.length;
-}
-
-/** 清空账本。**只给测试用**：真实流程里会话只能通过结算离开。 */
-export function resetPresentationSessions(): void {
-  sessions = [];
-  nextId = 1;
 }

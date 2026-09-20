@@ -17,7 +17,7 @@
  * 4. **拒绝时先问一句理由**（桌面端 `tool-approval-actions.vue` 的 `rejecting` 那一步）：
  *    理由随 `tool_approval_response` 的 `reason` 发给服务端，模型据此知道该换个做法；
  *    不写理由它只看到"被拒绝了"，下一轮很可能原样再试一次。帧参数在
- *    `features/chat/approval.ts`（纯逻辑、有单测：空理由不许变成一个空字段）。
+ *    `features/chat/approval.ts`（空理由不许变成一个空字段）。
  *
  * 5. **用原生 formSheet，不是自绘的透明 Modal**（`docs/research/memoh-design-baseline.md`
  *    §7.4）：自绘 Modal 拿不到 detent、抓手、圆角与滚动边缘；而审批的内容高度不固定
@@ -25,8 +25,7 @@
  *
  * ## 分成两半：`ApprovalView` 与 `ApprovalPage`
  *
- * - `ApprovalView` 是**纯展示**：给它一份审批和一个回调，它画出来。场景台
- *   （`SceneScreen`）直接渲染它——场景要的是"这个状态长什么样"，不该被拖进出席流程。
+ * - `ApprovalView` 是**纯展示**：给它一份审批和一个回调，它画出来。
  * - `ApprovalPage` 是**出席页面**：数据来自 store（服务端权威），关掉自己交给契约。
  *
  * 数据不放 `params` 里：审批可能在 sheet 打开期间被解决或被替换，那一刻的唯一真相是
@@ -48,7 +47,7 @@ export interface ApprovalParams {
   sessionId: string;
 }
 
-/** 纯展示：一份审批 + 一个选择回调。场景台与出席页面都用它。 */
+/** 纯展示：一份审批 + 一个选择回调。 */
 export function ApprovalView({
   approval,
   onChoose,

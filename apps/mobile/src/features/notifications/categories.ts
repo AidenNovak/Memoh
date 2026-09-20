@@ -40,9 +40,6 @@ export interface CategorySpec {
 /** 取分类名时的空上下文：`payloadFor` 只用 `category`，不碰会话 id。 */
 const NAMELESS = { sessionId: '', botName: '' };
 
-/** 只有审批这一类带动作。 */
-const ACTION_EVENTS: readonly NotificationEvent[] = ['approval_waiting'];
-
 /**
  * 要注册的分类。
  *
@@ -79,11 +76,3 @@ export function categorySpecs(t: (key: string) => string): CategorySpec[] {
 export function categorySpecsJSON(t: (key: string) => string): string {
   return JSON.stringify(categorySpecs(t));
 }
-
-/** 这个分类有没有动作（验收与测试用它确认"审批是可点的"）。 */
-export function actionsForCategory(specs: readonly CategorySpec[], id: string): CategoryAction[] {
-  return specs.find((spec) => spec.id === id)?.actions ?? [];
-}
-
-/** 这两个动作在事件集合里的归属（`ACTION_EVENTS` 只给测试与文档用）。 */
-export const ACTIONS_ONLY_FOR: readonly NotificationEvent[] = ACTION_EVENTS;

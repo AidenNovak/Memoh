@@ -3,7 +3,7 @@
  *
  * 为什么单开一个纯函数模块，而不是写在屏幕里那三行里：屏幕里它们夹在动画代码中间，
  * 谁也不会去测；而它们恰好是"给要减少动效的人播动效"这类错误的唯一开关。
- * 纯函数 → `tests/onboarding-motion.test.mjs` 钉住。
+ * 保持为纯函数，避免屏幕层散落动效判据。
  */
 import type { ReducedMotionPreference } from '../../lib/accessibility.ts';
 

@@ -14,7 +14,7 @@
  * 返回 null 而不是抛异常：路径可能来自 URL（深链、粘贴），是用户输入的一种，
  * 非法输入应当变成界面上的一个错误态，而不是让 App 崩。
  *
- * 这个模块是纯函数（不 import react / react-native），`tests/files.test.mjs` 直接跑它。
+ * 这个模块是纯函数，不 import react / react-native。
  */
 
 /** 工作区根。服务端不校验它，所以我们钉死。 */

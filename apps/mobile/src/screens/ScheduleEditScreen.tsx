@@ -17,7 +17,7 @@
  *
  * 用户真实的顺序是"打完一栏点下一栏"。键盘升起后 `KeyboardAvoidingView` 只把
  * ScrollView 的高度让开，**内容不会自己让位**——所以最下面那一栏会有一截留在键盘底下。
- * 实测（`verification/navigation` 最小复现）打 description 之后点 `What to do`：
+ * 打完 description 之后点 `What to do` 时：
  *
  * - 那一栏下缘在键盘下面（框 500–588pt，键盘顶 583pt）；
  * - 点击落在键盘边缘 → 焦点**没有换**，页面一点变化都没有；
@@ -132,7 +132,7 @@ export function ScheduleEditScreen({ scheduleId }: { scheduleId: string | null }
   const bringIntoView = useCallback(
     (node: TextInput | null) => {
       if (node === null) return;
-      // 两步算术在 `features/schedule/keyboard.ts`（可单测，见那个文件头）。
+      // 两步算术在 `features/schedule/keyboard.ts`（见那个文件头）。
       const limit = visibleBottom({
         keyboardTop: keyboardTop.current,
         windowHeight,

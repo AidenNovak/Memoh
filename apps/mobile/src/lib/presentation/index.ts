@@ -31,8 +31,6 @@ export {
   cancelPresentationSession,
   completePresentationSession,
   getPresentationSession,
-  presentationSessionCount,
-  resetPresentationSessions,
   type PresentationResult,
   type PresentationSession,
 } from './sessions.ts';

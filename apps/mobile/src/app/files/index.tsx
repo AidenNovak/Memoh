@@ -3,7 +3,7 @@
  *
  * ## 为什么单独一页（而不是让 `[...path].tsx` 顺带接住）
  *
- * `filesRoute('/data')` 返回 `/files`（`features/files/routes.ts` 的文档与单测都写着这条），
+ * `filesRoute('/data')` 返回 `/files`（`features/files/routes.ts` 的契约写着这条），
  * 而必需型 catch-all（`[...path]`）**不匹配没有段数的父路径**——它只匹配 `/files/...`。
  * 于是在 `/files/docs` 上点"回到上一层"会落到 expo-router 的 `Unmatched Route`
  * （2026-09-16 实测）。可选 catch-all 能同时接住两者，但会让类型生成器把

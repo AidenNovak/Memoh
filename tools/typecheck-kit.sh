@@ -3,20 +3,15 @@
 #
 # ## 为什么需要它
 #
-# `pnpm ios:test:swift` 只编译 Foundation-only 那一半（Transcript / MemohStrings），
-# 所以**看不见 UIKit 文件里的编译错误**。踩过：`let heading` 却对它做 `+=`、
-# 以及一个 `String.text` 的笔误——两处都让纯逻辑测试全绿、iOS 构建才报错，
-# 代价是等一轮完整的 xcodebuild（几分钟）。
+# UIKit 文件里的类型错误通常要到完整 Xcode 构建才暴露。这里用 `swiftc -typecheck`
+# 提前检查，避免为一个简单错误等待整轮构建。
 #
 # `-typecheck` 走完整类型检查但不生成代码、不链接、不需要模拟器，几秒出结果。
 # 比 `-parse`（只看语法）强得多：类型不匹配、成员不存在、可变性错误都能抓到。
 #
 # ## 覆盖范围（重要，别当成"Swift 都检查了"）
 #
-# **检查**：`MessageCells.swift`——六种 cell 的全部渲染逻辑，也是上面那两个错的
-# 所在。它是纯 UIKit，不需要 Expo。**还检查** `MessageListFrameProbe.swift`（逐帧探针）：
-# 它整个文件在 `#if DEBUG` 里，所以下面带 `-D DEBUG`；`MessageCells.swift` 的 cell 布局
-# 计数要调它，不列进来那一行就只能等真构建才报错。
+# **检查**：`MessageCells.swift`——六种 cell 的全部渲染逻辑。它是纯 UIKit，不需要 Expo。
 #
 # **不检查**：`NativeMessageList.swift`——它 `import ExpoModulesCore`，而 Pods 里
 # 那份预编译 xcframework 是用稍旧的 Swift 编译器构建的
@@ -26,7 +21,7 @@
 # ## 它做不到什么
 #
 # 不验证链接、不验证 Expo 模块注册、不验证运行时行为。类型检查通过 ≠ App 能构建。
-# 真正的构建仍然要跑 `pnpm verify:build`。
+# 真正的构建仍然要用生成后的 Xcode 工程完成。
 #
 # 用法：
 #     Tools/typecheck-kit.sh
@@ -40,15 +35,11 @@ sources=(
   "$KIT/Support/MemohStrings.swift"
   "$KIT/Support/MemohPalette.swift"
   "$KIT/Chat/Transcript.swift"
-  # Markdown 解析层：它只用 Foundation，所以本机这几秒的 `-typecheck` 也能覆盖它
-  # （纯逻辑测试那一半跑在构建机上，见 tools/run-logic-tests.sh）。
+  # Markdown 解析层只用 Foundation，本机这几秒的 `-typecheck` 也能覆盖它。
   "$KIT/Chat/Markdown.swift"
   # Markdown 视觉层：属性字符串、代码块横滚、链接命中、复制。
   "$KIT/Chat/MarkdownText.swift"
   "$KIT/Chat/MessageCells.swift"
-  # 逐帧探针：整个文件在 `#if DEBUG` 里，所以下面带 `-D DEBUG`。它只依赖 UIKit + QuartzCore，
-  # 而 `MessageCells.swift` 的 cell 布局计数要调它——不列进来的话，那一行只能等真构建才发现。
-  "$KIT/Chat/MessageListFrameProbe.swift"
   # 通知桥：只依赖 Foundation + UIKit + UserNotifications（不 import ExpoModulesCore），
   # 所以能在本机几秒内类型检查。模块注册那一侧（MemohKitModule.swift）仍然只能靠
   # 真构建兜底——见文件头"不检查"那一段。
@@ -56,7 +47,7 @@ sources=(
   "$KIT/Notifications/MemohNotifications.swift"
 )
 
-echo "对 ${#sources[@]} 个 UIKit 文件做类型检查（iphonesimulator SDK，DEBUG）…"
+echo "对 ${#sources[@]} 个 MemohKit 文件做类型检查（iphonesimulator SDK，DEBUG）…"
 
 xcrun -sdk iphonesimulator swiftc \
   -typecheck \

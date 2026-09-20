@@ -1,6 +1,5 @@
 /**
- * ESLint 配置。**这是门禁的一部分**：`pnpm lint` 跑它，`pnpm check` 里也有它
- * （`.github/workflows/check.yml`）。写在这里而不是让 `expo lint` 自己生成，
+ * ESLint 配置。`pnpm lint` 跑它，`pnpm check` 也会调用它。写在这里而不是让 `expo lint` 自己生成，
  * 是因为下面那组规则要带解释——一条规则为什么降级、什么时候升回去。
  *
  * 规则集用 Expo 官方的 `eslint-config-expo/flat`（`expo lint` 默认那一套）：
@@ -31,25 +30,14 @@ module.exports = defineConfig([
       // prebuild 产物，从不手改（见 AGENTS.md）。
       'ios/**',
       '.expo/**',
-      // 验收产物（截图/录屏/构建中间物），不是源码。
-      'verification/.artifacts/**',
-      'verification/**/out/**',
     ],
   },
   {
     /**
-     * 验收基建、工具脚本、config plugin、单测都是 **Node** 程序
-     * （`node verification/fixture/server.mjs`、`node --test tests/*.mjs`），
-     * 而 Expo 的配置按 React Native 环境给全局量。不声明 Node 全局的话，
-     * 光 `verification/fixture/server.mjs` 里的 `Buffer` 就会被报成 19 个 no-undef
-     * ——那是环境没配对，不是代码有问题。
+     * 工具脚本与 config plugin 是 **Node** 程序，而 Expo 的配置按 React Native
+     * 环境给全局量，所以在这里补齐 Node 全局。
      */
-    files: [
-      'verification/**/*.{js,mjs}',
-      'scripts/**/*.{js,mjs}',
-      'tests/**/*.mjs',
-      'plugins/*.js',
-    ],
+    files: ['scripts/**/*.{js,mjs}', 'plugins/*.js'],
     languageOptions: { globals: globals.node },
   },
   {

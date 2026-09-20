@@ -75,8 +75,7 @@ export const HEARTBEAT_INTERVAL_MS = 30_000;
  *
  * 没有它的话，弱网下 `connect()` 会永远停在 `connecting`：iOS 在"有无线但出不去"
  * 的网络里（酒店/机场门户、NAT 黑洞）会一直重传 SYN，WebSocket 可能几十秒都不回调
- * 任何事件。实测（`verification/fixture/netlab.mjs` 的 `hang` 场景）15s 内一次回调
- * 都没有，而且因为 `connect()` 见到 connecting 就返回，这段时间里所有发送都被
+ * 任何事件。因为 `connect()` 见到 connecting 就返回，这段时间里所有发送都被
  * 默默塞进了队列——用户看到的是"发出去了"。
  */
 export const CONNECT_TIMEOUT_MS = 10_000;

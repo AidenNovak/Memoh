@@ -272,7 +272,7 @@ function reducer(state: UiState, action: Action): UiState {
         sessionsMoreLoading: false,
         sessionsMoreError: null,
         currentSessionId: null,
-        // 三份按会话索引的缓存整个属于旧 bot：留着只会越攒越多（判据是纯逻辑，有单测）。
+        // 三份按会话索引的缓存整个属于旧 bot：留着只会越攒越多。
         ...clearedSessionMaps<ChatState, QueueView, SessionStatus>(),
       };
     case 'sessionsLoading':
@@ -321,7 +321,7 @@ function reducer(state: UiState, action: Action): UiState {
       };
     case 'closeSession': {
       // 只在"要关的还是当前会话"时清，并把该 id 在三份缓存里的条目一起删掉
-      // （只增不清会让长会话的整份转录永远留在内存里）。判据是纯逻辑，有单测。
+      // （只增不清会让长会话的整份转录永远留在内存里）。
       const released = closeSessionCache(state.currentSessionId, action.sessionId, state);
       if (released === null) return state;
       return { ...state, ...released };
@@ -442,7 +442,7 @@ interface SessionContextValue {
    回应审批。
 
    `reason` 只有"拒绝并写了理由"时才有（桌面端 `rejectReasonPlaceholder` 那一栏）。
-   帧参数由 `features/chat/approval.ts` 拼（纯逻辑、有单测）：空理由不出现在帧里。
+   帧参数由 `features/chat/approval.ts` 拼：空理由不出现在帧里。
    */
   respondApproval: (optionId: string, sessionId?: string, reason?: string) => void;
   /** 回应 agent 的提问：给答案，或显式取消（两者都会发出 `user_input_response`）。 */
@@ -474,7 +474,7 @@ export interface SessionSeed {
    * 于是退出之后落在空壳界面上而不是登录页。清凭据与回登录页现在只有一处实现
    * （`features/auth/sessionLoss.ts`），两条起因（401 / 手动退出）共用它。
    *
-   * 可选是因为验收种子与登录页都会构造 `SessionSeed`；缺省时就是"没人接这个动作"，
+   * 登录页会先构造只含 client 的 `SessionSeed`；缺省时就是"没人接这个动作"，
    * 而不是抛异常（那会变成一次崩，比行为不对更难查）。
    */
   endSession?: () => void;
@@ -1178,7 +1178,7 @@ export function SessionProvider({
     if (approval == null || runId == null) return;
 
     // 帧参数在纯逻辑里拼：兜底动作不能把假 id 回传（服务端匹配不到），而**空理由不能
-    // 变成一个空字段**（那会被当成"一条空理由"记进上下文）。两件事都有单测。
+    // 变成一个空字段**（那会被当成"一条空理由"记进上下文）。
     realtime.respondToApproval({
       sessionId: target,
       runId,

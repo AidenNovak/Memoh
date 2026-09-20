@@ -15,7 +15,7 @@ import UserNotifications
 /// 3. 系统 API 只有原生能做的那部分（设代理、注册分类、注册远程通知、设徽标）。
 ///
 /// 所以这里没有"如果前台就不弹"这类判断——那在 `src/features/notifications/policy.ts`
-/// 里，并且被测试钉着。桥上再抄一份判据，等于判据层白做。
+/// 里。桥上再抄一份判据，等于判据层白做。
 ///
 /// ## 两个时序陷阱（都在真机上才现形）
 ///
@@ -160,52 +160,9 @@ final class MemohNotifications: NSObject, UNUserNotificationCenterDelegate, Send
     }
   }
 
-  /// 通知中心里本 App 还留着的通知（冷启动/不崩降级的查证路径）。
-  func delivered() async -> String {    await withCheckedContinuation { continuation in
-      UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
-        let described: [[String: Any]] = notifications.map { notification in
-          let content = notification.request.content
-          let userInfo = content.userInfo
-          return [
-            "identifier": notification.request.identifier,
-            "category": content.categoryIdentifier,
-            "threadId": content.threadIdentifier,
-            "title": content.title,
-            "body": content.body,
-            "sessionId": NotificationContract.text(userInfo[NotificationContract.sessionIdKey]) ?? "",
-            "approvalId": NotificationContract.text(userInfo[NotificationContract.approvalIdKey]) ?? "",
-            "event": NotificationContract.text(userInfo[NotificationContract.eventKey]) ?? "",
-          ]
-        }
-        continuation.resume(returning: NotificationContract.jsonString(from: described))
-      }
-    }
-  }
-
-  /// **系统那边**记着的分类（注册成功了没有的唯一可查证据）。
-  ///
-  /// 为什么要读回来：分类注册是"写出去就没有回执"的调用，而它没生效的表现是**通知照旧
-  /// 到达、只是没有动作按钮**——验收时会以为"手势不对"，其实是分类压根没匹配上。
-  /// 读回来的这一份是 debug 页显示的那份（`getNotificationCategories`）。
-  func registeredCategories() async -> String {
-    await withCheckedContinuation { continuation in
-      UNUserNotificationCenter.current().getNotificationCategories { categories in
-        let described: [[String: Any]] = categories.map { category in
-          [
-            "id": category.identifier,
-            "actions": category.actions.map { action in
-              ["id": action.identifier, "title": action.title]
-            },
-          ]
-        }
-        continuation.resume(returning: NotificationContract.jsonString(from: described))
-      }
-    }
-  }
-
   /// 拿到 device token（hex）后交给 JS 去上报。
   ///
-  /// 这里只做"Data → hex"这一件事（`NotificationContract.hexToken` 有测试钉着）；
+  /// 这里只做"Data → hex"这一件事；
   /// **谁该拿到 token、换号要不要先解绑**是 `features/notifications/registration.ts`
   /// 的契约，不在原生。
   func handleDeviceToken(_ data: Data) {
@@ -311,8 +268,7 @@ final class MemohNotifications: NSObject, UNUserNotificationCenterDelegate, Send
 
   // MARK: - 映射（闭集合用字典，不叠条件）
 
-  /// Apple 的 `UNAuthorizationStatus` 原始值表。数字在这里，判断在 `NotificationContract`
-  /// （那边能在 Linux 上跑测试，这里不行）。
+  /// Apple 的 `UNAuthorizationStatus` 原始值表。数字在这里，判断在 `NotificationContract`。
   static func status(from status: UNAuthorizationStatus) -> NotificationContract.PermissionStatus {
     NotificationContract.permissionStatus(code: status.rawValue)
   }

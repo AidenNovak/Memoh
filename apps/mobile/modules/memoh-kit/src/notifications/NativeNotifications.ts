@@ -74,8 +74,6 @@ export interface NativeNotifications {
   notificationsRegisterCategories(json: string): Promise<void>;
   notificationsResolvePresentation(json: string): Promise<void>;
   notificationsSetBadgeCount(count: number): Promise<void>;
-  notificationsDelivered(): Promise<string>;
-  notificationsRegisteredCategories(): Promise<string>;
   notificationsTakePendingOpen(): Promise<Record<string, unknown> | null>;
   addListener(
     event: NotificationEventName,
@@ -86,6 +84,7 @@ export interface NativeNotifications {
 const REQUIRED_METHODS: readonly (keyof NativeNotifications)[] = [
   'notificationsAuthorizationStatus',
   'notificationsRequestAuthorization',
+  'notificationsRegisterForRemoteNotifications',
   'notificationsRegisterCategories',
   'notificationsResolvePresentation',
   'notificationsSetBadgeCount',
@@ -100,54 +99,22 @@ function isNotificationCapable(module: unknown): module is NativeNotifications {
   return REQUIRED_METHODS.every((name) => typeof candidate[name] === 'function');
 }
 
-function missingMethods(module: unknown): string[] {
-  if (typeof module !== 'object' || module === null) return [...REQUIRED_METHODS];
-  const candidate = module as Record<string, unknown>;
-  return REQUIRED_METHODS.filter((name) => typeof candidate[name] !== 'function');
-}
-
 let resolved = false;
 let facade: NativeNotifications | null = null;
-let diagnostics: string = 'not probed';
 
 export function nativeNotifications(): NativeNotifications | null {
   if (resolved) return facade;
   resolved = true;
-  if (Platform.OS !== 'ios') {
-    diagnostics = `platform ${Platform.OS}`;
-    return null;
-  }
+  if (Platform.OS !== 'ios') return null;
   try {
     const module = requireOptionalNativeModule<unknown>('MemohKit');
-    if (module === null || module === undefined) {
-      diagnostics = 'MemohKit 不在这个构建里';
-      return null;
-    }
+    if (module === null || module === undefined) return null;
     if (isNotificationCapable(module)) {
       facade = module;
-      diagnostics = 'present';
       return facade;
     }
-    const missing = missingMethods(module);
-    diagnostics = `缺方法：[${missing.join(', ')}]`;
-  } catch (error) {
-    diagnostics = `探测抛了异常：${String(error)}`;
+  } catch {
+    return null;
   }
   return null;
-}
-
-/**
- * 探测失败时**为什么**（只说形状，不含任何密钥）。
- *
- * 为什么需要它：`missing` 只有一个结论可用——猜。而这条链路上"模块不在"和"模块在但
- * 方法没注册上"是两件事：前者要重建 dev client，后者是原生那一侧写错了。debug 页把它
- * 显示出来，省掉一次二分。
- */
-export function notificationsDiagnostics(): string {
-  return diagnostics;
-}
-
-/** 测试与 debug 页用：这条链路的原生能力到底在不在。 */
-export function notificationsAvailable(): boolean {
-  return nativeNotifications() !== null;
 }

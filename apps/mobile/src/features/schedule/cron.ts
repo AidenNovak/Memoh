@@ -24,7 +24,7 @@
  * （春季 DST 前跳），此时跳过这一次而不是硬凑一个时刻——硬凑出来的时刻它的本地时间
  * 不是用户写的那个，等于骗人。
  *
- * 纯函数，不 import react / react-native；`tests/cron.test.mjs` 用 `node --test` 直接跑。
+ * 纯函数，不 import react / react-native。
  */
 
 /** 频率模式，与上游 Web 端的 7 种一致。 */

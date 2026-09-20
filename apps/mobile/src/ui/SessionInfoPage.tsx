@@ -22,7 +22,7 @@
  *
  * ## 分成两半（与审批页同一套）
  *
- * `SessionInfoView` 是纯展示（场景台渲染它），`SessionInfoPage` 是出席页面：
+ * `SessionInfoView` 是纯展示，`SessionInfoPage` 是出席页面：
  * 数据从 store 按 `params.sessionId` 取，自己拉一次最新状态，关闭交给契约。
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -127,7 +127,7 @@ export function SessionInfoView({
      *
      * formSheet 对子视图数量有约束（react-native-screens 会在控制台警告
      * "FormSheet with ScrollView expects at most 2 subviews"），多出来的那一个会让
-     * **无障碍命中框错位**——按钮看得见，但点它落到空处（实测：Maestro 能读到 "Close"
+     * **无障碍命中框错位**——按钮看得见，但点它落到空处（无障碍树能读到 "Close"
      * 这个标签、点下去却什么都不发生；换成按坐标点也一样，因为框本身是歪的）。
      * 所以标题行放进滚动内容里，而不是和 ScrollView 并列。
      */

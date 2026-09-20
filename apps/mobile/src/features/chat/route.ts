@@ -1,5 +1,5 @@
 /**
- * 这一屏的**路由同步**（纯逻辑，可单测）。
+ * 这一屏的**路由同步**。
  *
  * ## 为什么单独一个文件
  *
@@ -16,7 +16,6 @@
  * | `chatSessionId`       | 这一屏现在该读哪个会话的数据（`new` → 空串）           |
  * | `shouldOpenSession`   | 要不要让 store 打开这个会话（已经打开过就不再打开）    |
  * | `createdSessionRoute` | 会话建好了要不要 `replace`、`replace` 到哪             |
- * | `shouldOpenInfoOnMount` | `?info=1` 那个"进来就打开会话信息面板"的验收种子     |
  *
  * ## 为什么 `replace` 而不是 `push`
  *
@@ -63,12 +62,4 @@ export function createdSessionRoute(input: {
   if (!input.isNew) return null;
   if (input.openSessionId === null) return null;
   return `/chat/${input.openSessionId}`;
-}
-
-/** `?info=1`：验收种子要求进来就打开会话信息面板（模拟器没有点击能力）。 */
-export function shouldOpenInfoOnMount(input: {
-  info: string | undefined;
-  isNew: boolean;
-}): boolean {
-  return input.info === '1' && !input.isNew;
 }

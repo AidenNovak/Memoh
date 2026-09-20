@@ -54,12 +54,7 @@ import {
   userTextOfTurn,
 } from '../features/chat/copy.ts';
 import { composerView } from '../features/chat/composer.ts';
-import {
-  chatSessionId,
-  createdSessionRoute,
-  shouldOpenInfoOnMount,
-  shouldOpenSession,
-} from '../features/chat/route.ts';
+import { chatSessionId, createdSessionRoute, shouldOpenSession } from '../features/chat/route.ts';
 import {
   approvalPresentationKey,
   userInputPresentationKey,
@@ -76,7 +71,7 @@ import { canManageBot } from '../features/bots/permissions.ts';
  * 1. **路由同步**：`/chat/new` ↔ `/chat/<id>`（判据在 `features/chat/route.ts`）；
  * 2. **取数**：模型目录、技能清单（失败也要说得出"是拉不到还是真没有"）；
  * 3. **把状态翻成界面要的东西**：run 失败那一块、副标题、按钮语义、pending 投影
- *    （分别住在 `features/chat/{copy,composer,pending}.ts`，都是纯函数、有单测）；
+ *    （分别住在 `features/chat/{copy,composer,pending}.ts`）；
  * 4. **接线**：把 store 的动作交给组件（表头 / 状态条 / 消息流 / 队列 / 待发 / 输入区）。
  *
  * 界面本身拆在 `ui/ChatHeader`、`ui/ChatNotices`、`ui/ChatComposer`（外加既有的
@@ -84,7 +79,7 @@ import { canManageBot } from '../features/bots/permissions.ts';
  * testID）都不在这里**——搬出去的时候是逐字搬的，改一处文案不该需要读这一屏。
  */
 export function ChatScreen() {
-  const params = useLocalSearchParams<{ sessionId: string; info?: string }>();
+  const params = useLocalSearchParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
   const isNew = sessionId === 'new';
 
@@ -158,7 +153,7 @@ export function ChatScreen() {
    ⚠️ 这几处**故意各写一次** `chatSessionId(...)`，不提取成中间变量：React Compiler
    会把"来自函数调用的中间变量、又用在两处"判成"这个依赖之后可能被改"，于是整屏的
    自动记忆化被跳过（`react-hooks/preserve-manual-memoization`，实测 7 条警告）。
-   判据本身仍然是纯函数、有单测（`features/chat/route.ts`）。
+   判据本身仍然是纯函数（`features/chat/route.ts`）。
   */
   const chat: ChatState = chatFor(chatSessionId({ isNew, routeSessionId: sessionId }));
 
@@ -171,7 +166,7 @@ export function ChatScreen() {
 
    节流的只有"原生列表用的转录投影 + 序列化"（含 `pendingText` / `onErrorAction`
    对同一份投影的查找）：审批、错误、pending、按钮语义、连接态仍直读 `chat`。
-   发布节奏是纯逻辑（`features/chat/streamScheduler.ts`，有单测），hook 只接线。
+   发布节奏是纯逻辑（`features/chat/streamScheduler.ts`），hook 只接线。
    */
   const { turns, turnsJson } = useThrottledTranscript(
     chat,
@@ -184,7 +179,7 @@ export function ChatScreen() {
 
    `runError` 有两种来源：reducer 给的是我们自己的 i18n key（`error.runAbandoned`），
    协议里带的则可能是服务端**已经写好的句子**。分辨与拼接都在
-   `features/chat/copy.ts` 的 `runFailureNotice`（纯函数，有单测）。
+   `features/chat/copy.ts` 的 `runFailureNotice`。
    */
   const runFailure = runFailureNotice(
     { runStatus: chat.runStatus, runError: chat.runError },
@@ -199,7 +194,7 @@ export function ChatScreen() {
 
    三件事都是**现成的事实**，这里只做翻译：本地那条有没有被权威覆盖
    （`pendingInvocationId`）、outbox 里还有没有帧（`pendingSends`）、通道是不是开着
-   （`connection`）。翻译规则在 `features/chat/pending.ts`（纯函数，有单测）。
+   （`connection`）。翻译规则在 `features/chat/pending.ts`。
    */
   const pending = pendingSendView({
     unconfirmed: chat.pendingInvocationId !== null,
@@ -217,7 +212,7 @@ export function ChatScreen() {
    * 服务端说"我在等你批准" → 打开审批 sheet。
    *
    * 审批不是用户点出来的，所以这里用 `usePresentedPage` 把状态翻译成一次出席：
-   * 钥匙是"会话 id + 审批 id"（`features/chat/presentation.ts`，纯函数、有单测），
+   * 钥匙是"会话 id + 审批 id"（`features/chat/presentation.ts`），
    * 同一个审批只开一次，换一个审批会再开一次。
    *
    * 关掉它不在这里做——审批页自己在 store 里那份审批消失时 `finish()`。
@@ -343,13 +338,6 @@ export function ChatScreen() {
     const timer = setTimeout(() => setCopiedAt(null), COPY_NOTICE_MS);
     return () => clearTimeout(timer);
   }, [copiedAt]);
-
-  // `?info=1`：验收种子要求进来就打开面板（模拟器没有点击能力）。
-  // 走的是上面同一个处理函数，所以验的是产品的真实路径。
-  useEffect(() => {
-    if (!shouldOpenInfoOnMount({ info: params.info, isNew })) return;
-    openInfo();
-  }, [params.info, isNew, openInfo]);
 
   /**
    拉一次模型目录，只为两件事：胶囊上显示**名字**（`k3` 不是给人看的），以及在发送前
@@ -523,7 +511,7 @@ export function ChatScreen() {
          进入顶部区域时触发一次，离开再进入才再次触发，不因布局更新循环请求），而 JS 侧
          此前**没人接**——于是超过 100 轮的长会话，第 101 轮往前在 App 里永远看不到。
          去重与"还有没有更早"的判据在 store（`loadOlderHistory`）与
-         `features/chat/historyPage.ts`（纯逻辑，有单测），这里只负责接。
+         `features/chat/historyPage.ts`，这里只负责接。
 
          `new`（还没建会话）没有历史可翻，不接。
          */
@@ -649,7 +637,7 @@ function transcriptSnapshotOf(chat: ChatState): TranscriptSnapshot {
  * 原生列表转录的**节流投影**。
  *
  * 发布节奏（leading/trailing、33ms 上限、flush/reset 语义）在
- * `features/chat/streamScheduler.ts`（纯逻辑、有单测），这里只做三件接线：
+ * `features/chat/streamScheduler.ts`，这里只做三件接线：
  *
  *   1. 每次 `chat` 变化把最新值喂给调度器——运行中走 33ms 窗口，run 一停立即
  *      `flush()` 出最终值；

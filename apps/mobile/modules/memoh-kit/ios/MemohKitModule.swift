@@ -62,6 +62,37 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       MemohNotifications.shared.takePendingOpen()
     }
 
+    View(NativeAppearanceView.self) {
+      Events("onModeChange", "onBack")
+      Prop("mode") { (view: NativeAppearanceView, value: String) in
+        view.setMode(value)
+      }
+      Prop("title") { (view: NativeAppearanceView, value: String) in
+        view.setTitle(value)
+      }
+      Prop("sectionTitle") { (view: NativeAppearanceView, value: String) in
+        view.setSectionTitle(value)
+      }
+      Prop("backLabel") { (view: NativeAppearanceView, value: String) in
+        view.setBackLabel(value)
+      }
+      Prop("systemLabel") { (view: NativeAppearanceView, value: String) in
+        view.setSystemLabel(value)
+      }
+      Prop("lightLabel") { (view: NativeAppearanceView, value: String) in
+        view.setLightLabel(value)
+      }
+      Prop("darkLabel") { (view: NativeAppearanceView, value: String) in
+        view.setDarkLabel(value)
+      }
+      Prop("trueBlackLabel") { (view: NativeAppearanceView, value: String) in
+        view.setTrueBlackLabel(value)
+      }
+      Prop("trueBlackFooter") { (view: NativeAppearanceView, value: String) in
+        view.setTrueBlackFooter(value)
+      }
+    }
+
     View(NativeMessageList.self) {
       Events("onReachTop", "onErrorAction", "onMessageCopied")
       Prop("turnsJson") { (view: NativeMessageList, value: String) in

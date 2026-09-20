@@ -562,17 +562,19 @@ hosted XCTest。
 
 ## 9. 当前验收与还没做的事
 
-- **TestFlight 0.1.0 (build 5) 已可用**：从当前产品代码 head `ebf406e25` 归档，包含
-  Cloud/self-host 登录页、会话标题 VoiceOver 标签修正及其余已审查代码；ASC
+- **TestFlight 0.1.0 (build 6) 已可用**：从产品代码 head `f841b138d` 归档，包含
+  Cloud/self-host 登录页、会话动作、push，以及 chat-only 权限表面收敛与只读历史；ASC
   `processingState=VALID`，已挂 `Internal Testers`（1 位）；
   最低系统 iOS 26.0、`usesNonExemptEncryption=false`。最终 IPA 已核对发行签名链、Team、bundle、
   两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement；本机归档在
-  `.verify/testflight-build-5-ebf406e25/`。
+  `.verify/testflight-build-6-f841b138d/`。
   `vultr-sg` 上相同邮箱的 Memoh member 已能登录并看见 `ready` 的 `ios-dev`，以非服务器管理员
   身份实测 sessions/files/checks/schedule 均 HTTP 200；密码只在服务器 root-only secret 中。
-- **PR #165 当前 head 的全套 CI 已通过**：`.github/workflows/ios-ci.yml` 三个 job 覆盖
+- **PR #165 产品 head `f841b138d` 的全套 CI 已通过**：19 项成功、2 项按规则跳过、0 失败；
+  `.github/workflows/ios-ci.yml` 三个 job 覆盖
   JS/TS + Hermes bundle、Swift 纯逻辑、原生 Simulator build + hosted XCTest；上游的
-  Lint/Test、三平台 desktop/runtime 与 Docker 也全绿。它仍不代替真机和 Human QA。
+  Lint/Test、三平台 desktop/runtime 与 Docker 也全绿；原生 job 用时 33 分 55 秒。它仍不代替
+  真机和 Human QA。
   ⚠️ 顺带注意上游的 `.github/workflows/agents-md-updater.yml`：它**每两天重新生成
   `AGENTS.md` 并开一个 PR**。它会看不到我们加的「iOS Client」那节，所以**别直接把那个 PR
   合进来**——合之前先看它有没有把 iOS 那段删掉。真要被反复打扰，就在那个 workflow 的

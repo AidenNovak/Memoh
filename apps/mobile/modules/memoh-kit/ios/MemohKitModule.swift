@@ -93,6 +93,33 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       }
     }
 
+    View(NativeSettingsView.self) {
+      Events(
+        "onOpenAgentSwitcher",
+        "onOpenBotSettings",
+        "onOpenAppearance",
+        "onSelectLocale",
+        "onOpenNotifications",
+        "onSignOut"
+      )
+      Prop("mode") { (view: NativeSettingsView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeSettingsView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
+
+    View(NativeNotificationsView.self) {
+      Events("onRequestPermission", "onBack")
+      Prop("mode") { (view: NativeNotificationsView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeNotificationsView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
+
     View(NativeMessageList.self) {
       Events("onReachTop", "onErrorAction", "onMessageCopied")
       Prop("turnsJson") { (view: NativeMessageList, value: String) in

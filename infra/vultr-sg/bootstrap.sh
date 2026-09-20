@@ -17,6 +17,22 @@ if [ ! -d "$SRC/.git" ]; then
 else
   git -C "$SRC" fetch --depth 200 origin main
 fi
+
+if [ ! -f "$SECRETS/ios-push.env" ]; then
+  umask 077
+  cat > "$SECRETS/ios-push.env" <<'EOF'
+MEMOH_BASE_URL=http://server:8080
+MEMOH_TEAM_ID=00000000-0000-0000-0000-000000000001
+APNS_KEY_PATH=/run/secrets/apns-auth-key.p8
+APNS_KEY_ID=5N8C8XNJKB
+APNS_TEAM_ID=7533A52C52
+APNS_BUNDLE_ID=ai.memoh.ios
+PUSH_LISTEN_ADDRESS=:8083
+PUSH_POLL_SECONDS=3
+EOF
+  chmod 600 "$SECRETS/ios-push.env"
+  echo "generated $SECRETS/ios-push.env"
+fi
 git -C "$SRC" log --oneline -1
 
 gen() { openssl rand -hex "${1:-32}"; }
@@ -57,8 +73,14 @@ if [ ! -f "$CP" ]; then
     postgres password "$POSTGRES_PASSWORD" \
     pgvector password "$POSTGRES_PASSWORD"
   chmod 600 "$CP"
-  chmod 600 "$CP"
   echo "wrote $CP"
+fi
+
+IOS_PUSH_IMAGE="${MEMOH_IOS_PUSH_IMAGE:-memoh-ios-push:local}"
+if ! docker image inspect "$IOS_PUSH_IMAGE" >/dev/null 2>&1; then
+  BUILDER=/opt/meimaobing-alpha/scripts/build-limited.sh
+  [ -x "$BUILDER" ] || { echo "missing limited image builder: $BUILDER" >&2; exit 1; }
+  "$BUILDER" build "$SRC" "$SRC/infra/vultr-sg/ios-push.Dockerfile" "$IOS_PUSH_IMAGE"
 fi
 
 # 4) compose override：端口只绑本地 + 资源上限，保护同机生产
@@ -87,6 +109,39 @@ services:
     mem_limit: 384m
     ports: !override
       - "127.0.0.1:18082:8082"
+  ios-push:
+    image: ${MEMOH_IOS_PUSH_IMAGE:-memoh-ios-push:local}
+    pull_policy: never
+    cpus: 0.5
+    mem_limit: 192m
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - /opt/memoh-dev/secrets/ios-push.env
+    environment:
+      DATABASE_URL: "postgres://memoh:${POSTGRES_PASSWORD}@postgres:5432/memoh?sslmode=disable"
+    volumes:
+      - /opt/memoh-dev/secrets/apns-auth-key.p8:/run/secrets/apns-auth-key.p8:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "127.0.0.1:18083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8083/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - memoh-network
 YAML
 
 echo "=== ready ==="

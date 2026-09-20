@@ -19,12 +19,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MemohClient } from '../../api/client.ts';
 import {
   clearSession,
+  getSession,
   loadSession,
   shouldRefresh,
   getFreshToken,
   saveSession,
 } from '../../api/credentials.ts';
 import { hasSeenOnboarding, markOnboardingSeen } from '../onboarding/seen.ts';
+import { removeDeviceRegistration } from '../notifications/bridge.ts';
 import type { SessionSeed } from '../session/store.tsx';
 import { createSessionLoss } from './sessionLoss.ts';
 
@@ -79,7 +81,17 @@ export function useAuthGate(): AuthGateState {
   const loss = useMemo(
     () =>
       createSessionLoss({
-        clear: clearSession,
+        clear: async (reason) => {
+          const session = getSession();
+          if (reason === 'manual' && session !== null) {
+            await removeDeviceRegistration({
+              baseUrl: session.baseUrl,
+              accessToken: session.token,
+              currentUserId: session.userId,
+            });
+          }
+          await clearSession();
+        },
         onSignedOut: (reason) => {
           // 登录页要念一次原因（`LoginScreen` 的 `noticeKey`）：用户没做任何动作就被
           // 送回登录页，不说一句会以为是自己按错了。

@@ -21,11 +21,7 @@
  * 字段，缺了是服务端的问题，不该把用户的审批一起吞掉。
  */
 
-import {
-  FALLBACK_APPROVAL_OPTIONS,
-  decisionForFallback,
-  isFallbackOption,
-} from '../chat/reducer.ts';
+import { FALLBACK_APPROVAL_OPTIONS, decisionForFallback } from '../chat/reducer.ts';
 import type { NotificationEvent } from './policy.ts';
 
 /** 与原生 `NotificationContract.OpenAction` 一致。 */
@@ -151,9 +147,4 @@ function currentUserIdOf(params: {
 }): boolean {
   if (params.currentUserId === undefined) return true;
   return matchesCurrentUser(params.open, params.currentUserId);
-}
-
-/** 兜底动作一定是兜底那一个（测试用它确认没夹带 agent 的选项 id）。 */
-export function isFallbackSubmission(optionId: string): boolean {
-  return isFallbackOption(optionId);
 }

@@ -310,7 +310,11 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
   **正文永远不放对话内容 / 命令原文 / 路径 / URL / 错误原文。**
   点通知本体只深链、**不做任何决定**；点"允许/拒绝"只在挂着的 `approvalId` 完全相等时提交一次，
   20 秒等不到就放弃。
-  **device token 上报端点还不存在**（`POST /devices` 只是形状）。
+  `/devices` 由独立 `ios-push-gateway` sidecar 承接：它把 Bearer token 交回 Memoh
+  `/users/me` 核验，`user_id` 不一致直接拒绝；同一 App/device token 全局只绑定一个用户，
+  换号会清掉旧用户尚未发送的 delivery。gateway 从持久化审批与 run ledger 中只提取上述三类
+  事件，用游标 + 唯一键防重，再通过 APNs HTTP/2 投递。Apple `.p8` 只挂载进只读 sidecar，
+  **不进入 Memoh server、Bot workspace 或 microVM**。
 - **present 出席契约**：`definePage` / `usePageRuntime` / `present`。四条规则 ——
   参数只在内存（URL 里只有 `presentationId`）、`await present(...)` 永远有结论
   （`completed` / `cancelled`）、同一次出席只结算一次、写入必须幂等。
@@ -500,9 +504,12 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
   Time Sensitive entitlement 都已核对。
 - Release 默认连接 `https://memoh.yetodawn.com`。TestFlight 只决定谁能安装；
   Memoh member 决定谁能登录与访问哪个 Bot。内测账号只授予 `ios-dev` 的 Bot 级权限，
-  不授予服务器 admin；密码只保存在 `vultr-sg` 的 root-only secret 中。
+  不授予服务器 admin；登录凭据只保存在
+  `/opt/memoh-dev/secrets/testflight-tester.env`（`0600 root:root`）。
 - 功能收口前已完成模拟器、协议、权限矩阵、原生构建与 TestFlight 发布验证。为保持提交克制，
   仓库不保留单元测试、E2E、fixtures、截图证据、测试专用页面或探针。
 - **仍需真机 Human QA**：真实 APNs 送达、通知卡片与动作按钮、生产 device token、
   触感、专注模式，以及蜂窝/Wi-Fi 切换。完成前 PR 保持 Draft，`Human QA passed` 不勾选。
-- **服务端缺口**：device token 上报端点还不存在；`POST /devices` 目前只是客户端预留合同。
+- push gateway 已通过真实 Memoh/PostgreSQL 的 401/400/204 注册与解绑验证；APNs provider
+  JWT、Team/Key/topic 与 HTTP/2 已用假 token 验证到 Apple 的 `BadDeviceToken` 回执并自动清理。
+  仍缺的只是 TestFlight 真机产生 production token 后的实际送达与动作验收。

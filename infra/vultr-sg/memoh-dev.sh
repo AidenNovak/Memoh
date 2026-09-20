@@ -47,6 +47,7 @@ case "$cmd" in
     echo "--- server /health via web proxy ---"
     curl -s -m 10 -o /dev/null -w "web:%{http_code}\n" http://127.0.0.1:18082/ || true
     curl -s -m 10 -o /dev/null -w "api:%{http_code}\n" http://127.0.0.1:18080/health || true
+    curl -s -m 10 -o /dev/null -w "push:%{http_code}\n" http://127.0.0.1:18083/health || true
     echo "--- resources ---"
     docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}' \
       $(docker ps --filter "name=memoh-dev" --format '{{.Names}}' | head -10) 2>/dev/null || true

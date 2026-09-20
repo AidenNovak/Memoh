@@ -21,6 +21,8 @@ enum NotificationContract {
   static let approvalIdKey = "approvalId"
   /// 事件名（与 `policy.ts` 的 `NotificationEvent` 同一套字面量）。
   static let eventKey = "event"
+  /// 接收者 id。JS 用它阻止换号后的旧通知操作当前账号。
+  static let recipientUserIdKey = "recipientUserId"
 
   /// 审批分类。与 `policy.ts` 的 `payloadFor(...).category` 必须一致。
   static let approvalCategory = "approval"
@@ -85,6 +87,8 @@ enum NotificationContract {
     let action: OpenAction
     /// 事件名（可空：负载可能没带，或来自另一版服务端）。
     let event: EventKind?
+    /// 服务端声明的接收者；旧服务端未携带时为空。
+    let recipientUserId: String?
 
     /// 交给 JS 的形状（跨桥只传扁平字典）。
     var jsonObject: [String: Any] {
@@ -94,6 +98,7 @@ enum NotificationContract {
       ]
       if let approvalId { object["approvalId"] = approvalId }
       if let event { object["event"] = event.rawValue }
+      if let recipientUserId { object["recipientUserId"] = recipientUserId }
       return object
     }
   }
@@ -142,7 +147,8 @@ enum NotificationContract {
       sessionId: sessionId,
       approvalId: text(userInfo[approvalIdKey]).flatMap { $0.isEmpty ? nil : $0 },
       action: action(forActionIdentifier: actionIdentifier),
-      event: text(userInfo[eventKey]).flatMap(EventKind.init(rawValue:))
+      event: text(userInfo[eventKey]).flatMap(EventKind.init(rawValue:)),
+      recipientUserId: text(userInfo[recipientUserIdKey]).flatMap { $0.isEmpty ? nil : $0 }
     )
   }
 

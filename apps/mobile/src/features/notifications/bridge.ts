@@ -21,7 +21,7 @@
  * 只是没有东西被执行。模拟器上注册远程通知会失败，那是预期：错误经
  * `onRemoteRegistrationFailed` 报上来，由上层决定要不要说，桥不改成"假装成功"。
  */
-import { nativeNotifications, type NotificationEventName } from '@memoh-ios/kit';
+import { nativeNotifications } from '@memoh-ios/kit';
 import { AppState } from 'react-native';
 
 import { categorySpecsJSON } from './categories.ts';
@@ -263,18 +263,29 @@ export function startNotificationBridge(
   ];
 
   const appStateSubscription = AppState.addEventListener('change', (next) => {
-    if (next === 'active') void refreshAuthorizationStatus();
+    if (next === 'active') {
+      void refreshAuthorizationStatus()
+        .then(registerForRemoteNotifications)
+        .catch(() => undefined);
+    }
   });
 
-  void refreshAuthorizationStatus();
+  // 已授权的设备每次启动都重新向 APNs 注册；系统会复用或轮换 token，并通过同一个
+  // onRemoteToken 事件交给上层。只在首次授权时注册会漏掉后续冷启动与 token 轮换。
+  void refreshAuthorizationStatus()
+    .then(registerForRemoteNotifications)
+    .catch(() => undefined);
 
   // 冷启动那次点击：原生在 JS 起来之前就收到了，放在那儿等我们取。
-  void native.notificationsTakePendingOpen().then((pending) => {
-    if (pending === null) return;
-    const open = parseOpen(pending);
-    if (open === null) return;
-    events.onOpen(open);
-  });
+  void native
+    .notificationsTakePendingOpen()
+    .then((pending) => {
+      if (pending === null) return;
+      const open = parseOpen(pending);
+      if (open === null) return;
+      events.onOpen(open);
+    })
+    .catch(() => undefined);
 
   return () => {
     for (const subscription of subscriptions) subscription.remove();
@@ -299,8 +310,6 @@ export interface RegistrationReportParams {
 }
 
 export type RegistrationOutcome =
-  /** 端点在服务端还不存在，什么都没发。 */
-  | { kind: 'endpoint_missing' }
   /** 没登录/没 token：没有可绑定的东西（不是错误）。 */
   | { kind: 'nothing_to_do' }
   /** 已是最新绑定，没有重复写。 */
@@ -310,24 +319,15 @@ export type RegistrationOutcome =
   | { kind: 'failed'; step: string; status: number };
 
 /**
- * 把 device token 上报给服务端（**契约已定，端点还没有**）。
- *
- * ⚠️ **服务端没有 `POST /devices` 之前不得调用**：往一个不存在的路径打请求，会让
- * "注册失败"看起来像客户端的 bug，而且会真的把 token 发出去。所以它要求调用方
- * 显式声明 `endpointShipped: true`，否则**直接返回 `endpoint_missing` 不发任何请求**
- * （fail fast，而不是"先打着看看"）。
+ * 把 device token 上报给服务端。
  *
  * 顺序由 `registration.registrationSteps` 给出：换号或换 token 都是**先解绑、再绑定**。
- * 目前**没有任何调用点**，这是有意的。
  */
 export async function reportDeviceRegistration(
   params: RegistrationReportParams,
-  options: { token: string | null; endpointShipped?: boolean },
+  options: { token: string | null },
 ): Promise<RegistrationOutcome> {
-  // TODO(server): `POST /devices` / `DELETE /devices` 就位后，把
-  // `endpointShipped: true` 传给这里，并在登录成功/拿到 token 时各调一次。
-  if (options.endpointShipped !== true) return { kind: 'endpoint_missing' };
-
+  if (options.token === null || params.currentUserId === '') return { kind: 'nothing_to_do' };
   const bound = await loadBoundRegistration();
   const steps = registrationSteps({
     token: options.token,
@@ -335,21 +335,15 @@ export async function reportDeviceRegistration(
     bound,
     environment: pushEnvironment(params.isDevBuild),
   });
-  if (steps.length === 0) return { kind: 'nothing_to_do' };
+  if (steps.length === 0) return { kind: 'up_to_date' };
 
   for (const step of steps) {
     const request = requestFor(step, {
       bundleId: params.bundleId,
       userId: params.currentUserId,
     });
-    const response = await fetch(`${params.baseUrl}${request.path}`, {
-      method: request.method,
-      headers: {
-        ...authorizationHeader(params.accessToken),
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(request.body),
-    });
+    const response = await sendDeviceRequest(params, request);
+    if (response === null) return { kind: 'failed', step: step.kind, status: 0 };
     if (!response.ok) return { kind: 'failed', step: step.kind, status: response.status };
     const next = boundAfter(step, true, bound);
     if (next === null) {
@@ -361,10 +355,42 @@ export async function reportDeviceRegistration(
   return { kind: 'reported', steps: steps.length };
 }
 
-/** 事件名集合，方便调用方与测试对齐。 */
-export const NOTIFICATION_EVENTS: readonly NotificationEventName[] = [
-  'onNotificationPresented',
-  'onNotificationOpened',
-  'onRemoteToken',
-  'onRemoteRegistrationFailed',
-];
+/** 手动退出时解绑当前设备；网络失败时保留本地绑定，下一次登录会按安全顺序重试。 */
+export async function removeDeviceRegistration(
+  params: Pick<RegistrationReportParams, 'baseUrl' | 'accessToken' | 'currentUserId'>,
+): Promise<boolean> {
+  const bound = await loadBoundRegistration();
+  if (bound === null || bound.userId !== params.currentUserId) return true;
+  const request = requestFor(
+    { kind: 'unregister', token: bound.token },
+    { bundleId: '', userId: params.currentUserId },
+  );
+  const response = await sendDeviceRequest(params, request, 2_000);
+  if (response === null || !response.ok) return false;
+  await clearBoundRegistration();
+  return true;
+}
+
+async function sendDeviceRequest(
+  params: Pick<RegistrationReportParams, 'baseUrl' | 'accessToken'>,
+  request: ReturnType<typeof requestFor>,
+  timeoutMs: number = 8_000,
+): Promise<Response | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(`${params.baseUrl}${request.path}`, {
+      method: request.method,
+      headers: {
+        ...authorizationHeader(params.accessToken),
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(request.body),
+      signal: controller.signal,
+    });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}

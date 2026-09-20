@@ -1,12 +1,10 @@
 /**
  * 通知的**判据层**：什么时候请求权限、什么事件值得打扰、打扰时说什么。
  *
- * ## 为什么这一段先于推送存在
+ * ## 为什么策略与传输分开
  *
- * 真·远程推送要 APNs 凭据 + 服务端发送方 + 原生模块（`expo-notifications` 或自建
- * `UNUserNotificationCenter` 桥），三样都还没有。但"什么时候该弹权限框""哪些事才配
- * 发通知""通知里能写什么"这些判断**不依赖任何凭据**——它们是策略，写成纯函数就能被
- * 测试钉住，等发送端接上直接调用，不用回头重写一遍散落在 UI 里的 if。
+ * APNs gateway 负责可靠投递，原生桥负责系统 API；"什么时候该弹权限框""哪些事值得
+ * 通知""通知里能写什么"留在这里，避免凭据、传输与产品判断互相渗透。
  *
  * 出处（都是 Apple 一手材料，逐条对应到下面的函数）：
  *
@@ -24,10 +22,9 @@
  *
  * ## 这一层不做什么
  *
- * - **不碰** `UNUserNotificationCenter`、不碰 APNs、不发任何请求：这里只有纯判断，
- *   所以能在 `node --test` 里跑。
+ * - **不碰** `UNUserNotificationCenter`、不碰 APNs、不发任何请求：这里只有纯判断。
  * - **不发明事件**。事件集合是封闭的三条（见 `NOTIFICATION_EVENTS`），加一条要同时改
- *   这个文件、文案表和测试；"顺手也发一条"正是打扰用户的开始。
+ *   这个文件、文案表和 gateway；"顺手也发一条"正是打扰用户的开始。
  */
 
 import type { SFSymbol } from 'expo-symbols';
@@ -260,7 +257,7 @@ export function badgeCountFor(pendingApprovals: number): number {
   return Math.floor(pendingApprovals);
 }
 
-/** 界面上列出来的事件顺序（设置页用它，与测试共用同一份，避免两处各写一遍）。 */
+/** 界面上列出来的事件顺序。 */
 export const NOTIFICATION_EVENTS: readonly NotificationEvent[] = [
   'approval_waiting',
   'run_finished',

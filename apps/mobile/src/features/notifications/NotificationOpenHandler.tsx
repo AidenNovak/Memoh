@@ -19,11 +19,12 @@
  * 这里只负责"什么时候问它"和"把它说的动作做掉"。
  */
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getSession } from '../../api/credentials.ts';
 import { useSession } from '../session/store.tsx';
-import { startNotificationBridge } from './bridge.ts';
+import { reportDeviceRegistration, startNotificationBridge } from './bridge.ts';
 import {
   APPROVAL_WAIT_MS,
   matchesCurrentUser,
@@ -97,8 +98,20 @@ export function NotificationOpenHandler() {
           // in_app 的落点是**首页那份跨 bot 待审批聚合**（同一条实时通道喂它），
           // 所以这里不需要再造一个界面。
         },
-        onToken: () => {
-          // 上报契约见 `bridge.reportDeviceRegistration`（服务端端点未上线，暂不调用）。
+        onToken: (token) => {
+          const session = getSession();
+          const bundleId = Constants.expoConfig?.ios?.bundleIdentifier;
+          if (session === null || typeof bundleId !== 'string' || bundleId === '') return;
+          void reportDeviceRegistration(
+            {
+              baseUrl: session.baseUrl,
+              accessToken: session.token,
+              currentUserId: session.userId,
+              bundleId,
+              isDevBuild: __DEV__,
+            },
+            { token },
+          );
         },
         onRegistrationFailed: () => {
           // 模拟器 / 无凭据下这是预期路径，不打扰用户。

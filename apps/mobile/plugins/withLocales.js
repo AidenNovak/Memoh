@@ -25,6 +25,12 @@ const NATIVE_KEYS = [
   'login.title',
   'home.title',
   'chat.placeholder',
+  'notification.approval.title',
+  'notification.approval.body.system',
+  'notification.failed.title',
+  'notification.failed.body.system',
+  'notification.finished.title',
+  'notification.finished.body.system',
 ];
 
 function readCatalog(projectRoot, file) {

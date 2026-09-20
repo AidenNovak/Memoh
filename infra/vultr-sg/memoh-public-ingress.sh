@@ -42,6 +42,7 @@ HOST_ALT=memoh.yettodawn.com
 CERT_NAME=memoh.yetodawn.com
 UPSTREAM_API=127.0.0.1:18080   # compose 里 server 绑的端口
 UPSTREAM_WEB=127.0.0.1:18082   # compose 里 web 绑的端口
+UPSTREAM_PUSH=127.0.0.1:18083  # iOS 设备注册与 APNs sidecar
 SITE=/etc/nginx/sites-available/memoh-dev-public
 LINK=/etc/nginx/sites-enabled/memoh-dev-public
 
@@ -100,6 +101,17 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 60s;
+    }
+
+    # iOS device token 只交给 push gateway；Bearer 身份仍由 Memoh /users/me 核验。
+    location = /devices {
+        proxy_pass http://$UPSTREAM_PUSH;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 20s;
     }
 
     # API（含 WebSocket 实时通道）。
@@ -162,6 +174,11 @@ cmd_verify() {
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST \
     -H 'Content-Type: application/json' -d '{}' "https://$HOST_PRIMARY/auth/login" || true)
   echo "$code"; case "$code" in 4*) ;; *) echo "    期望 4xx，实际 $code"; fail=1;; esac
+
+  printf '  未认证的 /devices（期望 401）… '
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST \
+    -H 'Content-Type: application/json' -d '{}' "https://$HOST_PRIMARY/devices" || true)
+  echo "$code"; [ "$code" = 401 ] || { echo "    期望 401，实际 $code"; fail=1; }
 
   printf '  TLS 证书主体 … '
   echo | openssl s_client -connect "$HOST_PRIMARY:443" -servername "$HOST_PRIMARY" 2>/dev/null \

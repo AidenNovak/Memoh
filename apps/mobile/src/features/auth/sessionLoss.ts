@@ -33,7 +33,7 @@ export type SessionEndReason = 'unauthorized' | 'manual';
 
 export interface SessionLossPorts {
   /** 清凭据。生产实现是 `api/credentials.ts` 的 `clearSession`。 */
-  clear: () => Promise<void>;
+  clear: (reason: SessionEndReason) => Promise<void>;
   /** 回未登录（渲染由屏幕层负责，见 `useAuthGate` / `AuthGateScreen`）。 */
   onSignedOut: (reason: SessionEndReason) => void;
 }
@@ -84,7 +84,7 @@ export function createSessionLoss(ports: SessionLossPorts): SessionLoss {
     fired = true;
     settled = (async () => {
       try {
-        await ports.clear();
+        await ports.clear(reason);
       } catch {
         // 清不掉（Keychain 不可用）不是"继续当登录着"的理由：内存里那份已经被
         // `clearSession` 同步清掉了，界面这一步照走。

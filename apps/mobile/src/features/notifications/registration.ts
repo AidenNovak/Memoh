@@ -18,12 +18,7 @@
  *    没跑到（App 在换号途中被杀），服务端收到新用户的绑定时必须**替换**旧绑定，
  *    而不是留下两条。这条是契约的一半，不写清楚就等于没定。
  *
- * ## 服务端端点还不存在
- *
- * 这个仓库里没有服务端的发送方，也没有 `POST /devices`。所以这里的**形状**是契约
- * （路径、请求体、鉴权、解绑顺序），而 `reportDeviceRegistration` 那类调用点在
- * `bridge.ts` 里留了 TODO 并明确"服务端没有这个端点前不得上线调用"——契约不能靠
- * 猜服务端行为来补齐。
+ * 服务端由独立 push gateway 承接；Memoh Bot 工作区不接触 APNs 密钥。
  */
 
 /** 绑定端点。注册与解绑同一个路径，靠方法区分。 */
@@ -172,20 +167,3 @@ export function parseBound(raw: string | null): BoundRegistration | null {
 export function serializeBound(bound: BoundRegistration): string {
   return JSON.stringify({ token: bound.token, userId: bound.userId });
 }
-
-/**
- * 服务端实现这个端点时的硬要求（写在这里，因为它跟着契约走）。
- *
- * 三条都不是"建议"：
- *
- * 1. `user_id` 必须与 Bearer 身份一致，不一致一律 400 —— 不能以 body 为准，
- *    否则客户端 bug（拿错用户的 id）就变成"把别人的设备挂到自己名下"。
- * 2. 同一个 token 只保留一条绑定（后写覆盖）——换号途中被杀的那次解绑靠它兜底。
- * 3. 解绑必须**只**删当前身份 + 该 token 的绑定，不能按 token 删任意用户的绑定
- *    （否则任何人都能拿一个 hex 串解绑别人的设备）。
- */
-export const SERVER_REQUIREMENTS: readonly string[] = [
-  'user_id body 与 Bearer 身份必须一致，不一致 400',
-  '同一 token 只保留一条绑定（后写覆盖）',
-  '解绑按 (当前用户, token) 匹配，不按 token 全局删',
-];

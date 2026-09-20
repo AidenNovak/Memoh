@@ -19,6 +19,11 @@ export type {
   NativeNotificationsViewProps,
 } from './notifications/NativeNotificationsView';
 
+export { NativeLoginView } from './auth/NativeLoginView';
+export type { NativeLoginViewModel, NativeLoginViewProps } from './auth/NativeLoginView';
+export { nativeAuth } from './auth/NativeAuth';
+export type { NativeAuth } from './auth/NativeAuth';
+
 export { nativeNotifications } from './notifications/NativeNotifications';
 export type {
   NativeNotifications,

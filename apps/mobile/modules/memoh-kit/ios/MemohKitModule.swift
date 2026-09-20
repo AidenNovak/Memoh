@@ -22,6 +22,22 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       }
     }
 
+    // MARK: - Authentication and Keychain
+
+    // These methods keep the temporary RN session/cache bridge small while native code owns the
+    // actual Keychain item. The JSON shape is validated on both sides of the bridge.
+    AsyncFunction("authLoadSession") { () throws -> String? in
+      try AuthKeychain.shared.loadJSON()
+    }
+
+    AsyncFunction("authSaveSession") { (json: String) throws in
+      try AuthKeychain.shared.save(json: json)
+    }
+
+    AsyncFunction("authClearSession") {
+      try AuthKeychain.shared.clear()
+    }
+
     // MARK: - 推送（薄壳，每个函数只有一句；解析与映射在 NotificationContract）
 
     AsyncFunction("notificationsAuthorizationStatus") { () async -> String in
@@ -116,6 +132,16 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setMode(value)
       }
       Prop("viewModelJson") { (view: NativeNotificationsView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
+
+    View(NativeLoginView.self) {
+      Events("onSignedIn")
+      Prop("mode") { (view: NativeLoginView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeLoginView, value: String) in
         view.setViewModelJSON(value)
       }
     }

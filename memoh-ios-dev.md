@@ -501,9 +501,10 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 
 ## 9. 当前状态与剩余验收
 
-- **TestFlight 0.1.0 (build 6) 已可用**：产品代码 head `f841b138d`，ASC 状态 `VALID`，
+- **TestFlight 0.1.0 (build 7) 已可用**：产品代码 head `bf60faa0a`，ASC 状态 `VALID`，
   已挂 `Internal Testers`。发行签名、Team、bundle、build number、production APNs 与
-  Time Sensitive entitlement 都已核对。
+  Time Sensitive entitlement 都已核对。build 7 是首个包含 self-host push gateway 的内测包，
+  后续真实 APNs 验收必须使用这一版或更新版本。
 - Release 默认连接 `https://memoh.yetodawn.com`。TestFlight 只决定谁能安装；
   Memoh member 决定谁能登录与访问哪个 Bot。内测账号只授予 `ios-dev` 的 Bot 级权限，
   不授予服务器 admin；登录凭据只保存在

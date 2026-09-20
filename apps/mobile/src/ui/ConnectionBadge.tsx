@@ -46,7 +46,7 @@ import type { ConnectionState } from '../api/realtime.ts';
 
 /**
  状态 → 文案 key。
- 
+
  封闭集合用字典而不是嵌套三元（AGENTS.md 的规矩，这里也真的更清楚）：
  `connection` 以后再加一档（比如服务端主动踢人），只改这一张表。
  */

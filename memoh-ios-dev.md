@@ -14,6 +14,7 @@
 | ------------------------------------------------------------- | ------------------------------ | ---------------------- |
 | `apps/mobile/`                                                | iOS 客户端（**唯一交付物**）   | 我们                   |
 | `apps/mobile/modules/memoh-kit/`                              | 一方原生能力与原生 UI（Swift） | 我们                   |
+| `cmd/ios-push-gateway/`                                       | 设备注册与 APNs 推送 sidecar   | 我们                   |
 | `tools/`                                                      | iOS 侧编译检查、资产与发布脚本 | 我们                   |
 | `infra/`                                                      | 联调隧道与 dev 栈脚本          | 我们                   |
 | 其余（Go 服务端 / `apps/web` / `apps/desktop` / `packages/`） | 上游                           | 上游，**我们尽量不动** |
@@ -27,7 +28,7 @@
   加一行之前先想想能不能不加。
 - **怎么跟上游**：`git fetch upstream && git merge upstream/main`（或 rebase）。
   远程约定：`upstream` = `felinics/Memoh`，`origin` = 我们在 GitHub 上的这个 fork。
-  冲突只会落在 §6 那 7 个文件上，其余是纯新增。
+  冲突只会落在 §6 那 6 个文件上，其余是纯新增。
 
 ---
 
@@ -76,7 +77,7 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `ios:check`                                    | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
 | `ios:typecheck:foundation`                     | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
-| `ios:typecheck:kit`                            | UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                            | ✅（要 Xcode）                            |
+| `ios:typecheck:kit`                            | UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见 `tools/typecheck-kit.sh`）             | ✅（要 Xcode）                            |
 | `ios:bundle`                                   | Metro 能出 iOS bundle                                                                                           | ✅                                        |
 | Xcode Debug build                              | 生成工程、Pods、原生模块注册与 Swift/ObjC 链接                                                                  | ✅（要 Xcode）                            |
 
@@ -305,7 +306,7 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
   列表**没有** `next_run` / `last_run`，要去 `/schedule/logs` 聚合。
   服务端**没有任何重复触发防护**（裸 cron + 每 tick 独立 goroutine）。
 - **推送是三类事件的封闭集合**：`approval_waiting` / `run_finished` / `run_failed`，不加第四类。
-  `aps.thread-id` 必须是 `session:<session_id>`；`aps.badge` = 待审批总数；`sessionId` 必填
+  `aps.thread-id` 必须是 `session:<session_id>`；徽标由客户端按待审批聚合同步，不放进 APNs payload；`sessionId` 必填
   （没有它整条点击被丢）；`recipientUserId` 必填且要与当前登录用户比对。
   **正文永远不放对话内容 / 命令原文 / 路径 / URL / 错误原文。**
   点通知本体只深链、**不做任何决定**；点"允许/拒绝"只在挂着的 `approvalId` 完全相等时提交一次，
@@ -444,8 +445,9 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | 路径           | 是什么                                                                             |
 | -------------- | ---------------------------------------------------------------------------------- |
 | `apps/mobile/` | iOS 客户端（254 个文件，`modules/memoh-kit` 11 个 Swift 源文件）                  |
+| `cmd/ios-push-gateway/` | iOS 设备注册、持久事件游标与 APNs 投递 sidecar（6 个 Go 文件）         |
 | `tools/`       | iOS 侧编译检查、资产与 TestFlight 发布脚本（7 个）                                |
-| `infra/`       | 联调隧道与 dev 栈脚本（7 个）                                                      |
+| `infra/`       | 联调隧道、dev 栈与 push gateway 镜像/入口脚本（8 个）                             |
 
 **不提交的内容：** 单元测试、E2E/验收脚本、fixtures、截图证据、测试专用路由与原生探针。
 这些内容已在功能收口前完成验证；当前分支只保留产品、构建发布链与本文。

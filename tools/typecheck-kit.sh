@@ -78,4 +78,4 @@ if [[ -f "$ROOT/apps/mobile/ios/Pods/Pods.xcodeproj/project.pbxproj" ]]; then
   fi
 fi
 
-echo "类型检查通过（不含 NativeMessageList.swift：见文件头注释）"
+echo "类型检查通过（不含 NativeMessageList.swift：见本脚本头部说明）"

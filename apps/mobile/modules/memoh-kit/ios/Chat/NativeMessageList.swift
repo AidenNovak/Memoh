@@ -40,7 +40,7 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
   var emptyBody = "" { didSet { updateEmptyState() } }
   /**
    宿主（RN）有没有接上 `onErrorAction`。
-   
+
    没接上就不显示动作按钮：一个点了没反应的按钮比不给动作更糟（判据 R19/R45）。
    */
   var errorActionEnabled = false {
@@ -433,10 +433,10 @@ final class NativeMessageList: ExpoView, UICollectionViewDelegate {
 
   /**
    把"再来一次"报给 RN：哪一条 + **那一轮的用户输入**。
-   
+
    刻意**不** beginReading()：这不是阅读动作，而是一次把新内容送进这一屏的写操作，
    列表继续跟随底部才符合用户预期（与"展开详情"相反）。
-   
+
    正文取"屏幕上这条错误**上方最近的那条用户正文**"，而**不是**按轮次 key 去找：这一屏的行
    可能来自两条投影——已完成的 REST 历史，与当前这一轮的实时流水；实时那条的轮次 key 是
    合成的 `__live__`，与用户那句话所在的轮次**不是一个 key**。2026-09-16 实测：按轮次 key 找时

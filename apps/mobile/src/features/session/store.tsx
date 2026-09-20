@@ -458,7 +458,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 /**
  连接状态单独一份 context（见 `SessionProvider` 里的说明）。
- 
+
  默认值 `'idle'` = "没在 provider 里"：读它的组件（头像是唯一一个）在 provider 之外
  也能渲染，不会因为少一层 provider 就崩——它们只是永远拿不到"网络回来了"这个事件。
  */
@@ -559,11 +559,11 @@ export function SessionProvider({
 
   /**
    往下列表再拉一页（`cursor` 分页）。
-   
+
    为什么必须有它：`limit: 50` 之上的会话此前**在界面上直接消失**，而且一个字都不说
    ——超过 50 个会话的账号会以为旧会话被删了（评审 A2）。界面侧同时会如实写出"只显示
    最近 N 个"（见 `HomeScreen` 的尾部行）。
-   
+
    与 `refreshSessions` 的分工：那个是整表替换（最新一页），这个是**接在后面**。
    两者都只由 store 发起，屏幕不直接碰 client。
    */
@@ -745,7 +745,7 @@ export function SessionProvider({
 
   /**
    刷新一个会话的队列（服务端持有，客户端只读）。
-   
+
    失败不弹错：读队列失败不代表用户的操作失败，界面回到"没有待发项"就够了；
    真正需要说的是**写**失败（入队/删除），那在各自的调用点报。
    */
@@ -843,12 +843,12 @@ export function SessionProvider({
 
   /**
    往前翻一页历史（原生列表报"滚到顶了"时调）。
-   
+
    为什么以前做不到：`/messages` 的 `limit` 上限就是 100，而客户端只拉这一页就再也不拉
    ——超过 100 轮的长会话，第 101 轮往前在 App 里**永远看不到**（评审 A2）。
-   
+
    三条纪律：
-   
+
    1. **没有游标就别发**（`olderExhausted` / `olderCursor === null`）：服务端没有
       `has_more`，"到底"的唯一判据是返回空页，判过一次就够了；
    2. **同一时刻只发一个**：`onReachTop` 会连着触发，重复请求会拿到同一页；

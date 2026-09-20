@@ -57,7 +57,7 @@ export function isForkable(type: string | undefined): boolean {
 
 /**
  分叉的**锚点**：最近一条助手轮次。
- 
+
  为什么不用"最新一条消息"：服务端按 `turn_id` 找那一轮，而**用户轮次做不了锚点**
  （`ForkFromAssistantTurn` 复制的是那条助手回复之前的状态）。取不到就返回 `null`，
  调用方据此说清楚"这个会话还没有可复制的回复"，而不是发一个必然 400 的请求。
@@ -74,7 +74,7 @@ export function forkTarget(turns: readonly UITurn[]): string | null {
 
 /**
  新会话的名字。
- 
+
  服务端在没给 `title` 时用 `<源标题> fork`（英文、且源标题为空时会变成 "Untitled fork"）。
  中文界面里那句读起来像没说完，所以客户端自己拼一个：源标题为空时**返回 null，交给服务端**
  ——不要编一个"未命名会话的分支"出来。

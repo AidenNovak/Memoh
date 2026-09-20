@@ -381,15 +381,15 @@ export function HomeScreen({ embedded = false }: { embedded?: boolean } = {}) {
 
   /**
    列表尾部：**还有更早的会话就说出来**（评审 A2 的原话是"界面上一个字都不说"）。
-   
+
    以前这一屏只拉一页 `limit: 50` 就再也不拉，超过 50 个会话的账号会以为旧会话被删了。
    现在这条尾巴有两个作用：
-   
+
    - **如实说明**当前只显示最近 N 个（`home.sessions.window`）——数字是**已加载**的条数，
      不是编的"50"；
    - 给一个能点的入口（滚到底也会自动加载，见 `onEndReached`）。失败时说一句，
      游标留着，用户可以再点。
-   
+
    到底了（服务端没给 `next_cursor`）就什么都不显示——那时多一个字都是噪音。
   */
   const footerState = sessionsFooter({

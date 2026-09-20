@@ -68,7 +68,7 @@ class MessageBlockCell: UICollectionViewCell {
 
   /**
    给 label 上字体与颜色。
-   
+
    `color` 传 `nil` 表示"品牌正文色"——不能把 `MemohPalette.label(traitCollection)`
    写成默认参数，因为默认参数在编译期求值，拿不到当前 trait。
    */
@@ -90,16 +90,16 @@ class MessageBlockCell: UICollectionViewCell {
 
   /**
    机器活动的容器样式。
-   
+
    ⚠️ 这个表面必须与**用户气泡**不同色。两者同为系统灰时，整屏会变成一片
    同色的板子，没有层级。
-   
+
    现在两者的区分有两层，任一层单独成立：
-   
+
    - **色相**：用户气泡是品牌紫派生的淡紫（`MemohPalette.userBubble`），
      这里的中性下沉面（`MemohPalette.activitySurface`）一点紫都不带；
    - **形态**：用户气泡是实心块，这里是带描边的容器。
-   
+
    用中性下沉面而不是"描边白"，是因为 Memoh 的页面底本身是暖白 `#FAF8F7`，
    卡片白 `#FFFFFF` 与它的差别在手机上几乎看不出来，纯靠描边会显得单薄。
    */
@@ -113,7 +113,7 @@ class MessageBlockCell: UICollectionViewCell {
 
   /**
    语义表面 → 具体颜色。**唯一**的转换点，两边取值必须不同。
-   
+
    政策在 `SurfaceToken`（Foundation-only），这里只负责把它落到 UIColor。
    */
   static func color(for surface: SurfaceToken, traits: UITraitCollection) -> UIColor {
@@ -741,7 +741,7 @@ final class ErrorMessageCell: MessageBlockCell {
   let action = UIButton(type: .system)
   /**
    动作单独占一行、**贴左、不撑满**（同 `ui/ErrorNotice.tsx` 的 `alignSelf: flex-start`）。
-   
+
    为什么要这一层：`stack` 是 `.fill` 的竖直栈，直接塞进去按钮会被拉成整行宽——那样的
    "重试"抢的注意力比这一屏的任何东西都大，而 HIG 的判据是**反馈的分量要匹配信息的分量**。
    */

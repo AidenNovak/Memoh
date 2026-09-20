@@ -99,7 +99,7 @@ export function rejectionIsRetryable(code: string): boolean {
 
 /**
  一条待发消息此刻该怎么说。
- 
+
  返回 `null` = 没有待发的东西，界面不该出现这一块（**空容器会白占一行高度**，
  与 QueueStrip 同一条规矩）。
  */

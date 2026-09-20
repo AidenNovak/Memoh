@@ -2,21 +2,21 @@ import UIKit
 
 /**
  原生侧的 Memoh 品牌色。
- 
+
  ## 为什么原生不能直接用 `.label` / `.systemBackground`
- 
+
  那些是 iOS 的系统色：`#000000` 配 `#FFFFFF`，冷调的纯黑纯白。而 Memoh 的品牌色是
  **暖白 `#FAF8F7` / 暖黑 `#191816` / 品牌紫 `#764BE5`**。原生列表如果继续用系统色，
  它和它上下的 RN 界面（已经用了品牌色）会拼成两种温度的白，一眼能看出是两套东西。
- 
+
  ## 值从哪来
- 
+
  和 RN 侧同一个来源——`tools/oklch.py` 从桌面端 `@felinic/ui` 的 `style.css` 转出来。
  **改颜色请改那个脚本**，然后同步 `tokens.ts` 与这个文件。两边不一致比两边都用系统色更糟：
  前者是"看起来像 bug"，后者至少是"看起来统一但不像品牌"。
- 
+
  ## 为什么不用 UIColor(dynamicProvider:) 做动态色
- 
+
  动态色需要 trait 变化时重绘，而这个列表在流式追加时频繁 reload，多一层 trait 依赖
  就多一个"某些情况下颜色没跟上"的隐患。这里显式按 trait 取，逻辑一眼可见。
  */
@@ -63,10 +63,10 @@ enum MemohPalette {
 
   /**
    机器活动卡片的容器。
-   
+
    ⚠️ 必须与 `userBubble` **不同**——曾经两者都是同一个灰，实测一张工具场景截图里
    那种灰占了 49% 的像素，整屏没有层级。见 `MessageListMetrics` 里的说明。
-   
+
    这里用 `inset`（比页面深一档的中性色）而用户气泡用品牌淡紫，两者天然不同。
    */
   static func activitySurface(_ traits: UITraitCollection) -> UIColor {

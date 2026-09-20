@@ -176,25 +176,25 @@ indirect enum ToolInput: Codable, Hashable, Sendable {
 
 /**
  工具结果的诊断信息。
- 
+
  ## 为什么要读 output 才知道工具出没出错
- 
+
  传输层的 `UIMessage` **只有 `running: Bool`**，没有 `is_error` / `status` 字段
  （`internal/agent/view/uimessage.go:58`）。所以"这个工具失败了"这件事在协议层面
  不存在——服务端只告诉你"跑完了"。
- 
+
  上游 Web 客户端是从 output **内部**读的
  （`apps/web/src/pages/home/components/tool-result-error.ts`）：
- 
+
  ```
  result.isError === true || result.structuredContent.isError === true
  ```
- 
+
  注意 `exit_code !== 0` **不算失败**——上游只用它显示退出码。这个区分很重要：
  agent 在虚拟机里试错、跑一个非零退出的命令是正常的干活过程。
- 
+
  ## 读到之后怎么用
- 
+
  **只用来显示诊断文字，不给标题着色。** 上游把理由写在了
  `tool-call-inline.vue:225`：「非零退出码（包括 -1）或工具 isError 不等于用户任务
  失败。标题保持中性色……诊断留在展开详情中。」一次工具失败 ≠ 这一步失败 ≠ 任务失败。
@@ -234,7 +234,7 @@ struct ToolResultDiagnosis: Equatable {
 
 /**
  用户能对一条**回合级错误块**做什么。
- 
+
  与 `src/features/errors/present.ts` 的 `ErrorRecovery` 同构（少一个 `signin`：凭据失效
  走 HTTP 401，由连接/登录那条路处理，不会以错误块的形式落进消息流）。
  */
@@ -248,14 +248,14 @@ enum ErrorBlockRecovery: Equatable, Sendable {
 /**
  一条错误块在屏幕上该说什么、该给什么动作（判据见
  `docs/research/ios-error-and-feedback.md` 的 R43–R48）。
- 
+
  ## 为什么判据必须住在这一层（而不是写在 cell 里）
- 
+
  它是**纯函数**：输入是服务端给的两个字符串（`code`、`text`），输出是"标题 / 原因 /
  可展开的细节 / 能不能重试"；cell 只负责把四个字段摆上去。
- 
+
  ## 和 JS 侧那一份判据的关系
- 
+
  `features/errors/present.ts` 判的是 `ApiError`（有 HTTP status），这里判的是消息流里的
  错误块（**没有 status，只有 `code`**）。所以两边的**输入不同、结论必须一致**：那一份
  文档（§3.1）按 status 分的档，这里按 code 回推同一档：
@@ -280,22 +280,22 @@ struct ErrorBlockPresentation: Equatable, Sendable {
 
   /**
    重试**白名单**（R19/R45）：只列"这次没成功、下次可能成功"的传输层那一档。
-   
+
    出处：上游 `internal/apperror/error.go` 里每个 code 的 `HTTPStatus` 与它自己的
    `Detail` 文案。命中的三类——
-   
+
    - `agent.response_timeout`（504，"did not respond in time. Please try again."）
    - `agent.response_interrupted`（502，"was interrupted. Please try again."）
    - `queue_admission_overloaded`（429）/ `queue_admission_unavailable`（503）
    - `channel.runtime_unavailable`（503，"could not be reached"）/ `workspace.unreachable`（503）
    - `acp.operation_failed`（500，"Please try again."）
-   
+
    **不**在名单里的一律不给动作：写进 history 的错误码大多不是"等一会儿就好"
    （`compaction.model_unavailable` 要你去配模型、`context.protected_overflow` 要你
    压缩上下文、`bot_agent.not_found` 是对象没了）。名单是白名单而不是黑名单，
    是因为**新 code 的默认答案必须是"不给"**——给错动作的代价是用户去做一件我们
    已知不会成的事（R19），而少给一次动作只是少一次方便。
-   
+
    */
   static let retryableCodes: Set<String> = [
     "agent.response_timeout",
@@ -309,7 +309,7 @@ struct ErrorBlockPresentation: Equatable, Sendable {
 
   /**
    没有 `code` 时给动作（对应 §3.1 的"无 code 5xx"一行）。
-   
+
    ⚠️ 这一档是**有意**的选择，不是漏判：服务端当前版本只在**类型化 code 存在**时才写
    错误块（`internal/agent/view/uimessage_convert.go` 的 `code != ""` 守卫），所以
    "没有 code 的错误块"意味着**我们认不出这条错误的种类**。认不出时，"再来一次"是
@@ -325,7 +325,7 @@ struct ErrorBlockPresentation: Equatable, Sendable {
 
   /**
    `code` + `text` → 一个错误块的四件东西。
-   
+
    - **标题**：我们自己的话（R15 点名 `"Error"` 是反例；这里的标题说"发生了什么"）。
    - **原因**：只有**类型化 code + 非空 message** 才把服务端原文原样上屏（R23/R25）。
      其余（无 code、或 code 在但 message 空）用我们自己的兜底句——**不是**把
@@ -388,9 +388,9 @@ struct ToolExpansionState {
 
 /**
  错误块"展开细节"的状态容器（默认收起 = 空集）。
- 
+
  ## 两处刻意与 reasoning / tool 不同，都有实测依据（2026-09-16，模拟器）
- 
+
  1. **按块 key（`id.block`）记，不按整条行身份**：同一块错误在 REST 历史与实时投影里的
     `turn` / `message` 可能不一样（块 key 一样，都是 `m<message id>`）。按整条身份记，
     用户刚点开的细节会在刷新后对不上。
@@ -399,7 +399,7 @@ struct ToolExpansionState {
     于是"展开 → 看到错误码"在几秒后又变回收起（flow 里断言通过、读屏树里却是收起的，
     两处是同一台设备上的同一个屏幕）。用户点开技术细节是一次**显式动作**，宁可多留一个
     块 key（每个会话几十个字符），也不让它在一次刷新里自己合上。
- 
+
  代价：状态跟着这个列表实例活（切换会话会重建列表，`key={sessionId}`），同一个块 key
  出现在两行上时会一起展开——块 key 全转录唯一，这条路走不通。
  */
@@ -416,7 +416,7 @@ struct ErrorExpansionState {
 
 /**
  表面的语义名（不依赖 UIKit，才能在没有 UIKit 的环境里断言）。
- 
+
  具体对应哪个颜色由 UI 层决定（见 `MessageCells`）：浅色与深色下需要不同的取值，
  那是 UI 的事；"这两者必须是不同的东西"是政策的事，政策放在这里。
  */
@@ -502,14 +502,14 @@ enum MessageListMetrics {
 
   /**
    工具卡片要不要显示状态词。
-   
+
    **只在需要说明的时候出现**：运行中（用户正等着）、失败（服务端明确说这条出错了）。
    完成与未知都不贴标签。
-   
+
    理由：全部工具都会完成，给每一个都贴 "Done" 等于一屏里重复十几次同一句话，
    那是噪声不是信息。上游也是这么做的（`tool-call-inline.vue` 的
    `showPendingLabel` 就是 `title.pending`——只在未完成时显示）。
-   
+
    而且它消掉了一个真实出现过的矛盾：曾出现"卡片写着 Done、下一行红字说
    Module not found"，两轮视觉评审都判定为"状态与内容打架"。"跑完了"和
    "输出里有错误"本来就是两件事，硬贴一个 Done 等于替用户下结论。
@@ -523,12 +523,12 @@ enum MessageListMetrics {
 
   /**
    工具卡片要不要显示左边的图标。
-   
+
    只有两件事值得一个图标：**正在跑**（用户要等着）和**服务端说这条出错了**。
    完成态没有图标——上游那一行根本没有状态图标，而我原来给完成贴的对勾在断言
    "这次调用成功了"，与"不能从一次工具调用推导成败"（第 15 条）相冲。
    三份视觉评审都把"灰色对勾 + 红色报错"读成矛盾，说明图标不该说话。
-   
+
    ⚠️ 调用方还要再排除 running：那个状态由 spinner 表达，再来一个静态图标就是
    两个东西说同一句话（`ToolMessageCell.configure` 里做这个排除）。
    */
@@ -538,7 +538,7 @@ enum MessageListMetrics {
 
   /**
    状态行文案。
-   
+
    执行位置不在这里——它挂在标题行上（`exec · workspace`），因为它是"这个工具在
    哪儿跑"的修饰。状态行只回答"现在怎么样"。
    */

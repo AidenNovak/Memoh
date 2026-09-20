@@ -120,7 +120,7 @@ export function queuePreview(
 
 /**
  队列能力。`unknown` = 还没探测出来。
- 
+
  它是**服务端能力**，不是会话数据：实测部署版本（`memohai/server` 8/30 镜像）
  对 `/queue`、`/follow-up-queue` 一律 404，而同部署的桌面端产物里也**没有**队列
  相关代码。所以"运行中能排队"不是通用事实，是一个要探测的能力——不探测就会给

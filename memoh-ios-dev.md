@@ -553,10 +553,12 @@ hosted XCTest。
 
 ## 9. 当前验收与还没做的事
 
-- **TestFlight 0.1.0 (build 4) 已可用**：从 Cloud/self-host 登录页 head `410f517d9` 归档，ASC
+- **TestFlight 0.1.0 (build 5) 已可用**：从当前产品代码 head `ebf406e25` 归档，包含
+  Cloud/self-host 登录页、会话标题 VoiceOver 标签修正及其余已审查代码；ASC
   `processingState=VALID`，已挂 `Internal Testers`（1 位）；
   最低系统 iOS 26.0、`usesNonExemptEncryption=false`。最终 IPA 已核对发行签名链、Team、bundle、
-  两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement。
+  两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement；本机归档在
+  `.verify/testflight-build-5-ebf406e25/`。
   `vultr-sg` 上相同邮箱的 Memoh member 已能登录并看见 `ready` 的 `ios-dev`，以非服务器管理员
   身份实测 sessions/files/checks/schedule 均 HTTP 200；密码只在服务器 root-only secret 中。
 - **PR #165 当前 head 的全套 CI 已通过**：`.github/workflows/ios-ci.yml` 三个 job 覆盖

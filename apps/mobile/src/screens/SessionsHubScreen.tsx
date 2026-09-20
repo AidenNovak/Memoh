@@ -15,7 +15,7 @@
  * 大标题就是当前视图名，写两遍必然有一天不一致。
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,6 +25,8 @@ import { ACCESSIBILITY_FONT_SCALE, PRESS_OPACITY } from '../lib/theme/tokens.ts'
 import { BotSwitcher } from '../ui/BotSwitcher.tsx';
 import { ConnectionBadge } from '../ui/ConnectionBadge.tsx';
 import { ViewSwitcher, type HubView } from '../ui/ViewSwitcher.tsx';
+import { hubViewsFor, visibleHubView } from '../features/bots/surfaces.ts';
+import { useSession } from '../features/session/store.tsx';
 import { FilesScreen } from './FilesScreen.tsx';
 import { HomeScreen } from './HomeScreen.tsx';
 import { ScheduleScreen } from './ScheduleScreen.tsx';
@@ -97,6 +99,10 @@ export function SessionsHubScreen() {
   // 也让自动化验收能一条命令点到某一屏，不用先点两下图标。
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<HubView>(parseView(params.view));
+  const { currentBot, realtimeEnabled } = useSession();
+  const hubViews = useMemo(() => hubViewsFor(currentBot), [currentBot]);
+  // `view` 保留深链意图；`visibleView` 才能挂载子页。权限未知或不允许时绝不先画受限页。
+  const visibleView = visibleHubView(currentBot, view);
   const { fontScale } = useWindowDimensions();
   const accessibilityText = fontScale >= ACCESSIBILITY_FONT_SCALE;
 
@@ -104,6 +110,12 @@ export function SessionsHubScreen() {
     const next = parseView(params.view);
     if (params.view !== undefined) setView(next);
   }, [params.view]);
+
+  useEffect(() => {
+    // bot 未回来前还不知道权限，不提前吃掉 `?view=schedule` 这类深链意图；权限一旦可知，
+    // 不可用的目标立即收敛到 sessions。之后刷新同一个 bot 也不会把用户当前选择重置。
+    if (currentBot !== null && !hubViews.includes(view)) setView('sessions');
+  }, [currentBot, hubViews, view]);
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.groupedBackground, paddingTop: insets.top }}>
@@ -143,7 +155,7 @@ export function SessionsHubScreen() {
             style={[typography.largeTitle, { color: palette.label }]}
           >
             {/* 当前视图名就是大标题：封闭集合用字典，不用链式三元（AGENTS.md）。 */}
-            {t(HUB_TITLE_KEY[view])}
+            {t(HUB_TITLE_KEY[visibleView])}
           </Text>
         </View>
         <View
@@ -151,7 +163,9 @@ export function SessionsHubScreen() {
             accessibilityText ? { flexDirection: 'row', justifyContent: 'flex-end' } : undefined
           }
         >
-          <ViewSwitcher value={view} onChange={setView} />
+          {hubViews.length > 1 ? (
+            <ViewSwitcher value={visibleView} views={hubViews} onChange={setView} />
+          ) : null}
         </View>
       </View>
 
@@ -187,13 +201,13 @@ export function SessionsHubScreen() {
         {/* 辅助档下把 `＋` 推到最右：它与徽章挤在一起时会被徽章的文字推着走，
             顶到屏幕外。默认档保持原样（紧跟徽章），那是视觉评审认可的形态。 */}
         {accessibilityText ? <View style={{ flex: 1 }} /> : null}
-        {view === 'sessions' ? <NewSessionButton /> : null}
+        {visibleView === 'sessions' && realtimeEnabled ? <NewSessionButton /> : null}
       </View>
 
       <View style={{ flex: 1 }}>
-        {view === 'sessions' ? <HomeScreen embedded /> : null}
-        {view === 'files' ? <FilesScreen path={FILES_ROOT} /> : null}
-        {view === 'schedule' ? <ScheduleScreen /> : null}
+        {visibleView === 'sessions' ? <HomeScreen embedded /> : null}
+        {visibleView === 'files' ? <FilesScreen path={FILES_ROOT} /> : null}
+        {visibleView === 'schedule' ? <ScheduleScreen /> : null}
       </View>
     </View>
   );

@@ -64,6 +64,7 @@ import {
   approvalPresentationKey,
   userInputPresentationKey,
 } from '../features/chat/presentation.ts';
+import { canManageBot } from '../features/bots/permissions.ts';
 
 /**
  * 对话页的**编排**：把 store 里的状态接到几个小组件上。
@@ -355,7 +356,7 @@ export function ChatScreen() {
    校正失效的选择。失败不影响对话——胶囊退回"默认"。
    */
   useEffect(() => {
-    if (client === null) return;
+    if (client === null || !realtimeEnabled) return;
     let cancelled = false;
     void loadCatalog(client)
       .then((sections) => {
@@ -370,10 +371,10 @@ export function ChatScreen() {
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [client, realtimeEnabled]);
 
   useEffect(() => {
-    if (client === null || currentBot === null) return;
+    if (client === null || currentBot === null || !realtimeEnabled) return;
     let cancelled = false;
     void loadSkills(client, currentBot.id).then((catalog) => {
       if (cancelled) return;
@@ -383,7 +384,7 @@ export function ChatScreen() {
     return () => {
       cancelled = true;
     };
-  }, [client, currentBot, skillsAttempt]);
+  }, [client, currentBot, realtimeEnabled, skillsAttempt]);
 
   const openMachine = useCallback(() => {
     const botId = currentBot?.id;
@@ -490,7 +491,7 @@ export function ChatScreen() {
         title={isNew ? t('home.newSession') : sessionTitle}
         subtitle={subtitle}
         stale={chat.stale}
-        showMachine={currentBot !== null}
+        showMachine={currentBot !== null && canManageBot(currentBot)}
         showInfo={!isNew}
         onOpenInfo={openInfo}
         onOpenMachine={openMachine}
@@ -501,6 +502,7 @@ export function ChatScreen() {
         `ui/ChatNotices.tsx`（为什么在那、为什么那个形态，写在它的文件头）。
       */}
       <ChatNotices
+        permissionsKnown={currentBot !== null}
         realtimeEnabled={realtimeEnabled}
         runFailure={runFailure}
         olderError={chat.olderError}
@@ -531,13 +533,17 @@ export function ChatScreen() {
         onMessageCopied={onMessageCopied}
         // 接了才有按钮：原生只在**有人能执行**的时候显示错误块里的"再来一次"。
         // 它带上来的 `text` 是那一轮的用户原文（屏幕上那一份），`turn` 只用于回退。
-        onErrorAction={(event) =>
-          onErrorAction(event.nativeEvent.turn ?? '', event.nativeEvent.text ?? '')
+        onErrorAction={
+          realtimeEnabled
+            ? (event) => onErrorAction(event.nativeEvent.turn ?? '', event.nativeEvent.text ?? '')
+            : undefined
         }
       />
 
       {/* 待发队列：还没有发出去的话，排在 composer 正上方（不是消息流里）。 */}
-      <QueueStrip queue={queue} onRemove={removeQueueItem} onPromote={promoteQueueItem} />
+      {realtimeEnabled ? (
+        <QueueStrip queue={queue} onRemove={removeQueueItem} onPromote={promoteQueueItem} />
+      ) : null}
 
       {/*
         刚发出去、服务端还没回显的那一句现在在哪儿（等网络 / 等确认 / 没发出去）。
@@ -548,7 +554,7 @@ export function ChatScreen() {
         权威轮次覆盖它（见 `features/chat/reducer.ts` 的 `turnsForDisplay`），这一条则
         回答"它到底出去了没有"，并在真的失败时给一个**能执行**的动作。
       */}
-      {pending === null ? null : (
+      {!realtimeEnabled || pending === null ? null : (
         <PendingSendStrip
           view={pending}
           /**
@@ -576,7 +582,7 @@ export function ChatScreen() {
         斜杠菜单：草稿以 `/` 开头时出现，在输入区正上方。
         它是**建议**而不是"必须选"——用户照样可以直接把 `/skill 正文` 打完发送。
       */}
-      {slashQuery(draft) === null ? null : (
+      {!realtimeEnabled || slashQuery(draft) === null ? null : (
         <SlashMenu
           items={slashItems(slashQuery(draft), skills, t)}
           skillsFailure={skillsFailure}
@@ -597,17 +603,19 @@ export function ChatScreen() {
         输入区（模型胶囊 + 输入框 + 发送/停止键）：形态、命中区、按钮语义的理由都写在
         `ui/ChatComposer.tsx` 的文件头。
       */}
-      <ChatComposer
-        draft={draft}
-        view={composer}
-        modelLabel={modelPillLabel(catalog, choice, t)}
-        sendErrorKey={sendError}
-        inputVisible={chat.userInput === null}
-        onChangeDraft={onChangeDraft}
-        onSend={onSend}
-        onStop={abort}
-        onOpenModelPicker={openModelPicker}
-      />
+      {realtimeEnabled ? (
+        <ChatComposer
+          draft={draft}
+          view={composer}
+          modelLabel={modelPillLabel(catalog, choice, t)}
+          sendErrorKey={sendError}
+          inputVisible={chat.userInput === null}
+          onChangeDraft={onChangeDraft}
+          onSend={onSend}
+          onStop={abort}
+          onOpenModelPicker={openModelPicker}
+        />
+      ) : null}
 
       {/* 审批不在这里渲染：它在 presented 路由上，由上面的 usePresentedPage 打开
           （原生 formSheet，见 ui/ApprovalPage.tsx）。 */}

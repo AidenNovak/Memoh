@@ -91,19 +91,23 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
 | `ios:verify:build`                             | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
 | `ios:test:hosted`                              | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
 | `ios:verify:native`                            | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
-| onboarding/login/files/session-actions Maestro | 首启翻页与只出现一次、Cloud 占位、自部署登录拒绝/成功、文件三态预览与长按动作、会话重命名→刷新→分叉→跳转闭环    | ✅（要 Xcode + Maestro）                  |
+| onboarding/login/files/session-actions/push/permissions Maestro | 首启与登录、文件、会话动作、通知闭环，以及 chat-only 的只读历史/受限深链/零 WS 请求 | ✅（要 Xcode + Maestro）                  |
 | `tools/frame-probe/`                           | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
 
 旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
-2026-09-19 删除，但四条有明确行为判据的 Maestro 旅程仍保留：
-`verification/onboarding/run.sh`、`verification/login/run.sh`、`verification/files/run.sh` 与
-`verification/session-actions/run.sh`。
+2026-09-19 删除，但六条有明确行为判据的 Maestro 旅程仍保留：
+`verification/onboarding/run.sh`、`verification/login/run.sh`、`verification/files/run.sh`、
+`verification/session-actions/run.sh`、`verification/push/push-run.sh` 与
+`verification/permissions/run.sh`。
 登录旅程覆盖 GitHub/Google/邮箱占位反馈、邮箱错误、自部署切换、地址编辑、第一次 401 与第二次成功；
 fixture 的 `/ping` + 空载荷 `/auth/login` 也照真实客户端的“先确认是 Memoh，再发口令”顺序实现。
 会话动作旅程覆盖长按原生 action sheet、rename PATCH、列表刷新、从最近助手轮次 fork、进入新会话、
 返回后新旧会话同时可见，并用请求账核对源会话、标题、助手 `turn_id` 与新 id。它顺带修正了 fixture
 普通历史曾错发内部 `RenderTurn[]` 的问题：现在 `/messages` 与真实 API 一样发 `UITurn[]`，既有
 WebSocket 内容不再掩盖 REST 历史解析和分叉锚点。
+权限旅程从一个无权 `?view=schedule` 深链启动，确认页面只挂载 Sessions、REST 历史正文真的可读、
+Files / Schedule / 新建 / 机器 / 模型 / composer 都不出现，再直接深链定时编辑页确认只显示权限说明；
+fixture 请求账必须同时为 **0 次 WS 尝试、0 次 Files/Schedule 请求**。
 它们必须通过 simulator lease
 运行，并把截图落进各自的 `out/`；截图仍要由人看，脚本成功不能替代视觉检查。
 
@@ -255,6 +259,11 @@ WebSocket 内容不再掩盖 REST 历史解析和分叉锚点。
   `Authorization: Bearer <jwt>`。原生客户端**不要用 `?token=`**（那是浏览器妥协），
   也不要碰 `/web/stream`（SSE，旧 channel 抽象）与 `POST /web/messages`（旧入口）。
 - 权限门要 `workspace_exec` 或 `manage`：**只有 `chat` 权限的用户连不上**。
+- 2026-09-20 对 `vultr-sg` 当前部署做过一次可恢复权限探测：把既有内测 member 的 `ios-dev`
+  grant 临时从 `manage` 降到 `chat`，在 `finally` 恢复原权限并以 Schedule 200 复核。chat-only 下
+  profile、bot 列表/详情、checks、sessions、GET settings 都是 200；Files、Schedule、user-access 与
+  `/web/ws` 都是 403。由此 iOS 的边界不是“低权限聊天”，而是**REST 历史只读**：只显示 Sessions，
+  不建 WS，也不画任何会触发 Files/Schedule/实时写入的入口。
 - **发消息的连接收不到正文。** 正确顺序是：连 WS → `runtime_subscribe` → 收 `runtime_snapshot`
   → 才发 `message`。文本/思考/工具增量只以 `runtime_delta` 发给**订阅了该会话**的连接。
 - `runtime_subscribe` 幂等，服务端会替换旧订阅并重发 snapshot。cursor 会被接受并回报，
@@ -572,7 +581,9 @@ hosted XCTest。
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
 - **UI 自动化仍是定向覆盖，不是全导航录制**：保留在树里的 onboarding / login / files /
-  session-actions 四条旅程已实跑；后者真实完成了重命名→刷新→分叉→打开→返回，并核对请求账。
+  session-actions / push / permissions 六条旅程已实跑；会话动作真实完成了重命名→刷新→分叉→打开→
+  返回，权限旅程则覆盖 chat-only 的深链收敛、REST 历史、只读文案、隐藏写入口、定时编辑页自判与
+  0 次 WS/Files/Schedule 请求，并核对请求账。
   2026-09-19 还把精简前 commit `c93589a` 的会话、bot、schedule、设置、语言、
   通知旅程拿来对当前代码与当前 fixture 补跑：会话发送/流式/工具顺序与压缩端点、schedule
   新建→编辑→删除及请求体、外观 light/dark/true-black、语言即时切换、通知三类事件、bot
@@ -603,8 +614,8 @@ hosted XCTest。
 - **仍只能真机验**：点系统通知卡片与动作按钮、真实 APNs 送达、生产环境 token、触感与专注模式；
   Simulator 的本地 `simctl push` 与事件注入不冒充这些结论。
 - **设备 token 上报端点还不存在**（`POST /devices` 只是形状）。
-- **没实测过的**（照抄 memoh-ios 的标注，别升级成已完成）：只有 `chat` 权限是否真 403；
-  不同 provider 的 thinking 字段归一化（在服务端）；真实蜂窝/Wi-Fi 切换；
+- **没实测过的**（照抄 memoh-ios 的标注，别升级成已完成）：不同 provider 的 thinking 字段归一化
+  （在服务端）；真实蜂窝/Wi-Fi 切换；
   `sessions/events` SSE 在 `URLSession` 下的分帧；键盘几何与"点空白收键盘"两条判据。
 - **本机 dev 环境没配**：`~/.config/memoh-ios/dev.env` 不存在，所以 `tools/` 里依赖它的探针
   （`live-integration` / `api-scenarios` / `ask-user-e2e` / `*-probe`）**都还没在这台机器上跑过**。

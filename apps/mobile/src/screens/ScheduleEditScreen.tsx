@@ -71,6 +71,7 @@ import { checkRunTarget, selectedSessionLabel } from '../features/schedule/runTa
 import { useScheduleEditor } from '../features/schedule/useSchedule.ts';
 import { reasonKeyOf } from '../features/errors/present.ts';
 import { ErrorNotice } from '../ui/ErrorNotice.tsx';
+import { canManageBot } from '../features/bots/permissions.ts';
 
 /** 常见频率的预设。写进去的是规范化 5 段——用户看到的是"每天 09:00"这种话。 */
 export function ScheduleEditScreen({ scheduleId }: { scheduleId: string | null }) {
@@ -80,14 +81,15 @@ export function ScheduleEditScreen({ scheduleId }: { scheduleId: string | null }
   const { typography: type } = useTheme();
   const t = useT();
   const router = useRouter();
-  const { state, currentBot } = useSession();
+  const { state, currentBot, refreshBots } = useSession();
+  const allowed = canManageBot(currentBot);
 
   const timezone = safeTimezone(currentBot?.timezone);
   /** "按哪个时区算"那一行：**编辑页和列表都要有**——写 09:00 的人就在这里。 */
   const line = timezoneLine(currentBot?.timezone);
   const { draft, patch, loading, saving, error, running, save } = useScheduleEditor(
     state.client,
-    currentBot?.id ?? null,
+    allowed ? (currentBot?.id ?? null) : null,
     scheduleId,
   );
 
@@ -290,15 +292,82 @@ export function ScheduleEditScreen({ scheduleId }: { scheduleId: string | null }
     ]);
   };
 
+  const header = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingHorizontal: GROUP_INSET,
+        marginBottom: spacing.md,
+      }}
+    >
+      <BackButton testID="schedule-edit-back" fallback="/?view=schedule" />
+      <Text style={[typography.title2, { color: palette.label, flex: 1 }]}>
+        {scheduleId === null ? t('schedule.edit.new') : t('schedule.edit.existing')}
+      </Text>
+    </View>
+  );
+
+  if (currentBot === null) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.groupedBackground,
+          paddingTop: insets.top + spacing.sm,
+        }}
+      >
+        {header}
+        {state.botsError === null ? (
+          <ActivityIndicator color={palette.secondaryLabel} />
+        ) : (
+          <View style={{ paddingHorizontal: GROUP_INSET }}>
+            <ErrorNotice
+              testID="schedule-bot-error"
+              title={t('bots.loadFailed')}
+              reason={t(reasonKeyOf(state.botsError))}
+              action={{ label: t('common.retry'), onPress: () => void refreshBots() }}
+            />
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <View
+        testID="schedule-permission"
+        style={{
+          flex: 1,
+          backgroundColor: palette.groupedBackground,
+          paddingTop: insets.top + spacing.sm,
+        }}
+      >
+        {header}
+        <View style={{ paddingHorizontal: GROUP_INSET, paddingTop: spacing.lg }}>
+          <Text style={[type.headline, { color: palette.label, marginBottom: spacing.xs }]}>
+            {t('schedule.permission.title')}
+          </Text>
+          <Text style={[type.body, { color: palette.secondaryLabel }]}>
+            {t('schedule.permission.body')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View
         style={{
           flex: 1,
           backgroundColor: palette.groupedBackground,
-          paddingTop: insets.top + spacing.xl,
+          paddingTop: insets.top + spacing.sm,
         }}
       >
+        {header}
         <ActivityIndicator color={palette.secondaryLabel} />
       </View>
     );
@@ -327,20 +396,7 @@ export function ScheduleEditScreen({ scheduleId }: { scheduleId: string | null }
       >
         {/* push 进来的页，原生导航栏的返回箭头不存在（`headerShown: false`），
             所以标题行左侧要有一个可见的 `‹`（否则只有知道边缘侧滑手势的人能退出去）。 */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.sm,
-            paddingHorizontal: GROUP_INSET,
-            marginBottom: spacing.md,
-          }}
-        >
-          <BackButton testID="schedule-edit-back" fallback="/?view=schedule" />
-          <Text style={[typography.title2, { color: palette.label, flex: 1 }]}>
-            {scheduleId === null ? t('schedule.edit.new') : t('schedule.edit.existing')}
-          </Text>
-        </View>
+        {header}
 
         <Group header={t('schedule.group.basics')}>
           <Field

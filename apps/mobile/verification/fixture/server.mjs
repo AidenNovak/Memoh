@@ -79,8 +79,8 @@ const BOT = {
  就永远分不清"算对了时区"和"把服务器本地时区当成了 bot 时区"——两者在截图里
  都可能看着合理。
 
- `fs-no-permission` 拿掉 `workspace_read`：文件视图的入口由 `current_user_permissions`
- 决定（见 types.ts 的判定），没有它就该只给一句原因，而不是一个点了会失败的文件页。
+ `fs-no-permission` 拿掉 `workspace_read`；`chat-only` 只给 `chat`。文件 / 定时 / 实时入口
+ 都由 `current_user_permissions` 决定，没有能力就不该画一个点下去必然 403 的入口。
  */
 /**
  `bots-many` 用的四个 bot：覆盖切换器列表要画出的四种样子。
@@ -286,10 +286,11 @@ function manyModels() {
 }
 
 function activeBot() {
-  const permissions =
-    currentScenario === 'fs-no-permission'
-      ? BOT.current_user_permissions.filter((item) => item !== 'workspace_read')
-      : BOT.current_user_permissions;
+  let permissions = BOT.current_user_permissions;
+  if (currentScenario === 'fs-no-permission') {
+    permissions = permissions.filter((item) => item !== 'workspace_read');
+  }
+  if (currentScenario === 'chat-only') permissions = ['chat'];
   return {
     ...BOT,
     timezone: currentScenario === 'tz-pacific' ? 'America/Los_Angeles' : BOT.timezone,
@@ -2102,6 +2103,9 @@ const server = createServer(async (request, response) => {
    */
   const scheduleLogsRoute = path.match(/^\/bots\/([^/]+)\/schedule\/logs$/);
   if (scheduleLogsRoute !== null) {
+    if (currentScenario === 'chat-only') {
+      return json(response, 403, { error: 'bot access denied' });
+    }
     if (method === 'GET') {
       const limit = Number(url.searchParams.get('limit') ?? '50');
       const offset = Number(url.searchParams.get('offset') ?? '0');
@@ -2119,6 +2123,9 @@ const server = createServer(async (request, response) => {
 
   const scheduleCollection = path.match(/^\/bots\/([^/]+)\/schedule$/);
   if (scheduleCollection !== null) {
+    if (currentScenario === 'chat-only') {
+      return json(response, 403, { error: 'bot access denied' });
+    }
     if (method === 'GET') {
       if (currentScenario === 'schedule-error') {
         return json(response, 500, { error: 'schedule unavailable (fixture scenario)' });
@@ -2180,6 +2187,9 @@ const server = createServer(async (request, response) => {
 
   const scheduleOne = path.match(/^\/bots\/([^/]+)\/schedule\/([^/]+)$/);
   if (scheduleOne !== null) {
+    if (currentScenario === 'chat-only') {
+      return json(response, 403, { error: 'bot access denied' });
+    }
     const index = SCHEDULES.findIndex((item) => item.id === scheduleOne[2]);
     if (method === 'GET') {
       if (currentScenario === 'schedule-error') {
@@ -2448,6 +2458,9 @@ const server = createServer(async (request, response) => {
    */
   const fsRoute = path.match(/^\/bots\/([^/]+)\/container\/fs(?:\/(list|read|download))?$/);
   if (fsRoute !== null) {
+    if (currentScenario === 'chat-only') {
+      return json(response, 403, { error: 'bot access denied' });
+    }
     if (currentScenario === 'fs-error') {
       return json(response, 500, { error: 'list failed (fixture scenario)' });
     }
@@ -2695,6 +2708,12 @@ server.on('upgrade', (request, socket) => {
   // 而不是客户端自己的状态回调（那要经过 JS 事件循环，测不准）。
   const connection = wsLog.connections;
   wsLog.attempts.push(Date.now());
+
+  if (currentScenario === 'chat-only') {
+    socket.write('HTTP/1.1 403 Forbidden\r\ncontent-length: 0\r\nconnection: close\r\n\r\n');
+    socket.end();
+    return;
+  }
 
   // token 失效：不升级，直接回 401。真实的 Memoh 也是在这个位置挡人
   // （`canOpenLocalWebSocket` 之外还有一层 Bearer 校验）。

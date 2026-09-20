@@ -83,6 +83,28 @@ test('可点击的聊天标题仍把会话名留在 VoiceOver 标签里', () => 
   );
 });
 
+test('只读账号不暴露实时输入、机器或未授权 hub 入口', () => {
+  const hub = read('src/screens/SessionsHubScreen.tsx');
+  const chat = read('src/screens/ChatScreen.tsx');
+  const notices = read('src/ui/ChatNotices.tsx');
+  const scheduleEdit = read('src/screens/ScheduleEditScreen.tsx');
+  assert.match(hub, /hubViewsFor\(currentBot\)/);
+  assert.match(hub, /visibleHubView\(currentBot, view\)/);
+  assert.match(hub, /hubViews\.length > 1/);
+  assert.match(hub, /visibleView === 'sessions' && realtimeEnabled/);
+  assert.match(chat, /showMachine=\{currentBot !== null && canManageBot\(currentBot\)\}/);
+  assert.match(chat, /permissionsKnown=\{currentBot !== null\}/);
+  assert.match(chat, /\{realtimeEnabled \? \(\s*<ChatComposer/);
+  assert.match(chat, /realtimeEnabled \? \(\s*<QueueStrip/);
+  assert.match(chat, /!realtimeEnabled \|\| pending === null/);
+  assert.match(notices, /testID="chat-read-only"/);
+  assert.match(notices, /!permissionsKnown \|\| realtimeEnabled/);
+  assert.match(notices, /chat\.readOnly/);
+  assert.match(scheduleEdit, /const allowed = canManageBot\(currentBot\)/);
+  assert.match(scheduleEdit, /allowed \? \(currentBot\?\.id \?\? null\) : null/);
+  assert.match(scheduleEdit, /testID="schedule-permission"/);
+});
+
 // ------------------------------------- ② 登录页要说清地址与账号从哪来
 
 test('登录页把那句说明画在服务器那一行下面（用户正看着这两个框的时刻）', () => {

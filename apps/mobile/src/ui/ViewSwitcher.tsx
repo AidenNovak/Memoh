@@ -25,10 +25,9 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { useT } from '../lib/i18n/useT.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
+import { ALL_HUB_VIEWS, type HubView } from '../features/bots/surfaces.ts';
 
-export type HubView = 'sessions' | 'files' | 'schedule';
-
-export const HUB_VIEWS: readonly HubView[] = ['sessions', 'files', 'schedule'];
+export type { HubView } from '../features/bots/surfaces.ts';
 
 /**
  * 每个视图的图标。选中态用 `.fill`：**图标按钮这一排没有文字**，如果选中态只靠颜色，
@@ -46,10 +45,16 @@ const ICONS: Record<HubView, { default: SFSymbol; selected: SFSymbol }> = {
 interface Props {
   value: HubView;
   onChange: (next: HubView) => void;
+  views?: readonly HubView[];
   variant?: 'buttons' | 'segmented';
 }
 
-export function ViewSwitcher({ value, onChange, variant = 'buttons' }: Props) {
+export function ViewSwitcher({
+  value,
+  onChange,
+  views = ALL_HUB_VIEWS,
+  variant = 'buttons',
+}: Props) {
   const palette = usePalette();
   const { spacing, typography } = useTheme();
   const t = useT();
@@ -70,7 +75,7 @@ export function ViewSwitcher({ value, onChange, variant = 'buttons' }: Props) {
           },
         ]}
       >
-        {HUB_VIEWS.map((view) => {
+        {views.map((view) => {
           const active = view === value;
           return (
             <Pressable
@@ -114,7 +119,7 @@ export function ViewSwitcher({ value, onChange, variant = 'buttons' }: Props) {
         { backgroundColor: palette.field, borderRadius: 11, padding: 2 },
       ]}
     >
-      {HUB_VIEWS.map((view) => {
+      {views.map((view) => {
         const active = view === value;
         return (
           <Pressable

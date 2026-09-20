@@ -64,7 +64,7 @@ export function ConnectionBadge() {
   const palette = usePalette();
   const { typography } = useTheme();
   const t = useT();
-  const { state, realtimeEnabled, retryConnection } = useSession();
+  const { state, currentBot, realtimeEnabled, retryConnection } = useSession();
   const { connection, pendingSends } = state;
 
   /**
@@ -80,12 +80,14 @@ export function ConnectionBadge() {
     realtimeEnabled && connection === 'unauthorized' ? t(LABELS.unauthorized) : null;
   useAnnounceOnAppear(announceLabel);
 
+  if (currentBot === null) return null;
+
   if (!realtimeEnabled) {
     return (
-      <View style={styles.row}>
+      <View testID="connection-read-only" style={styles.row}>
         <View style={[styles.dot, { backgroundColor: palette.tertiaryLabel }]} />
         <Text style={[typography.caption, { color: palette.tertiaryLabel }]}>
-          {t('chat.disconnected')}
+          {t('chat.readOnly.short')}
         </Text>
       </View>
     );

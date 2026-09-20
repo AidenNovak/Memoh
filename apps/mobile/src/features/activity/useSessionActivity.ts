@@ -26,7 +26,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { MemohClient } from '../../api/client.ts';
-import type { Bot, Session } from '../../api/types.ts';
+import { canOpenRealtime, type Bot, type Session } from '../../api/types.ts';
 import { MemohRealtime } from '../../api/realtime.ts';
 import type { RunStatus } from '../../api/protocol.ts';
 
@@ -52,6 +52,22 @@ export interface ActivityResult {
   connected: boolean;
 }
 
+/** 只给真正能升级 WebSocket 的 bot 建活动连接；chat-only 的 403 不是网络故障。 */
+export function realtimeActivityBots(bots: Bot[]): Bot[] {
+  return bots.filter(canOpenRealtime);
+}
+
+/**
+ * 只有“会影响这批连接”的变化才重建：实时资格、可读名称或 bot 集合。
+ * 权限数组顺序与 chat-only bot 的改名都不应让别的 bot 全量重连。
+ */
+export function activityBotKey(bots: Bot[]): string {
+  return realtimeActivityBots(bots)
+    .map((bot) => `${bot.id}:${bot.name}:${bot.display_name ?? ''}`)
+    .sort()
+    .join(',');
+}
+
 function isRecent(updatedAt: string): boolean {
   const parsed = Date.parse(updatedAt);
   // 时间戳坏了就当它活跃——宁可多订阅一个，也别漏掉待办。
@@ -73,10 +89,10 @@ export function useSessionActivity(client: MemohClient | null, bots: Bot[]): Act
   const [sessionRefs, setSessionRefs] = useState<Map<string, SessionRef>>(() => new Map());
 
   /** 用 bot 列表的稳定标识做依赖，避免每次渲染都重连。 */
-  const botKey = useMemo(() => bots.map((bot) => `${bot.id}:${bot.name}`).join(','), [bots]);
+  const botKey = useMemo(() => activityBotKey(bots), [bots]);
   // botKey 没变就复用上一份快照：同内容的列表换了数组引用不应重连。
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const botSnapshot = useMemo(() => bots, [botKey]);
+  const botSnapshot = useMemo(() => realtimeActivityBots(bots), [botKey]);
 
   useEffect(() => {
     const currentBots = botSnapshot;

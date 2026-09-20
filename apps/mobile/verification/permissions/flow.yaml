@@ -1,0 +1,33 @@
+# chat-only：能看列表/历史，但所有需要 workspace/manage 的入口都不出现。
+appId: ai.memoh.ios
+---
+- extendedWaitUntil:
+    visible:
+      id: 'connection-read-only'
+    timeout: 120000
+- assertVisible: '^Sessions$'
+- assertNotVisible:
+    id: 'hub-view-sessions'
+- assertNotVisible:
+    id: 'hub-view-files'
+- assertNotVisible:
+    id: 'hub-view-schedule'
+- assertNotVisible:
+    id: 'hub-new-session'
+- takeScreenshot: permissions-01-read-only-hub
+
+- tapOn:
+    # 选一条已经完成的历史，避免“只读权限”证据被另一个专门展示运行中工具的 fixture 干扰。
+    id: 'session-row-fixture-session-long-title'
+- extendedWaitUntil:
+    visible:
+      id: 'chat-read-only'
+    timeout: 30000
+- assertNotVisible:
+    id: 'machine-button'
+- assertNotVisible:
+    id: 'composer-model'
+- assertVisible: 'You can read this history, but this account can.t start live chats.*'
+- assertVisible: '为什么昨天那个部署脚本在 CI 上超时.*'
+- assertVisible: '最可能的原因是脚本里轮询间隔只有 1 秒.*'
+- takeScreenshot: permissions-02-read-only-history

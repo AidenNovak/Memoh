@@ -10,7 +10,8 @@
  *
  * ## 每一条为什么长这样
  *
- * - **没有实时权限**：只说一句（`chat.disconnected`）。这是权限层面的缺失，不是故障。
+ * - **已经确认没有实时权限**：只说一句（`chat.readOnly`）。这是权限层面的缺失，不是故障。
+ *   bot 还没拉到时保持静默，不能把“权限未知”说成“此账号不能发起实时对话”。
  * - **有实时权限**：挂 `ConnectionBadge`。以前只有首页/会话列表有连接指示，于是掉线时
  *   用户盯着的是一屏停在几秒前的内容、副标题还写着 "Thinking"——弱网下最难受的从来
  *   不是报错，是**安静的旧数据**。放在标题行下面（而不是塞进标题行）：标题行里已经有
@@ -35,12 +36,15 @@ import { useT } from '../lib/i18n/useT.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 
 export function ChatNotices({
+  permissionsKnown,
   realtimeEnabled,
   runFailure,
   olderError,
   copied,
   onRetryOlder,
 }: {
+  /** bot 已经拉到；false 时权限仍未知，不能展示只读结论。 */
+  permissionsKnown: boolean;
   /** 这个 bot 有没有实时通道的权限（没有就只说一句，不挂连接徽标）。 */
   realtimeEnabled: boolean;
   /** run 失败那一块；`null` = 这一轮没失败。判据在 `features/chat/copy.ts`。 */
@@ -57,10 +61,15 @@ export function ChatNotices({
 
   return (
     <>
-      {realtimeEnabled ? null : (
-        <View style={{ backgroundColor: palette.field, padding: spacing.md }}>
+      {!permissionsKnown || realtimeEnabled ? null : (
+        <View
+          testID="chat-read-only"
+          accessible
+          accessibilityLabel={t('chat.readOnly')}
+          style={{ backgroundColor: palette.field, padding: spacing.md }}
+        >
           <Text style={[typography.footnote, { color: palette.secondaryLabel }]}>
-            {t('chat.disconnected')}
+            {t('chat.readOnly')}
           </Text>
         </View>
       )}

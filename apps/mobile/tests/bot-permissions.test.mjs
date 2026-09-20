@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { canManageBot } from '../src/features/bots/permissions.ts';
+import { hubViewsFor, visibleHubView } from '../src/features/bots/surfaces.ts';
 
 test('没有 bot（还没选/还没拉到）不认为可管理', () => {
   assert.equal(canManageBot(null), false);
@@ -43,4 +44,28 @@ test('workspace_exec 不等于能改配置（那是实时通道的门槛）', ()
 
 test('字段存在但不是数组（服务端给了个 null）按"没表达"处理', () => {
   assert.equal(canManageBot({ current_user_permissions: undefined }), true);
+});
+
+test('会话 tab 只显示服务端权限真正允许的视图', () => {
+  assert.deepEqual(hubViewsFor(null), ['sessions']);
+  assert.deepEqual(hubViewsFor({ current_user_permissions: ['chat'] }), ['sessions']);
+  assert.deepEqual(hubViewsFor({ current_user_permissions: ['chat', 'workspace_read'] }), [
+    'sessions',
+    'files',
+  ]);
+  assert.deepEqual(
+    hubViewsFor({
+      current_user_permissions: ['chat', 'workspace_read', 'workspace_exec', 'manage'],
+    }),
+    ['sessions', 'files', 'schedule'],
+  );
+});
+
+test('受限深链在权限未知或不允许时绝不挂载受限子页', () => {
+  assert.equal(visibleHubView(null, 'schedule'), 'sessions');
+  assert.equal(visibleHubView({ current_user_permissions: ['chat'] }, 'schedule'), 'sessions');
+  assert.equal(
+    visibleHubView({ current_user_permissions: ['chat', 'manage'] }, 'schedule'),
+    'schedule',
+  );
 });

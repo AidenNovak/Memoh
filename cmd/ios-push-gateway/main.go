@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,24 +14,28 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	if err := run(logger); err != nil {
+		logger.Error("run iOS push gateway", slog.Any("error", err))
+		os.Exit(1)
+	}
+}
+
+func run(logger *slog.Logger) error {
 	cfg, err := loadConfig()
 	if err != nil {
-		logger.Error("load configuration", slog.Any("error", err))
-		os.Exit(1)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	store, err := newPushStore(ctx, cfg.databaseURL, cfg.teamID)
 	if err != nil {
-		logger.Error("open push store", slog.Any("error", err))
-		os.Exit(1)
+		return fmt.Errorf("open push store: %w", err)
 	}
 	defer store.close()
 	apns, err := newAPNSClient(cfg)
 	if err != nil {
-		logger.Error("initialize APNs", slog.Any("error", err))
-		os.Exit(1)
+		return fmt.Errorf("initialize APNs: %w", err)
 	}
 
 	worker := &pushWorker{store: store, apns: apns, interval: cfg.pollInterval, logger: logger}
@@ -44,18 +49,27 @@ func main() {
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+	serveErr := make(chan error, 1)
 	go func() {
 		logger.Info("iOS push gateway listening", slog.String("address", cfg.listenAddress))
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("serve iOS push gateway", slog.Any("error", err))
-			stop()
+			serveErr <- fmt.Errorf("serve iOS push gateway: %w", err)
+			return
 		}
+		serveErr <- nil
 	}()
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case err := <-serveErr:
+		if err != nil {
+			return err
+		}
+	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("stop iOS push gateway", slog.Any("error", err))
+		return fmt.Errorf("stop iOS push gateway: %w", err)
 	}
+	return nil
 }

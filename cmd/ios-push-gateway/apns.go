@@ -110,11 +110,11 @@ func (c *apnsClient) send(ctx context.Context, message apnsMessage) (apnsResult,
 	request.Header.Set("apns-collapse-id", message.CollapseID)
 	request.Header.Set("content-type", "application/json")
 
-	response, err := c.http.Do(request)
+	response, err := c.http.Do(request) //nolint:gosec // APNs host is a compile-time constant; the path suffix is a validated device token.
 	if err != nil {
 		return apnsResult{}, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusOK {
 		return apnsResult{}, nil
 	}
@@ -179,12 +179,13 @@ func notificationPayload(message apnsMessage) ([]byte, error) {
 	bodyKey := "notification.finished.body.system"
 	category := "run"
 	interruptionLevel := "active"
-	if message.Event == "approval_waiting" {
+	switch message.Event {
+	case "approval_waiting":
 		titleKey = "notification.approval.title"
 		bodyKey = "notification.approval.body.system"
 		category = "approval"
 		interruptionLevel = "time-sensitive"
-	} else if message.Event == "run_failed" {
+	case "run_failed":
 		titleKey = "notification.failed.title"
 		bodyKey = "notification.failed.body.system"
 	}

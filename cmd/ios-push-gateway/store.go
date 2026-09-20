@@ -92,7 +92,7 @@ func (s *pushStore) acquireWorker(ctx context.Context) (func(), bool, error) {
 		connection.Release()
 		return func() {}, false, nil
 	}
-	release := func() {
+	release := func() { //nolint:contextcheck // Unlock must still run after the worker context is cancelled.
 		unlockCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_, _ = connection.Exec(unlockCtx, `SELECT pg_advisory_unlock($1)`, workerAdvisoryLock)

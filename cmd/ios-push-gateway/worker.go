@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 )
@@ -90,5 +89,5 @@ func (worker *pushWorker) deliver(ctx context.Context, item delivery) {
 		slog.String("delivery_id", item.ID),
 		slog.Int("attempt", attempt),
 		slog.Bool("terminal", terminal),
-		slog.String("error", fmt.Sprint(err)))
+		slog.String("error", err.Error()))
 }

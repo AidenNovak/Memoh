@@ -159,11 +159,11 @@ func (h *gatewayHandler) authenticate(ctx context.Context, authorization string)
 		return currentUser{}, errAuthUnavailable
 	}
 	request.Header.Set("authorization", authorization)
-	response, err := h.http.Do(request)
+	response, err := h.http.Do(request) //nolint:gosec // The Memoh base URL is operator configuration, not request input.
 	if err != nil {
 		return currentUser{}, errAuthUnavailable
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
 		return currentUser{}, errInvalidAuthorization
 	}
@@ -181,7 +181,7 @@ func (h *gatewayHandler) authenticate(ctx context.Context, authorization string)
 }
 
 func decodeBody(request *http.Request, target any) error {
-	defer request.Body.Close()
+	defer func() { _ = request.Body.Close() }()
 	decoder := json.NewDecoder(io.LimitReader(request.Body, 16<<10))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {

@@ -34,9 +34,8 @@
     system-alerts.py decide --ocr <textdump.json> [--choice deny|allow]
     system-alerts.py self-test        # 判据的回归，用合成 OCR 数据，不碰设备
 
-`--ocr` 吃的是 `verification/ui/textdump.swift` 的 JSON（它有每个文本块的归一化
-`x` / `y`）——**那个源文件已随 harness 在 2026-09-19 删除**，所以 `decide` 现在只能吃
-别人给的 JSON；`self-test`（合成数据）不受影响。输出是给 shell 用的 JSON：
+`--ocr` 吃的是 `verification/ocr/textdump.py` 的 JSON（它有每个文本块的归一化
+`x` / `y`）；`self-test` 使用合成数据，不碰设备。输出是给 shell 用的 JSON：
 `{"kind": ..., "button": ..., "x": ..., "y": ...}`。
 """
 import argparse

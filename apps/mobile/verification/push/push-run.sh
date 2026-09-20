@@ -157,6 +157,28 @@ shot() {
   echo "  ok $name.png"
 }
 
+# 下拉手势成功不等于通知中心真的打开：iOS 26.5 偶尔会接住手势却仍停在主屏幕。
+# 用截图文字做结果判据，第一次没打开就再拉一次；两次都没有才让旅程失败。
+notification_center_shot() {
+  local name="$1" attempt=1
+  while true; do
+    run_flow 03-open-center
+    sleep 2
+    xcrun simctl io "$UDID" screenshot "$OUT/$name.png" > /dev/null 2>&1
+    if python3 "$HERE/assert-text.py" "$OUT/$name.png" --contains 'Waiting for you' > /dev/null 2>&1; then
+      python3 "$HERE/assert-text.py" "$OUT/$name.png" --contains 'Waiting for you'
+      echo "  ok $name.png（第 ${attempt} 次下拉打开通知中心）"
+      return 0
+    fi
+    if [ "$attempt" -ge 2 ]; then
+      python3 "$HERE/assert-text.py" "$OUT/$name.png" --contains 'Waiting for you'
+      return 1
+    fi
+    echo "  通知中心第一次没有打开，再下拉一次" >&2
+    attempt=$((attempt + 1))
+  done
+}
+
 push() {
   local payload="$1" label="$2"
   cp "$PAY/$payload" "$OUT/payload-$label.json"
@@ -235,8 +257,7 @@ fi
 # ---- ⑤ 通知中心里看得到那条通知（分组与动作按钮由系统画） -------------------
 if want center; then
   echo "⑤ 通知中心里的那条通知"
-  run_flow 03-open-center
-  shot 04-notification-center --contains 'Waiting for you'
+  notification_center_shot 04-notification-center
 fi
 
 # ---- ⑥ 点通知本体 ----------------------------------------------
@@ -286,9 +307,7 @@ if want group; then
   push approval-1.json group-a
   push approval-2.json group-b
   sleep 3
-  run_flow 03-open-center
-  sleep 2
-  shot 06-grouping --contains 'Waiting for you'
+  notification_center_shot 06-grouping
 fi
 
 # ---- ⑨ 前台接住：不弹横幅，判据走 in_app ----------------------------------
@@ -312,14 +331,14 @@ if want badge; then
   run_flow 02-go-home
   push approval-2.json badge
   sleep 3
-  shot 09-badge
+  shot 09-badge --contains-line '2'
   # 再让客户端算一次：首页那份待审批聚合会调 `setBadgeCount`（同源语义），
   # 于是徽标从"服务端给的值"变成"客户端算出的值"。
   launch "/" "default"
   sleep 6
   run_flow 02-go-home
   sleep 2
-  shot 10-badge-after-client
+  shot 10-badge-after-client --absent-line '2'
 fi
 
 # ---- ⑪ 排查用：直接看桥的状态页 -------------------------------------------

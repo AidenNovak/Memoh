@@ -119,6 +119,14 @@ jobs:
       - name: Typecheck Swift sources
         run: pnpm ios:typecheck:foundation && pnpm ios:typecheck:kit
 
+      - name: Test macOS verification helpers
+        run: |
+          python3 apps/mobile/verification/ocr/textdump.py --self-test
+          python3 apps/mobile/verification/push/assert-text.py \
+            apps/mobile/verification/login/evidence/cloud.png \
+            --contains "Log in or sign up" --absent "Waiting for you"
+          python3 apps/mobile/verification/system-alerts.py self-test
+
       - name: Build for the iOS Simulator
         run: pnpm --dir apps/mobile exec python3 verification/build.py --destination "generic/platform=iOS Simulator"
 

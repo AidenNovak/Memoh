@@ -6,12 +6,13 @@
 存在"时最忌只写一句 `grep` 失败：那时读者既不知道屏幕上有什么，也不知道是断言写错了
 还是功能坏了。所以失败时把整屏文字打出来。
 
-复用 `verification/ui/textdump.swift`（Vision OCR）——**那个文件已随 harness 在 2026-09-19
-删除，所以本脚本现在跑不了**（见下方 import 处的说明与恢复用的 blob）。不引入 Appium / Detox。
+复用 `verification/ocr/textdump.py`（Vision OCR）。它只负责截图读字，不恢复已经删除的通用
+UI harness，也不引入 Appium / Detox。
 
 用法：
 
     python3 assert-text.py shot.png --contains 'Waiting for you' --absent 'Turn on notifications'
+    python3 assert-text.py home.png --contains-line '2' --absent-line '3'
     python3 assert-text.py shot.png --json          # 只打印读到的文字
 """
 import argparse
@@ -21,25 +22,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-UI = HERE.parent / 'ui'
-sys.path.insert(0, str(UI))
-
-# ⚠️ 现在跑不了：`compile_textdump` 住在 `verification/ui/driver.py`，而 `verification/ui/`
-# 已于 2026-09-19 整体删除（harness 从 0 重写，形态待定）。**没有静默降级**——这里必须
-# 明确失败，否则会变成"断言没跑但看起来跑过了"。
-# 要恢复：`git cat-file -p 1131ed46380f9abb7b6e9e1f67eaef42b51dc74d > verification/ui/driver.py`
-# （textdump.swift 的 blob 是 5ff398467c42b206eeb721609e00549053360ccb），或重写时
-# 把 OCR 读取这一步换成一个新的实现。
-try:
-    from driver import DriverError, compile_textdump  # noqa: E402
-except ImportError as error:  # pragma: no cover - 恢复 harness 之前必然走到这里
-    print(
-        f'FAILED: 这个断言脚本依赖 verification/ui/driver.py（已随 harness 删除）：{error}\n'
-        '        见 memoh-ios-dev.md §9。恢复方法写在文件头注释里。',
-        file=sys.stderr,
-        flush=True,
-    )
-    raise SystemExit(2)
+TEXTDUMP = HERE.parent / 'ocr' / 'textdump.py'
 
 
 def fail(message):
@@ -48,8 +31,9 @@ def fail(message):
 
 
 def read_text(image):
-    binary = compile_textdump()
-    result = subprocess.run([str(binary), str(image)], capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        [sys.executable, str(TEXTDUMP), str(image)], capture_output=True, text=True, timeout=300
+    )
     if result.returncode != 0:
         fail(f'textdump failed: {result.stderr.strip() or result.returncode}')
     try:
@@ -63,6 +47,8 @@ def main(argv=None):
     parser.add_argument('image', type=Path)
     parser.add_argument('--contains', action='append', default=[])
     parser.add_argument('--absent', action='append', default=[])
+    parser.add_argument('--contains-line', action='append', default=[])
+    parser.add_argument('--absent-line', action='append', default=[])
     parser.add_argument('--json', action='store_true')
     arguments = parser.parse_args(argv)
 
@@ -70,13 +56,17 @@ def main(argv=None):
         fail(f'{arguments.image} 不存在（上一步没截到图？）')
     payload = read_text(arguments.image)
     text = payload.get('text', '')
+    lines = [str(entry.get('text') or '').strip() for entry in payload.get('lines') or []]
+    folded_lines = {line.casefold() for line in lines if line}
     if arguments.json:
         print(json.dumps({'text': text, 'image': str(arguments.image)}, ensure_ascii=False))
         return 0
 
     missing = [needle for needle in arguments.contains if needle.casefold() not in text.casefold()]
     present = [needle for needle in arguments.absent if needle.casefold() in text.casefold()]
-    if missing or present:
+    missing_lines = [needle for needle in arguments.contains_line if needle.casefold() not in folded_lines]
+    present_lines = [needle for needle in arguments.absent_line if needle.casefold() in folded_lines]
+    if missing or present or missing_lines or present_lines:
         print(f'--- {arguments.image.name} 上读到的文字 ---', file=sys.stderr)
         print(text, file=sys.stderr)
         reasons = []
@@ -84,9 +74,19 @@ def main(argv=None):
             reasons.append(f'缺少 {missing}')
         if present:
             reasons.append(f'不该出现却出现了 {present}')
+        if missing_lines:
+            reasons.append(f'缺少完整文字行 {missing_lines}')
+        if present_lines:
+            reasons.append(f'不该出现却出现了完整文字行 {present_lines}')
         fail('；'.join(reasons))
-    print(json.dumps({'image': arguments.image.name, 'contains': arguments.contains, 'absent': arguments.absent,
-                      'bytes': arguments.image.stat().st_size}, ensure_ascii=False))
+    print(json.dumps({
+        'image': arguments.image.name,
+        'contains': arguments.contains,
+        'absent': arguments.absent,
+        'containsLine': arguments.contains_line,
+        'absentLine': arguments.absent_line,
+        'bytes': arguments.image.stat().st_size,
+    }, ensure_ascii=False))
     return 0
 
 

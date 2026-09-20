@@ -591,17 +591,17 @@ hosted XCTest。
   首行位移、距底收缩、停止增长后距底均为 `0pt`。25ms 人为 stall 的 hitch rate 为 `1.0`，
   证明探针确实能抓到卡顿。不同长度档的宿主 load 不全可比，因此这些数是各档上界证据，
   不拿来声称跨档线性加速。
-- **harness 删除留下的三个断口**（都做成了"明确失败 + 说清怎么取回"，不是静默降级；
-  重写 harness 时要一起收）：
-  - `verification/push/assert-text.py` 与 `verification/system-alerts.sh` 都依赖
-    `verification/ui/{driver.py,textdump.swift}`（已删）。blob：
-    `driver.py` = `1131ed46380f9abb7b6e9e1f67eaef42b51dc74d`、
-    `textdump.swift` = `5ff398467c42b206eeb721609e00549053360ccb`、
-    `measure_surfaces.py` = `9c38826f38b8d0872a6e0c5cf1dfdb5952e2194d`
-    （取回：`git cat-file -p <blob> > <路径>`）。
-  - `verification/device.sh` 里打印的"怎么拿设备"示例原来指向 `verify:e2e` /
-    `verification/navigation`，已换成现存入口（`verify:native` / `files/run.sh`）。
-- **推送在模拟器上验不了**：点系统通知卡片与动作按钮、徽标、真实 APNs 送达都只能真机手点。
+- **旧 harness 删除留下的断口已收口**：push 截图断言与 `system-alerts.sh` 不再依赖已删的
+  `verification/ui/{driver.py,textdump.swift}`，改为共用独立的 `verification/ocr/textdump.py` +
+  `textdump.swift`；macOS CI 用合成图片实际编译并跑 Vision OCR，自测输出不是只查文件存在。
+  2026-09-19 又在 iPhone 17 Pro / iOS 26.5 Simulator 上重跑整条 push 旅程：未授权不显示、
+  用户触发授权、横幅、通知中心、审批提交、跨账号拒绝、同会话分组、前台 `in_app`、分类注册
+  都通过；`aps.badge=2` 的红色徽标与 App 按待审批聚合清成 0 也首次截到并由 OCR 精确行断言。
+  第二次打开通知中心时 Maestro 曾报告 swipe 成功但画面仍在主屏幕，脚本现改为看截图结果，
+  未打开时最多再下拉一次（本轮第二次成功），不再把手势回执当成页面状态。
+  `verification/device.sh` 打印的设备租约示例也只指向现存入口（`verify:native` / `files/run.sh`）。
+- **仍只能真机验**：点系统通知卡片与动作按钮、真实 APNs 送达、生产环境 token、触感与专注模式；
+  Simulator 的本地 `simctl push` 与事件注入不冒充这些结论。
 - **设备 token 上报端点还不存在**（`POST /devices` 只是形状）。
 - **没实测过的**（照抄 memoh-ios 的标注，别升级成已完成）：只有 `chat` 权限是否真 403；
   不同 provider 的 thinking 字段归一化（在服务端）；真实蜂窝/Wi-Fi 切换；

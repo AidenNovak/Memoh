@@ -18,7 +18,6 @@
     "test": "vitest",
     "prepare": "husky",
     "postinstall": "node scripts/check-patched-deps.mjs",
-
     "ios:start": "pnpm --filter @memoh-ios/mobile start",
     "ios:run": "pnpm --filter @memoh-ios/mobile ios",
     "ios:prebuild": "pnpm --filter @memoh-ios/mobile prebuild",
@@ -34,6 +33,7 @@
     "ios:verify:build": "pnpm --filter @memoh-ios/mobile verify:build",
     "ios:verify:simulator": "pnpm --filter @memoh-ios/mobile verify:simulator",
     "ios:verify:clean": "pnpm --filter @memoh-ios/mobile verify:clean",
+    "ios:release:testflight": "python3 tools/release-testflight.py",
     "ios:dev-env": "./infra/local/memoh-tunnel.sh start",
     "ios:dev-env:stop": "./infra/local/memoh-tunnel.sh stop"
   },

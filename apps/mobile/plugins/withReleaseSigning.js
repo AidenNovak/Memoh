@@ -31,11 +31,10 @@
  * ## 说清楚它**没有**解决什么（实测）
  *
  * 删掉之后，**裸跑 `xcodebuild archive` 仍然会要 iOS App Development 描述文件**、仍然
- * 失败——因为"归档即发行"这件事只存在于 Xcode 的 GUI 里（Archive 动作自己切发行身份），
- * 命令行没有对应的开关。CLI 那条路是**两步**：archive 时把身份清空
- * （`'CODE_SIGN_IDENTITY[sdk=iphoneos*]=' CODE_SIGN_IDENTITY=`，得到未签名的归档），
- * 再用 `signingStyle: manual` + 自建描述文件导出（那一步才真正签名）。见 AGENTS.md
- * 的「构建与发布（签名 / TestFlight）」。
+ * 失败——因为命令行不会像 Xcode GUI 的 Archive 动作那样自动切发行身份。CLI 必须在
+ * archive 阶段显式给 `CODE_SIGN_STYLE=Manual`、发行身份、team 与 profile，然后再用同一
+ * profile 导出。**不能先做未签名 archive 再指望 export 补齐**：那样 Xcode 会签出一个
+ * 能安装但丢失 `aps-environment` 的 App。见仓库根 `memoh-ios-dev.md` 的「TestFlight 发布」。
  *
  * 所以这个插件的作用是**把工程里那句错的断言去掉**，不是修好 CLI 归档。
  *
@@ -48,8 +47,8 @@
  * ## 签名本身怎么走
  *
  * 证书与描述文件不在这里生成，也不入库：命令行归档用 App Store Connect API key 现建
- * （`tools/asc-api.py`），签名材料放临时钥匙串。完整流程与判据见仓库根 `AGENTS.md`
- * 的「构建与发布（签名 / TestFlight）」。
+ * （`tools/asc-api.py`），签名材料放独立钥匙串。完整流程与判据见仓库根
+ * `memoh-ios-dev.md` 的「TestFlight 发布」。
  */
 const { withXcodeProject } = require('expo/config-plugins');
 

@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm i18n:check && pnpm ternary:check && pnpm press:check && pnpm lint && pnpm format:check",
-    "test": "node --experimental-strip-types --experimental-test-module-mocks --test 'tests/**/*.test.mjs' && python3 verification/simulator_test.py && python3 verification/build_test.py && python3 ../../tools/frame-probe/measure_test.py",
+    "test": "node --experimental-strip-types --experimental-test-module-mocks --test 'tests/**/*.test.mjs' && python3 verification/simulator_test.py && python3 verification/build_test.py && python3 ../../tools/frame-probe/measure_test.py && python3 ../../tools/release_testflight_test.py",
     "verify:build": "python3 verification/build.py",
     "verify:native": "python3 verification/native.py",
     "verify:simulator": "python3 verification/simulator.py",

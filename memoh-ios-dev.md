@@ -46,6 +46,7 @@ pnpm ios:prebuild && pnpm ios:pods   # 从 app config 生成原生工程 + 装 P
 pnpm ios:verify:build         # 构建 Debug 模拟器 App（要 Xcode；单独跑要先租设备，见下）
 pnpm ios:test:hosted          # UIKit 那一半断言，跑在真 App 宿主里（要 Xcode）
 pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
+pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签名、上传并挂内部组
 ```
 
 - 根脚本全部带 `ios:` 前缀，**与上游脚本不重名**：`pnpm lint` / `pnpm test` 仍然是上游的
@@ -59,6 +60,25 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
   本机没装 Go 工具链时那两条自己跳过；`check-web` 会跑 `lint-staged`，iOS 侧由
   `apps/mobile/package.json` 里那份配置接管（见 §7 第 4 条）。
 
+### TestFlight 发布
+
+- App Store Connect 的正式边界是 team `7533A52C52`、bundle `ai.memoh.ios`；凭据只从
+  `ASC_KEY_PATH` / `ASC_KEY_ID` / `ASC_ISSUER_ID` 读取，私钥与签名材料不进仓库。
+- `pnpm ios:release:testflight` 只生成并核对签名 IPA；只有显式加 `-- --upload` 才写入 ASC。
+  脚本先要求 tracked worktree 干净，再从 ASC 取最大构建号 + 1，重跑 prebuild/Pods，生成
+  未签名 archive，以 `Memoh iOS App Store (mini)` 手工签名导出，并逐一核对 archive 与 IPA
+  的 bundle/version/build。上传后等到 `VALID` 才挂到现有内部测试组；失败或超时不会假报成功。
+- CLI 的 archive/export 都带 ASC API key。脚本从仓库外的 loose key/cert 每次创建一次性
+  keychain，所以**不需要知道旧签名钥匙串密码**；结束即恢复 search list 并删除临时钥匙串。
+  archive 阶段就用手工发行身份/profile 签名，export 再用同一 profile；不能先做未签名
+  archive，因为实测那会让最终 IPA 丢失 production APNs entitlement。
+  `manageAppVersionAndBuildNumber=false`，构建号只由 `MEMOH_BUILD_NUMBER` → `app.config.ts`
+  决定，避免 Apple 在导出期悄悄改号。
+- Release 默认服务器是 `https://memoh.yetodawn.com`。TestFlight 身份与 Memoh 身份是两层：
+  ASC 决定谁能装包，Memoh member 决定谁能登录与看哪个 Bot；内测账号只授予共享
+  `ios-dev` 的 Bot 级 `manage`（覆盖 App 的聊天/文件/schedule/设置验收），**不授予服务器
+  admin**。这个 Bot 是内测专用；增加第二位测试员前要给每人独立 Bot，避免彼此看见会话。
+
 ### 门禁到底覆盖了什么
 
 | 检查                       | 覆盖                                                                                                            | 本机可跑                                  |
@@ -71,8 +91,8 @@ pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
 | `ios:verify:build`         | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
 | `ios:test:hosted`          | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
 | `ios:verify:native`        | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
-| onboarding/files Maestro  | 首启翻页与只出现一次、登录落点、文件三态预览与长按动作                                                         | ✅（要 Xcode + Maestro）                  |
-| `tools/frame-probe/`       | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                             | ✅（要 Xcode + Maestro）                  |
+| onboarding/files Maestro   | 首启翻页与只出现一次、登录落点、文件三态预览与长按动作                                                          | ✅（要 Xcode + Maestro）                  |
+| `tools/frame-probe/`       | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
 
 旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
 2026-09-19 删除，但两条有明确行为判据的 Maestro 旅程仍保留：
@@ -427,10 +447,10 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | ---------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AGENTS.md`（`CLAUDE.md` 是指向它的软链）      | 加「iOS Client (`apps/mobile`)」一节 + 末尾的「iOS Design」指引 | 上游自己的约定是"改一个目录之前先读最近的 `AGENTS.md`"。iOS 的硬约束必须在上游那份宪法里有一席之地，否则下一个 agent 会照 web/desktop 的规矩改 RN 代码。细节一律不写在这里，只留指到本文的入口                                          |
 | `pnpm-workspace.yaml`                          | `packages` 加一行 `apps/mobile/modules/*`                       | `@memoh-ios/kit` 既是 Expo 原生模块也是 JS 包。列进 workspace 它才是**真 workspace 包**：pnpm 会把它链进 `node_modules`，任何只认 `node_modules` 的工具都能解析到，不必在 `tsconfig paths` 和 `metro extraNodeModules` 里各手工对齐一份 |
-| `package.json`                                 | 加 17 个 `ios:*` 脚本；补 Worklets 的 Babel package extension   | 脚本与上游不重名；Worklets 0.10.1 的插件会直接加载 `@babel/generator` 却没有声明它，显式钉在 Expo 使用的 Babel 7.28.5，防止干净安装误捡 Babel 8。**上游脚本一个没动**                                                                         |
+| `package.json`                                 | 加 17 个 `ios:*` 脚本；补 Worklets 的 Babel package extension   | 脚本与上游不重名；Worklets 0.10.1 的插件会直接加载 `@babel/generator` 却没有声明它，显式钉在 Expo 使用的 Babel 7.28.5，防止干净安装误捡 Babel 8。**上游脚本一个没动**                                                                   |
 | `eslint.config.mjs`                            | `ignores` 加 `apps/mobile/**`                                   | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题                                                                                                   |
 | `.gitignore`                                   | 追加 iOS 段 + `/.verify/`                                       | prebuild 产物（`ios/`、`.expo/`）不入库；验收产物按轮次显式 `git add -f`；签名材料绝不入库                                                                                                                                              |
-| `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图；另记录 Worklets 的 `@babel/generator@7.28.5` package extension。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）                              |
+| `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图；另记录 Worklets 的 `@babel/generator@7.28.5` package extension。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）                       |
 | `.github/scripts/contribution-policy.test.mjs` | 普通 PR workflow 计数 9 → 10                                    | 新增 `ios-ci.yml` 后，治理测试仍遍历全部 PR workflow，确认它们没有 format 依赖且权限都是 read-only                                                                                                                                      |
 
 **新增的目录（不改上游任何文件）：**
@@ -520,6 +540,12 @@ hosted XCTest。
 
 ## 9. 当前验收与还没做的事
 
+- **TestFlight 0.1.0 (build 3) 已可用**：从 reviewed app head `7d9febeb3` 归档，ASC
+  `processingState=VALID`，已挂 `Internal Testers`（1 位，当前 Apple 状态仍为 `INVITED`）；
+  最低系统 iOS 26.0、`usesNonExemptEncryption=false`。最终 IPA 已核对发行签名链、Team、bundle、
+  两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement。
+  `vultr-sg` 上相同邮箱的 Memoh member 已能登录并看见 `ready` 的 `ios-dev`，以非服务器管理员
+  身份实测 sessions/files/checks/schedule 均 HTTP 200；密码只在服务器 root-only secret 中。
 - **PR #165 当前 head 的全套 CI 已通过**：`.github/workflows/ios-ci.yml` 三个 job 覆盖
   JS/TS + Hermes bundle、Swift 纯逻辑、原生 Simulator build + hosted XCTest；上游的
   Lint/Test、三平台 desktop/runtime 与 Docker 也全绿。它仍不代替真机和 Human QA。

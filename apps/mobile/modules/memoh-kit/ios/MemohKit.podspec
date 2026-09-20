@@ -12,5 +12,10 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
   s.source_files = '**/*.swift'
-  s.resource_bundles = { 'MemohKitStrings' => ['Support/Resources/*.lproj/*.strings'] }
+  s.resource_bundles = {
+    'MemohKitStrings' => ['Support/Resources/*.lproj/*.strings'],
+    # 设置页 agent 卡片的吉祥物：`assets/images/brand-mark.png` 的副本。原生拿不到 Metro
+    # 打包的资源，而两端必须画同一枚图形（见 MemohAssets.swift）。
+    'MemohKitAssets' => ['Support/Resources/Assets/*.png'],
+  }
 end

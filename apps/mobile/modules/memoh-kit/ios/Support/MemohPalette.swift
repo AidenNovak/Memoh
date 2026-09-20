@@ -56,6 +56,30 @@ enum MemohPalette {
     traits.userInterfaceStyle == .dark ? Palette.darkDestructive : Palette.lightDestructive
   }
 
+  /** 品牌紫。可点的文字/图形（内置头像的图形用它）。 */
+  static func accent(_ traits: UITraitCollection) -> UIColor {
+    traits.userInterfaceStyle == .dark ? Palette.darkAccent : Palette.lightAccent
+  }
+
+  /** 品牌紫的淡底（内置头像的方块底）。深色那份本身带 alpha。 */
+  static func accentSoft(_ traits: UITraitCollection) -> UIColor {
+    traits.userInterfaceStyle == .dark ? Palette.darkAccentSoft : Palette.lightAccentSoft
+  }
+
+  /**
+   在线/成功、警告。
+
+   `tokens.ts` 文件头第 2 条偏离：Memoh 的颜色体系里没有这一档，这两枚照抄 RN 侧
+   `success` / `warning`，让原生与 RN 画出来的是同一个点。
+   */
+  static func success(_ traits: UITraitCollection) -> UIColor {
+    traits.userInterfaceStyle == .dark ? Palette.darkSuccess : Palette.lightSuccess
+  }
+
+  static func warning(_ traits: UITraitCollection) -> UIColor {
+    traits.userInterfaceStyle == .dark ? Palette.darkWarning : Palette.lightWarning
+  }
+
   /** 下沉面（代码块、内嵌容器）。 */
   static func inset(_ traits: UITraitCollection) -> UIColor {
     traits.userInterfaceStyle == .dark ? Palette.darkInset : Palette.lightInset
@@ -83,6 +107,10 @@ enum MemohPalette {
     static let lightDestructive = UIColor(hex: 0xE7000B)
     static let lightInset = UIColor(hex: 0xF4F4F4)
     static let lightUserBubble = UIColor(hex: 0xEEE5FE)
+    static let lightAccent = UIColor(hex: 0x764BE5)
+    static let lightAccentSoft = UIColor(hex: 0xF1EFFF)
+    static let lightSuccess = UIColor(hex: 0x34C759)
+    static let lightWarning = UIColor(hex: 0xB25E00)
 
     static let darkBackground = UIColor(hex: 0x060606)
     static let darkCard = UIColor(hex: 0x181818)
@@ -92,17 +120,21 @@ enum MemohPalette {
     static let darkDestructive = UIColor(hex: 0xFF6467)
     static let darkInset = UIColor(hex: 0x242424)
     static let darkUserBubble = UIColor(hex: 0x532D8D)
+    static let darkAccent = UIColor(hex: 0xA490FF)
+    static let darkAccentSoft = UIColor(hex: 0x2E274E, alpha: 0x73 / 255)
+    static let darkSuccess = UIColor(hex: 0x30D158)
+    static let darkWarning = UIColor(hex: 0xFF9F0A)
   }
 }
 
 private extension UIColor {
   /// 从 `0xRRGGBB` 构造。比 `UIColor(red:green:blue:)` 少一行除法，也少一次抄错的机会。
-  convenience init(hex: Int) {
+  convenience init(hex: Int, alpha: CGFloat = 1) {
     self.init(
       red: CGFloat((hex >> 16) & 0xFF) / 255,
       green: CGFloat((hex >> 8) & 0xFF) / 255,
       blue: CGFloat(hex & 0xFF) / 255,
-      alpha: 1
+      alpha: alpha
     )
   }
 }

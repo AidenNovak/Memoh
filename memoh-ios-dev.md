@@ -513,6 +513,10 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
   仓库不保留单元测试、E2E、fixtures、截图证据、测试专用页面或探针。
 - **仍需真机 Human QA**：真实 APNs 送达、通知卡片与动作按钮、生产 device token、
   触感、专注模式，以及蜂窝/Wi-Fi 切换。完成前 PR 保持 Draft，`Human QA passed` 不勾选。
+- `vultr-sg` dev 栈已运行由 commit `e21aa87d2` 构建的 push gateway：sidecar 健康、
+  持久事件 cursor、独立重启恢复、公网 `/devices` 鉴权、双域名 TLS 均已通过，部署过程未重启
+  Memoh server / PostgreSQL。当前 production device 注册数仍为 0，说明 build 7 尚未在真机完成
+  登录与 token 注册；这项状态不能冒充 APNs 到达验证。
 - push gateway 已通过真实 Memoh/PostgreSQL 的 401/400/204 注册与解绑验证；APNs provider
   JWT、Team/Key/topic 与 HTTP/2 已用假 token 验证到 Apple 的 `BadDeviceToken` 回执并自动清理。
   仍缺的只是 TestFlight 真机产生 production token 后的实际送达与动作验收。

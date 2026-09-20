@@ -34,6 +34,23 @@ Use your own API keys to run Memoh's built-in agent, or host your existing Claud
 
 Talk to them through Telegram, Discord, Lark, WeChat, Web UI, and more. They remember context across sessions and platforms, drive a browser, call MCP tools, and run scheduled tasks. Run one for yourself, assign one to each team member, or spin up a fleet.
 
+## Native iOS Client
+
+This fork adds an iOS client for Memoh Cloud and self-hosted servers. It supports account and server sign-in, multi-bot sessions, streaming chat, model selection, scheduled tasks, workspace file browsing, and push notifications. See the [iOS development guide](./memoh-ios-dev.md) for setup and release details.
+
+<table>
+  <tr>
+    <td align="center"><img src="./assets/ios/sign-in.png" alt="iOS sign-in screen" width="230"><br><sub>Cloud and self-hosted sign-in</sub></td>
+    <td align="center"><img src="./assets/ios/sessions.png" alt="iOS sessions screen" width="230"><br><sub>Bot sessions</sub></td>
+    <td align="center"><img src="./assets/ios/chat.png" alt="iOS chat screen" width="230"><br><sub>Streaming chat</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/ios/model-picker.png" alt="iOS model picker" width="230"><br><sub>Model selection</sub></td>
+    <td align="center"><img src="./assets/ios/schedule-editor.png" alt="iOS scheduled task editor" width="230"><br><sub>Scheduled tasks</sub></td>
+    <td align="center"><img src="./assets/ios/file-preview.png" alt="iOS workspace file preview" width="230"><br><sub>Workspace files</sub></td>
+  </tr>
+</table>
+
 ## Get Started
 
 ### Memoh Cloud

@@ -34,6 +34,23 @@ Memoh はオープンソースのマルチ Agent プラットフォームです�
 
 Telegram、Discord、Lark、WeChat、Web UI などから Agent と会話できます。セッションやプラットフォームをまたいで文脈を記憶し、Browser を操作し、MCP ツールを呼び出し、スケジュールタスクを実行します。自分用に 1 つ、チームメンバーごとに 1 つ、あるいは複数の Agent をまとめて起動できます。
 
+## ネイティブ iOS クライアント
+
+この fork は Memoh Cloud とセルフホスト環境向けの iOS クライアントを追加します。アカウントとサーバーへのログイン、複数 Bot のセッション、ストリーミングチャット、モデル選択、スケジュールタスク、Workspace のファイル閲覧、プッシュ通知に対応しています。セットアップとリリースの詳細は [iOS 開発ガイド](./memoh-ios-dev.md) を参照してください。
+
+<table>
+  <tr>
+    <td align="center"><img src="./assets/ios/sign-in.png" alt="iOS ログイン画面" width="230"><br><sub>Cloud とセルフホストへのログイン</sub></td>
+    <td align="center"><img src="./assets/ios/sessions.png" alt="iOS セッション画面" width="230"><br><sub>Bot セッション</sub></td>
+    <td align="center"><img src="./assets/ios/chat.png" alt="iOS チャット画面" width="230"><br><sub>ストリーミングチャット</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/ios/model-picker.png" alt="iOS モデル選択画面" width="230"><br><sub>モデル選択</sub></td>
+    <td align="center"><img src="./assets/ios/schedule-editor.png" alt="iOS スケジュールタスク編集画面" width="230"><br><sub>スケジュールタスク</sub></td>
+    <td align="center"><img src="./assets/ios/file-preview.png" alt="iOS Workspace ファイルプレビュー" width="230"><br><sub>Workspace ファイル</sub></td>
+  </tr>
+</table>
+
 ## はじめに
 
 ### Memoh Cloud

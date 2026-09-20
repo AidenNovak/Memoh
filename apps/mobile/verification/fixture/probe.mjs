@@ -539,17 +539,17 @@ async function checkChatErrorBlocks() {
   const cases = [
     {
       session: 'fixture-session-error',
-      // REST 那一侧的块 key（`b-<message id>`）。**flow 里钉的节点 id 从它派生**：
-      // 客户端把 REST 的块重新按 `m<message id>` 编号，所以 `b-41` ↔ `message-block-m41`。
+      // REST 那一侧的 message id。**flow 里钉的节点 id 从它派生**：
+      // 客户端把 REST message 重新按 `m<message id>` 编号，所以 `41` ↔ `message-block-m41`。
       // 这个对应关系很容易改坏（改场景里的 message id，flow 的断言就会指向不存在的节点），
       // 所以在这里钉住——probe 红的时候，先看这里，而不是去 flow 里改断言。
-      key: 'b-41',
+      id: 41,
       code: 'fs.readonly',
       content: '权限不足：目标文件在只读挂载上。',
     },
     {
       session: 'fixture-session-timeout',
-      key: 'b-51',
+      id: 51,
       code: 'agent.response_timeout',
       content: 'The model did not respond in time. Please try again.',
     },
@@ -557,18 +557,18 @@ async function checkChatErrorBlocks() {
   const codes = new Set();
   for (const item of cases) {
     const response = await call(`/bots/${BOT}/messages?session_id=${item.session}`);
-    const blocks = (response.body?.items ?? []).flatMap((turn) => turn.assistant?.blocks ?? []);
-    const error = blocks.find((block) => block.kind === 'error');
+    const messages = (response.body?.items ?? []).flatMap((turn) => turn.messages ?? []);
+    const error = messages.find((message) => message.type === 'error');
     check(
-      `${item.session}：转录里有一块 error，且 key/code/content 都对得上`,
-      error?.key === item.key && error?.code === item.code && error?.text === item.content,
+      `${item.session}：转录里有一块 error，且 id/code/content 都对得上`,
+      error?.id === item.id && error?.code === item.code && error?.content === item.content,
       show(error),
     );
     // 工具失败那一块得在同一个回合里（错误块挨着它解释的那一步，不是飘在别处）。
     check(
       `${item.session}：同一个回合里还有一条工具块`,
-      blocks.some((block) => block.kind === 'tool'),
-      show(blocks.map((block) => block.kind)),
+      messages.some((message) => message.type === 'tool'),
+      show(messages.map((message) => message.type)),
     );
     codes.add(error?.code ?? '');
   }
@@ -1131,6 +1131,21 @@ async function checkSessions() {
     status.body?.context_usage?.context_window === undefined,
     show(status.body?.context_usage),
   );
+  const history = await call(`/bots/${BOT}/messages?session_id=fixture-session-active&limit=50`);
+  const historyItems = history.body?.items ?? [];
+  check(
+    '普通 REST 历史也是 UITurn[]（不是 RenderTurn[]），含可分叉的 assistant turn',
+    historyItems.some((turn) => turn.role === 'user' && typeof turn.turn_id === 'string') &&
+      historyItems.some(
+        (turn) =>
+          turn.role === 'assistant' &&
+          typeof turn.turn_id === 'string' &&
+          Array.isArray(turn.messages) &&
+          turn.messages.length > 0,
+      ) &&
+      historyItems.every((turn) => !('user' in turn) && !('assistant' in turn)),
+    show(historyItems.slice(0, 2)),
+  );
   await setScenario('compact-unavailable');
   const noSkills = await call(`/bots/${BOT}/sessions/fixture-session-active/status`);
   check(
@@ -1459,6 +1474,49 @@ async function checkE2eHooks() {
     '新建的会话没有历史（刚开的会话是空的）',
     (history.body?.items ?? []).length === 0,
     show(history.body?.items),
+  );
+
+  // ④ 会话动作：重命名必须改进列表；分叉必须建出一条能查、能开的新会话。
+  const sourceHistory = await call(
+    `/bots/${BOT}/messages?session_id=fixture-session-long-title&limit=50`,
+  );
+  const assistantTurnId = sourceHistory.body?.items?.find(
+    (turn) => turn.role === 'assistant',
+  )?.turn_id;
+  const renamed = await call(`/bots/${BOT}/sessions/fixture-session-long-title`, {
+    method: 'PATCH',
+    body: { title: 'Renamed session' },
+  });
+  const afterRename = await call(`/bots/${BOT}/sessions`);
+  check(
+    'PATCH /sessions 返回更新后的会话并同步列表',
+    renamed.status === 200 &&
+      renamed.body?.title === 'Renamed session' &&
+      afterRename.body?.items?.find((item) => item.id === 'fixture-session-long-title')?.title ===
+        'Renamed session',
+    `${renamed.status}/${show(renamed.body?.title)}`,
+  );
+
+  const forked = await call(`/bots/${BOT}/sessions/fixture-session-long-title/fork`, {
+    method: 'POST',
+    body: { turn_id: assistantTurnId, title: 'Renamed session (fork)' },
+  });
+  const forkedId = forked.body?.id;
+  const forkedOne = await call(`/bots/${BOT}/sessions/${forkedId}`);
+  const forkedHistory = await call(`/bots/${BOT}/messages?session_id=${forkedId}`);
+  const actionLog = await call('/__session-action-log');
+  check(
+    'POST /fork 返回 201，新会话能查、复制源历史且在请求账里保留助手轮次锚点',
+    forked.status === 201 &&
+      typeof forkedId === 'string' &&
+      forkedOne.status === 200 &&
+      forkedOne.body?.title === 'Renamed session (fork)' &&
+      forkedHistory.body?.items?.some((turn) => turn.role === 'assistant') &&
+      actionLog.body?.patches?.[0]?.body?.title === 'Renamed session' &&
+      typeof assistantTurnId === 'string' &&
+      actionLog.body?.forks?.[0]?.body?.turn_id === assistantTurnId &&
+      actionLog.body?.forks?.[0]?.created_session_id === forkedId,
+    `${forked.status}/${forkedOne.status}/${forkedHistory.body?.items?.length}/${show(actionLog.body)}`,
   );
 
   /**

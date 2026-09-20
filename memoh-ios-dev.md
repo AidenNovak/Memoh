@@ -81,24 +81,29 @@ pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签�
 
 ### 门禁到底覆盖了什么
 
-| 检查                           | 覆盖                                                                                                            | 本机可跑                                  |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `ios:check`                    | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
-| `ios:typecheck:foundation`     | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
-| `ios:typecheck:kit`            | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
-| `ios:test`                     | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
-| `ios:bundle`                   | Metro 能出 iOS bundle                                                                                           | ✅                                        |
-| `ios:verify:build`             | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
-| `ios:test:hosted`              | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
-| `ios:verify:native`            | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
-| onboarding/login/files Maestro | 首启翻页与只出现一次、Cloud 占位、自部署登录拒绝/成功、文件三态预览与长按动作                                   | ✅（要 Xcode + Maestro）                  |
-| `tools/frame-probe/`           | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
+| 检查                                           | 覆盖                                                                                                            | 本机可跑                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `ios:check`                                    | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
+| `ios:typecheck:foundation`                     | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
+| `ios:typecheck:kit`                            | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
+| `ios:test`                                     | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
+| `ios:bundle`                                   | Metro 能出 iOS bundle                                                                                           | ✅                                        |
+| `ios:verify:build`                             | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
+| `ios:test:hosted`                              | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
+| `ios:verify:native`                            | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
+| onboarding/login/files/session-actions Maestro | 首启翻页与只出现一次、Cloud 占位、自部署登录拒绝/成功、文件三态预览与长按动作、会话重命名→刷新→分叉→跳转闭环    | ✅（要 Xcode + Maestro）                  |
+| `tools/frame-probe/`                           | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
 
 旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
-2026-09-19 删除，但三条有明确行为判据的 Maestro 旅程仍保留：
-`verification/onboarding/run.sh`、`verification/login/run.sh` 与 `verification/files/run.sh`。
+2026-09-19 删除，但四条有明确行为判据的 Maestro 旅程仍保留：
+`verification/onboarding/run.sh`、`verification/login/run.sh`、`verification/files/run.sh` 与
+`verification/session-actions/run.sh`。
 登录旅程覆盖 GitHub/Google/邮箱占位反馈、邮箱错误、自部署切换、地址编辑、第一次 401 与第二次成功；
 fixture 的 `/ping` + 空载荷 `/auth/login` 也照真实客户端的“先确认是 Memoh，再发口令”顺序实现。
+会话动作旅程覆盖长按原生 action sheet、rename PATCH、列表刷新、从最近助手轮次 fork、进入新会话、
+返回后新旧会话同时可见，并用请求账核对源会话、标题、助手 `turn_id` 与新 id。它顺带修正了 fixture
+普通历史曾错发内部 `RenderTurn[]` 的问题：现在 `/messages` 与真实 API 一样发 `UITurn[]`，既有
+WebSocket 内容不再掩盖 REST 历史解析和分叉锚点。
 它们必须通过 simulator lease
 运行，并把截图落进各自的 `out/`；截图仍要由人看，脚本成功不能替代视觉检查。
 
@@ -564,8 +569,9 @@ hosted XCTest。
   所以先按现状看着）。
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
-- **UI 自动化仍是定向覆盖，不是全导航录制**：保留在树里的 onboarding / login / files
-  三条旅程已实跑。2026-09-19 还把精简前 commit `c93589a` 的会话、bot、schedule、设置、语言、
+- **UI 自动化仍是定向覆盖，不是全导航录制**：保留在树里的 onboarding / login / files /
+  session-actions 四条旅程已实跑；后者真实完成了重命名→刷新→分叉→打开→返回，并核对请求账。
+  2026-09-19 还把精简前 commit `c93589a` 的会话、bot、schedule、设置、语言、
   通知旅程拿来对当前代码与当前 fixture 补跑：会话发送/流式/工具顺序与压缩端点、schedule
   新建→编辑→删除及请求体、外观 light/dark/true-black、语言即时切换、通知三类事件、bot
   创建→切换→消息发往新 bot 都取得了界面和服务端证据。旧断言里的三处文案已变化

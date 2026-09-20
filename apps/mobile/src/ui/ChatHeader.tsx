@@ -77,7 +77,9 @@ export function ChatHeader({
       {/* 标题即入口：点它看会话信息（设计基线里"标题可点=会话信息"）。 */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={t('sessionInfo.open')}
+        // 这颗按钮同时承担“我在哪个会话”与“点开会话信息”两件事。只念 Session info 会把
+        // 屏幕上最重要的会话名从 VoiceOver 树里吃掉（子 Text 会被 Pressable 合并）。
+        accessibilityLabel={`${title}, ${t('sessionInfo.open')}`}
         accessibilityHint={t('sessionInfo.title')}
         onPress={onOpenInfo}
         style={({ pressed }) => ({ flex: 1, opacity: pressed ? PRESS_OPACITY.control : 1 })}

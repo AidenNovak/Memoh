@@ -75,6 +75,14 @@ test('用户能看到的文案里不许出现路由组名（(tabs) 这种内部�
   assert.deepEqual(leaks, [], `文案里漏了路由内部名：\n  ${leaks.join('\n  ')}`);
 });
 
+test('可点击的聊天标题仍把会话名留在 VoiceOver 标签里', () => {
+  const source = read('src/ui/ChatHeader.tsx');
+  assert.ok(
+    source.includes("accessibilityLabel={`${title}, ${t('sessionInfo.open')}`}"),
+    '标题 Pressable 只念“Session info”会吞掉当前会话名；应同时说明会话名与动作',
+  );
+});
+
 // ------------------------------------- ② 登录页要说清地址与账号从哪来
 
 test('登录页把那句说明画在服务器那一行下面（用户正看着这两个框的时刻）', () => {

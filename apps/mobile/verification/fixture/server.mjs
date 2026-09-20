@@ -572,16 +572,21 @@ function sparseSessions() {
  分页本身在 GET 处理里按游标出数据。
  */
 function activeSessions() {
-  if (currentScenario === 'home-empty') return [];
-  if (currentScenario === 'sessions-many') return manySessions();
+  let sessions;
+  if (currentScenario === 'home-empty') sessions = [];
+  else if (currentScenario === 'sessions-many') sessions = manySessions();
   if (isPagedScenario(currentScenario)) {
-    return [...createdSessions, ...pagedSessionItems(0, pagedPageSizes(currentScenario))];
+    sessions = [...createdSessions, ...pagedSessionItems(0, pagedPageSizes(currentScenario))];
+  } else if (isOlderHistoryScenario(currentScenario)) {
+    sessions = [...createdSessions, olderHistorySession(), ...SESSIONS];
+  } else if (currentScenario === 'sessions-sparse') {
+    sessions = [...createdSessions, ...sparseSessions()];
+  } else if (sessions === undefined) {
+    sessions = [...createdSessions, ...SESSIONS];
   }
-  if (isOlderHistoryScenario(currentScenario)) {
-    return [...createdSessions, olderHistorySession(), ...SESSIONS];
-  }
-  if (currentScenario === 'sessions-sparse') return [...createdSessions, ...sparseSessions()];
-  return [...createdSessions, ...SESSIONS];
+  // PATCH 后列表与单条查询都必须读到新标题。只空回 200 会让重命名 sheet 看似成功，
+  // 回到列表却仍是旧名——那种 fixture 反而替产品 bug 打掩护。
+  return sessions.map((session) => updatedSessions.get(session.id) ?? session);
 }
 
 /**
@@ -618,8 +623,8 @@ function olderHistorySession() {
 /**
  一页历史的**线上形状**（`UITurn[]`）。
 
- ⚠️ 这一份必须是线上形状，不能照抄 `turnsFor` 那种渲染形状（`{key, position, user:{…}}`）。
- 两个原因，都是这一轮撞出来的：
+ ⚠️ 这一份必须与 `turnsFor` 一样保持线上 `UITurn` 形状，不能退回客户端内部的渲染形状
+ （`{key, position, user:{…}}`）。两个原因，都是验收撞出来的：
 
  1. 往前翻页的游标是 `turn.id`（`historyPage.olderCursorOf`），渲染形状里没有这个字段，
     于是客户端会认为"没有游标、别发请求"——那个失败条**永远不可能出现**；
@@ -663,7 +668,14 @@ function sceneById(id) {
   return SCENES.find((scene) => scene.id === id) ?? null;
 }
 
-/** 把场景的帧序列翻成 REST 历史（`UITurn[]`）。 */
+/**
+ 把场景的帧序列翻成 REST 历史（真正的 `UITurn[]`，不是客户端渲染后的 `RenderTurn[]`）。
+
+ 场景帧只有消息 id，没有显式的 assistant turn id，所以按协议时序归属：一条消息第一次出现时
+ 归到最近的 user turn；同一帧恰好有 N 个 user turn + N 条 message 时一一对应（性能场景的批量
+ 历史就是这个形状）。后续 append 继续按 message id 找原 owner。这样默认聊天、错误块和多轮历史
+ 都能走客户端真正的 REST 解析路径，`forkTarget()` 也能拿到真实的 assistant `turn_id`。
+ */
 function turnsFor(sceneId) {
   const scene = sceneById(sceneId);
   if (scene === null) return [];
@@ -671,79 +683,77 @@ function turnsFor(sceneId) {
    标记了 `restHistory: 'none'` 的场景**没有历史**：它是"这一轮还在跑"的切面，而服务端
    要在轮次屏障上才把这一轮落盘。合成一份历史会让界面同时拿到"已完成的一轮"和
    "正在跑的一轮"两份，把要验的东西盖住（见 `src/features/verify/scenes.ts`）。
-   */
+  */
   if (scene.restHistory === 'none') return [];
-  const turns = [];
+  const pairs = [];
+  const pairByUserTurn = new Map();
+  const ownerByMessage = new Map();
+  let currentPair = null;
+
   for (const frame of scene.frames) {
     if (frame.kind !== 'delta') continue;
     const delta = frame.delta;
-    const userTurn = delta.user_turn_upserts?.[0];
-    if (userTurn !== undefined) {
-      turns.push({
-        key: userTurn.turn_id,
-        position: userTurn.turn_position ?? turns.length,
-        active: false,
-        user: {
-          key: `m-user-${turns.length}`,
-          role: 'user',
-          blocks: [{ key: 'b-user', kind: 'text', text: userTurn.text }],
-        },
-      });
+    const framePairs = [];
+    for (const userTurn of delta.user_turn_upserts ?? []) {
+      let pair = pairByUserTurn.get(userTurn.turn_id);
+      if (pair === undefined) {
+        pair = { user: { ...userTurn, role: 'user' }, messages: new Map() };
+        pairByUserTurn.set(userTurn.turn_id, pair);
+        pairs.push(pair);
+      } else {
+        pair.user = { ...pair.user, ...userTurn, role: 'user' };
+      }
+      currentPair = pair;
+      framePairs.push(pair);
     }
-  }
-  // 助手侧：把 upsert / append 合成一条消息，按 id 归并。
-  const assistantBlocks = new Map();
-  for (const frame of scene.frames) {
-    if (frame.kind !== 'delta') continue;
-    for (const message of frame.delta.message_upserts ?? []) {
-      assistantBlocks.set(message.id, message);
+
+    const upserts = [...(delta.message_upserts ?? []), ...(delta.current_run_view?.messages ?? [])];
+    for (const [index, message] of upserts.entries()) {
+      const key = String(message.id);
+      let owner = ownerByMessage.get(key);
+      if (owner === undefined) {
+        owner = framePairs.length === upserts.length ? framePairs[index] : currentPair;
+        if (owner === undefined || owner === null) continue;
+        ownerByMessage.set(key, owner);
+      }
+      owner.messages.set(key, { ...(owner.messages.get(key) ?? {}), ...message });
     }
-    for (const append of frame.delta.message_appends ?? []) {
-      const existing = assistantBlocks.get(append.id);
-      assistantBlocks.set(append.id, {
+
+    for (const append of delta.message_appends ?? []) {
+      const key = String(append.id);
+      let owner = ownerByMessage.get(key);
+      if (owner === undefined) {
+        owner = currentPair;
+        if (owner === undefined || owner === null) continue;
+        ownerByMessage.set(key, owner);
+      }
+      const existing = owner.messages.get(key);
+      owner.messages.set(key, {
         ...(existing ?? { id: append.id, type: append.type }),
         content: `${existing?.content ?? ''}${append.content}`,
       });
     }
   }
-  if (assistantBlocks.size > 0 && turns.length > 0) {
-    const blocks = [...assistantBlocks.values()].map((message) => {
-      const base = { key: `b-${message.id}` };
-      switch (message.type) {
-        case 'text':
-          return { ...base, kind: 'text', text: message.content ?? '' };
-        case 'reasoning':
-          return { ...base, kind: 'reasoning', text: message.content ?? '' };
-        case 'tool':
-          return {
-            ...base,
-            kind: 'tool',
-            name: message.name ?? '',
-            title: message.title ?? '',
-            status: message.running === true ? 'running' : 'done',
-            input: message.input,
-            output: message.output,
-            execution_location: message.execution_location,
-          };
-        case 'error':
-          return { ...base, kind: 'error', text: message.content ?? '', code: message.code };
-        case 'notice':
-          return { ...base, kind: 'notice', text: message.content ?? '', code: message.code };
-        default:
-          return { ...base, kind: 'text', text: message.content ?? '' };
-      }
-    });
-    turns[turns.length - 1].assistant = {
-      key: `m-assistant-${turns.length}`,
+
+  const turns = [];
+  for (const pair of pairs) {
+    turns.push(pair.user);
+    if (pair.messages.size === 0) continue;
+    turns.push({
+      turn_id: `${pair.user.turn_id}-assistant`,
+      turn_position:
+        typeof pair.user.turn_position === 'number' ? pair.user.turn_position + 1 : undefined,
       role: 'assistant',
-      blocks,
-    };
+      messages: [...pair.messages.values()],
+    });
   }
   return turns;
 }
 
 /** 每个会话对应哪个场景。默认用第一个聊天场景。 */
 function sceneForSession(sessionId) {
+  // 分叉会话的内容来自复制后的 REST 历史，不该再伪造一个正在跑的 WS 场景。
+  if (forkedSessionSources.has(sessionId)) return 'forked-history-only';
   if (sessionId === 'fixture-session-active') return 'chat-tools';
   if (sessionId === 'fixture-session-stream') return 'chat-tool-stream';
   if (sessionId.startsWith('fixture-session-created')) return 'chat-tool-stream';
@@ -765,6 +775,12 @@ function sceneForSession(sessionId) {
    */
   if (sessionId === OLDER_HISTORY_SESSION_ID) return 'fixture-no-scene';
   return 'chat-tools';
+}
+
+/** 普通会话读自己的场景；分叉会话读源会话被复制过来的那份历史。 */
+function historyForSession(sessionId) {
+  const sourceId = forkedSessionSources.get(sessionId) ?? sessionId;
+  return turnsFor(sceneForSession(sourceId));
 }
 
 // ------------------------------------------------------------------ HTTP
@@ -1212,6 +1228,13 @@ function takeFault(fault) {
 let gapOnceSent = false;
 /** 旅程里新建出来的会话（`POST /bots/{id}/sessions`）。 */
 let createdSessions = [];
+/** 分叉出来的新 id → 源会话 id；REST 克隆源历史，WS 保持空闲。 */
+let forkedSessionSources = new Map();
+/** 重命名后的会话（按 id）；列表与单条查询共用。 */
+let updatedSessions = new Map();
+/** 会话写操作的请求账：UI 文案证明不了 body/锚点是否真的对。 */
+let sessionActionPatches = [];
+let sessionActionForks = [];
 
 /**
  每个会话回显过几句用户消息（`runtime_delta.user_turn_upserts`）。
@@ -1295,6 +1318,10 @@ function applyScenario(name) {
   writeFault = { mode: 'normal', remaining: 0 };
   gapOnceSent = false;
   createdSessions = [];
+  forkedSessionSources = new Map();
+  updatedSessions = new Map();
+  sessionActionPatches = [];
+  sessionActionForks = [];
   resetWsLog();
 }
 
@@ -1889,10 +1916,66 @@ const server = createServer(async (request, response) => {
     return json(response, 200, found);
   }
   if (oneSession && method === 'PATCH') {
-    return json(response, 200, { ok: true });
+    const found = activeSessions().find((session) => session.id === oneSession[2]);
+    if (found === undefined) return json(response, 404, { error: 'not found' });
+    const body = await readBody(request);
+    const updated = {
+      ...found,
+      ...(typeof body.title === 'string' ? { title: body.title } : {}),
+      id: found.id,
+      updated_at: ISO(0),
+    };
+    updatedSessions = new Map(updatedSessions).set(found.id, updated);
+    sessionActionPatches.push({ session_id: found.id, body });
+    return json(response, 200, updated);
   }
   if (oneSession && method === 'DELETE') {
     return json(response, 204, {});
+  }
+
+  /**
+   从最后一条助手回复分叉。
+
+   这条不能用“随便回个 201”糊过去：产品动作随后会刷新列表、打开返回的 id，并读取那条
+   新会话；fixture 必须把它真正放进内存列表，才能证明 UI → POST body → 刷新 → 跳转
+   是一条闭环。非 chat 与空锚点照真实服务端分别回 409 / 400。
+   */
+  const forkPath = path.match(/^\/bots\/([^/]+)\/sessions\/([^/]+)\/fork$/);
+  if (forkPath && method === 'POST') {
+    const source = activeSessions().find((session) => session.id === forkPath[2]);
+    if (source === undefined) return json(response, 404, { error: 'not found' });
+    if (source.type !== 'chat') {
+      return json(response, 409, { error: 'only chat sessions can be forked' });
+    }
+    const body = await readBody(request);
+    if (typeof body.turn_id !== 'string' || body.turn_id.trim() === '') {
+      return json(response, 400, { error: 'turn_id is required' });
+    }
+    const assistantTurnExists = historyForSession(source.id).some(
+      (turn) => turn.role === 'assistant' && turn.turn_id === body.turn_id,
+    );
+    if (!assistantTurnExists) {
+      return json(response, 400, { error: 'assistant turn not found' });
+    }
+    const created = {
+      ...source,
+      id: `fixture-session-created-${createdSessions.length + 1}`,
+      title:
+        typeof body.title === 'string' && body.title.trim() !== ''
+          ? body.title
+          : `${source.title} fork`,
+      created_at: ISO(0),
+      updated_at: ISO(0),
+      last_message_at: ISO(0),
+    };
+    createdSessions = [created, ...createdSessions];
+    forkedSessionSources = new Map(forkedSessionSources).set(created.id, source.id);
+    sessionActionForks.push({
+      source_session_id: source.id,
+      body,
+      created_session_id: created.id,
+    });
+    return json(response, 201, created);
   }
 
   // 会话队列：两条队列一起拿（与上游 GET /queue 同形）。
@@ -1926,8 +2009,8 @@ const server = createServer(async (request, response) => {
      那一跳要么失败（`chat-older-error`，界面上必须出现"没能拉到更早的消息"），
      要么真的给更老的一页（`chat-older-ok`，点"重试"之后要真的接上内容）。
 
-     ⚠️ 这一档的响应是**线上形状**（`olderHistoryPageWire`），与下面 `turnsFor` 那条不同
-     ——前者是给"向前翻页"这条路用的，形状不对它根本不成立。
+     ⚠️ 这一档除了是线上 `UITurn` 形状，还必须显式带每轮第一条记录的 `id`
+     （`olderHistoryPageWire`）：它是向前翻页游标；普通 `turnsFor` 不需要合成这个字段。
      */
     if (isOlderHistoryScenario(currentScenario)) {
       const before = url.searchParams.get('before_message_id') ?? '';
@@ -1956,7 +2039,7 @@ const server = createServer(async (request, response) => {
         ),
       });
     }
-    return json(response, 200, { items: turnsFor(sceneForSession(sessionId)) });
+    return json(response, 200, { items: historyForSession(sessionId) });
   }
 
   /**
@@ -2180,6 +2263,12 @@ const server = createServer(async (request, response) => {
   }
   if (path === '/__last-schedule-write') return json(response, 200, lastScheduleWrite);
   if (path === '/__last-settings-patch') return json(response, 200, lastSettingsPatch);
+  if (path === '/__session-action-log') {
+    return json(response, 200, {
+      patches: sessionActionPatches,
+      forks: sessionActionForks,
+    });
+  }
   // 验收用：最近一次**回应审批**的帧（证明拒绝时那句理由真的随帧发出去了）。
   if (path === '/__last-approval-response') return json(response, 200, lastApprovalResponse);
   if (path === '/__last-bot-patch') return json(response, 200, lastBotPatch);

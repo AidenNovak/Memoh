@@ -560,6 +560,7 @@ function SessionRow({
 
   return (
     <Pressable
+      testID={`session-row-${session.id}`}
       accessibilityRole="button"
       // 长按是一个**看不见的手势**，读屏用户不会自己发现它——把"按住能做别的"写进提示。
       accessibilityHint={t('session.action.hint')}

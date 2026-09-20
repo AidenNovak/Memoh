@@ -38,7 +38,8 @@ device_lease_instructions() {
   cat <<'TEXT'
   正确做法（一次租一台，租约会自动分配并锁定一台空闲设备）：
       pnpm verify:simulator --name native -- pnpm verify:native
-      pnpm verify:simulator --name files -- zsh apps/mobile/verification/files/run.sh
+      pnpm verify:simulator --name files -- zsh verification/files/run.sh
+      pnpm verify:simulator --name 'session actions' -- zsh verification/session-actions/run.sh
   看一眼谁占着哪台：
       pnpm verify:simulator --list
 TEXT

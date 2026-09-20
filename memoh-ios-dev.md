@@ -46,7 +46,7 @@ pnpm ios:prebuild && pnpm ios:pods   # 从 app config 生成原生工程 + 装 P
 pnpm ios:verify:build         # 构建 Debug 模拟器 App（要 Xcode；单独跑要先租设备，见下）
 pnpm ios:test:hosted          # UIKit 那一半断言，跑在真 App 宿主里（要 Xcode）
 pnpm ios:dev-env              # 起 dev 栈隧道（18080 API / 18082 Web）
-pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签名、上传并挂内部组
+pnpm ios:release:testflight --upload     # 取下一个构建号、归档、签名、上传并挂内部组
 ```
 
 - 根脚本全部带 `ios:` 前缀，**与上游脚本不重名**：`pnpm lint` / `pnpm test` 仍然是上游的
@@ -64,7 +64,7 @@ pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签�
 
 - App Store Connect 的正式边界是 team `7533A52C52`、bundle `ai.memoh.ios`；凭据只从
   `ASC_KEY_PATH` / `ASC_KEY_ID` / `ASC_ISSUER_ID` 读取，私钥与签名材料不进仓库。
-- `pnpm ios:release:testflight` 只生成并核对签名 IPA；只有显式加 `-- --upload` 才写入 ASC。
+- `pnpm ios:release:testflight` 只生成并核对签名 IPA；只有显式加 `--upload` 才写入 ASC。
   脚本先要求 tracked worktree 干净，再从 ASC 取最大构建号 + 1，重跑 prebuild/Pods，生成
   未签名 archive，以 `Memoh iOS App Store (mini)` 手工签名导出，并逐一核对 archive 与 IPA
   的 bundle/version/build。上传后等到 `VALID` 才挂到现有内部测试组；失败或超时不会假报成功。
@@ -548,8 +548,8 @@ hosted XCTest。
 
 ## 9. 当前验收与还没做的事
 
-- **TestFlight 0.1.0 (build 3) 已可用**：从 reviewed app head `7d9febeb3` 归档，ASC
-  `processingState=VALID`，已挂 `Internal Testers`（1 位，当前 Apple 状态仍为 `INVITED`）；
+- **TestFlight 0.1.0 (build 4) 已可用**：从 Cloud/self-host 登录页 head `410f517d9` 归档，ASC
+  `processingState=VALID`，已挂 `Internal Testers`（1 位）；
   最低系统 iOS 26.0、`usesNonExemptEncryption=false`。最终 IPA 已核对发行签名链、Team、bundle、
   两处 build number，以及 `aps-environment=production` / Time Sensitive entitlement。
   `vultr-sg` 上相同邮箱的 Memoh member 已能登录并看见 `ready` 的 `ios-dev`，以非服务器管理员

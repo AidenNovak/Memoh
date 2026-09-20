@@ -1,0 +1,90 @@
+appId: ai.memoh.ios
+---
+- tapOn:
+    text: '^Skip$'
+    optional: true
+- extendedWaitUntil:
+    visible: 'Log in or sign up'
+    timeout: 90000
+- assertVisible:
+    id: 'login-cloud-github'
+- assertVisible:
+    id: 'login-cloud-google'
+- assertVisible:
+    id: 'login-cloud-email-input'
+- assertVisible:
+    id: 'login-selfhosted-toggle'
+- takeScreenshot: login-01-cloud
+
+# GitHub / Google 都是明确的本地占位，不得装死或偷偷联网。
+- tapOn:
+    id: 'login-cloud-github'
+- assertVisible:
+    id: 'login-cloud-notice'
+- tapOn:
+    id: 'login-cloud-google'
+- assertVisible:
+    id: 'login-cloud-notice'
+- takeScreenshot: login-02-cloud-placeholder
+
+# 邮箱先走错误态，再走可继续态；有效邮箱仍只进入同一条诚实占位反馈。
+- tapOn:
+    id: 'login-cloud-email-input'
+- inputText: 'not-an-email'
+- assertVisible:
+    id: 'login-cloud-email-error'
+- takeScreenshot: login-03-email-invalid
+- eraseText: 64
+- inputText: 'tester@example.com'
+- assertNotVisible:
+    id: 'login-cloud-email-error'
+- tapOn:
+    point: '50%,18%'
+- tapOn:
+    id: 'login-cloud-email-continue'
+- assertVisible:
+    id: 'login-cloud-notice'
+
+# 自部署是 Cloud 官方入口下面的独立入口，进入后标题与字段语义一起切换。
+- tapOn:
+    id: 'login-selfhosted-toggle'
+- assertVisible: 'Sign in'
+- assertVisible:
+    id: 'login-username-input'
+- assertVisible:
+    id: 'login-password-input'
+- takeScreenshot: login-04-self-hosted
+
+- tapOn:
+    id: 'login-server-toggle'
+- tapOn:
+    id: 'login-server-input'
+- eraseText: 128
+- inputText: ${FIXTURE_URL}
+- tapOn:
+    point: '50%,18%'
+- tapOn:
+    id: 'login-server-toggle'
+- tapOn:
+    id: 'login-username-input'
+- inputText: 'fixture'
+- tapOn:
+    id: 'login-password-input'
+- inputText: 'fixture'
+- tapOn:
+    point: '50%,18%'
+
+# fixture 只拒绝第一次：先看见可操作的凭据错误，原字段仍保留；再按一次就真登录。
+- tapOn:
+    id: 'login-submit'
+- extendedWaitUntil:
+    visible: 'Incorrect username or password'
+    timeout: 10000
+- takeScreenshot: login-05-rejected
+- tapOn:
+    id: 'login-submit'
+- extendedWaitUntil:
+    visible:
+      id: 'hub-new-session'
+    timeout: 30000
+- takeScreenshot: login-06-signed-in

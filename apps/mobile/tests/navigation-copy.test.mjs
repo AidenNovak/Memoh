@@ -15,6 +15,11 @@
  * 2. 登录页 —— 全屏 16 条 `login.*` 文案里**没有一条**说地址和账号从哪来；三页引导也只讲
  *    了"数据在你自己服务器上"。第一次用的人卡在登录页时，屏幕上没有任何地方能回答
  *    "我该填什么"。补的那句话要**说出处**（谁给、去哪儿看），不许说教。
+ * 3. 登录首页现在是 **Cloud 入口 + 自部署入口** 两段（对齐 Cloud 登录页）。Cloud 的
+ *    GitHub / Google / 邮箱三个入口是**诚实占位**：服务端合同（§4.7 的 PKCE 一次性
+ *    code）没落地之前，它们只给本地化的"尚未开放"反馈，**不许发请求、不许跳
+ *    WebView、不许装死**。旧合同（"这里没有 Google 按钮，因为服务端没有第三方登录"）
+ *    到这一版为止，下面把它换成新合同的结构断言。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -102,4 +107,77 @@ test('那句话同时点到"地址"和"账号"两样东西（缺一样，用户�
   assert.match(en, /account/i);
   assert.match(zh, /地址/);
   assert.match(zh, /账号/);
+});
+
+// ------------------------------- ③ 登录首页的新合同：Cloud 占位 + 自部署入口
+
+test('Cloud 三个入口与自部署切换/返回都有稳定 testID（自动化不靠坐标）', () => {
+  const source = read('src/screens/LoginScreen.tsx');
+  for (const id of [
+    'login-cloud-github',
+    'login-cloud-google',
+    'login-cloud-email-input',
+    'login-cloud-email-continue',
+    'login-cloud-notice',
+    'login-selfhosted-toggle',
+    'login-selfhosted-back',
+  ]) {
+    assert.ok(source.includes(`testID="${id}"`), `登录页缺 testID：${id}`);
+  }
+});
+
+test('自部署入口在 Cloud 入口**下面**（信息层级：官方入口在前，自部署在后）', () => {
+  const source = read('src/screens/LoginScreen.tsx');
+  const cloud = source.indexOf('testID="login-cloud-email-continue"');
+  const selfHosted = source.indexOf('testID="login-selfhosted-toggle"');
+  assert.ok(cloud > 0 && selfHosted > 0, '两个入口都该在');
+  assert.ok(selfHosted > cloud, '自部署入口要放在 Cloud 官方入口的下面');
+});
+
+test('Cloud 占位是诚实的：按下给本地化的"尚未开放"，不发请求、不跳 WebView、不做假 OAuth', () => {
+  const source = read('src/screens/LoginScreen.tsx');
+  // 三个入口的反馈是同一句本地化文案，且界面上真的画出来（testID 在上面那条钉过）。
+  assert.ok(
+    source.includes("t('login.cloud.unavailable')"),
+    'Cloud 占位按下后没有"尚未开放"的反馈——那就是装死按钮',
+  );
+  // 占位不许做的事：WebView 填密码、外跳浏览器 OAuth、读链接库——出现一个就是越界。
+  // 只查**代码**：文件头注释里本来就会**提到**这些词（说明为什么不许做），
+  // 把注释也算进来，合同就变成了"连提都不许提"，那谁也说不清这条禁令了。
+  const code = source
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+    .join('\n');
+  for (const forbidden of ['WebView', 'ASWebAuthenticationSession', 'Linking', 'openURL']) {
+    assert.ok(
+      !code.includes(forbidden),
+      `登录页的代码里出现了 ${forbidden}：Cloud 占位不许偷偷变成真 OAuth/WebView（合同见 memoh-ios-dev.md §4.7）`,
+    );
+  }
+  // 反馈文案本身要说出"还没开放"这件事，中英都要。
+  const en = catalog('en.json')['login.cloud.unavailable'];
+  const zh = catalog('zh-Hans.json')['login.cloud.unavailable'];
+  assert.match(en, /not available yet|isn't available yet/i);
+  assert.match(zh, /尚未开放/);
+});
+
+test('Cloud 与自部署各自有准确标题，Google 保留官方彩色标记', () => {
+  const source = read('src/screens/LoginScreen.tsx');
+  assert.ok(source.includes("t('login.selfhosted.title')"));
+  assert.ok(source.includes("t('login.selfhosted.subtitle')"));
+  assert.match(source, /login-cloud-google[\s\S]*?preserveIconColor/);
+  assert.ok(source.includes("require('../../assets/images/google-mark-color.png')"));
+
+  assert.equal(catalog('en.json')['login.selfhosted.title'], 'Sign in');
+  assert.equal(catalog('zh-Hans.json')['login.selfhosted.title'], '登录');
+});
+
+test('Cloud 邮箱格式错误与占位反馈都会主动播报', () => {
+  const source = read('src/screens/LoginScreen.tsx');
+  assert.ok(
+    source.includes("useAnnounceOnAppear(showEmailError ? t('login.cloud.email.invalid') : null)"),
+  );
+  assert.ok(
+    source.includes("useAnnounceOnAppear(cloudNotice ? t('login.cloud.unavailable') : null)"),
+  );
 });

@@ -81,25 +81,28 @@ pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签�
 
 ### 门禁到底覆盖了什么
 
-| 检查                       | 覆盖                                                                                                            | 本机可跑                                  |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `ios:check`                | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
-| `ios:typecheck:foundation` | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
-| `ios:typecheck:kit`        | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
-| `ios:test`                 | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
-| `ios:bundle`               | Metro 能出 iOS bundle                                                                                           | ✅                                        |
-| `ios:verify:build`         | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
-| `ios:test:hosted`          | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
-| `ios:verify:native`        | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
-| onboarding/files Maestro   | 首启翻页与只出现一次、登录落点、文件三态预览与长按动作                                                          | ✅（要 Xcode + Maestro）                  |
-| `tools/frame-probe/`       | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
+| 检查                           | 覆盖                                                                                                            | 本机可跑                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `ios:check`                    | **Swift 类型检查（Foundation-only + UIKit 两批）** + TS 类型、i18n 键、禁嵌套三元、按压态两档、ESLint、Prettier | ✅（Swift 那两条要 Swift 工具链 / Xcode） |
+| `ios:typecheck:foundation`     | 4 个 Foundation-only 的 Swift 文件（`swiftc -typecheck`，不要 Xcode SDK）                                       | ✅                                        |
+| `ios:typecheck:kit`            | 9 个 UIKit 文件的类型检查（要 iOS SDK；**不含** `NativeMessageList.swift`，见文件头注释）                       | ✅（要 Xcode）                            |
+| `ios:test`                     | 归约器/协议/路由等纯逻辑（node --test）、验收基建自测（python）、MemohKit 纯逻辑（Swift）                       | ✅（Swift 那半在 vultr-sg）               |
+| `ios:bundle`                   | Metro 能出 iOS bundle                                                                                           | ✅                                        |
+| `ios:verify:build`             | 真的能编出一个 Debug App                                                                                        | ✅（要 Xcode）                            |
+| `ios:test:hosted`              | UIKit cell 复用/颜色映射/无障碍（真 App 宿主里的 XCTest target）                                                | ✅（要 Xcode）                            |
+| `ios:verify:native`            | 生产 Swift 类型的行为（模拟器里 `simctl spawn`）                                                                | ✅（要 Xcode）                            |
+| onboarding/login/files Maestro | 首启翻页与只出现一次、Cloud 占位、自部署登录拒绝/成功、文件三态预览与长按动作                                   | ✅（要 Xcode + Maestro）                  |
+| `tools/frame-probe/`           | 逐帧 hitch、阅读锚点/贴底几何、流式追加与解码单价                                                               | ✅（要 Xcode + Maestro）                  |
 
 旧的通用 UI/流程 harness（`verification/{ui,navigation,e2e,demo,presentation}`）已于
-2026-09-19 删除，但两条有明确行为判据的 Maestro 旅程仍保留：
-`verification/onboarding/run.sh` 与 `verification/files/run.sh`。它们必须通过 simulator lease
+2026-09-19 删除，但三条有明确行为判据的 Maestro 旅程仍保留：
+`verification/onboarding/run.sh`、`verification/login/run.sh` 与 `verification/files/run.sh`。
+登录旅程覆盖 GitHub/Google/邮箱占位反馈、邮箱错误、自部署切换、地址编辑、第一次 401 与第二次成功；
+fixture 的 `/ping` + 空载荷 `/auth/login` 也照真实客户端的“先确认是 Memoh，再发口令”顺序实现。
+它们必须通过 simulator lease
 运行，并把截图落进各自的 `out/`；截图仍要由人看，脚本成功不能替代视觉检查。
 
-2026-09-19 在 iPhone 17 Pro / iOS 26.5 上实跑并逐张看图（不等于 Human QA）：首启三页、第二次启动、登录页、
+2026-09-19 在 iPhone 17 Pro / iOS 26.5 上实跑并逐张看图（不等于 Human QA）：首启三页、第二次启动、Cloud/自部署登录页、
 文件列表/三态预览/长按动作，以及 light/dark、`accessibility-extra-large`。这轮由截图发现并修了
 “末页 Skip 只从无障碍树隐藏、视觉仍残留”与“notes.txt 被浮动 tab bar 挡住，flow 没真进预览”
 两处假通过。**截图证视觉状态，逐帧探针/交互旅程证时序行为；只有其中一边不算完整证据。**
@@ -185,29 +188,29 @@ pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签�
 
 ### 3.3 已经裁决过的取舍（桌面端有什么 → iOS 怎么做 → 为什么）
 
-| 桌面端                          | iOS                                                                   | 为什么                                                                 |
-| ------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 审批在 composer panel           | 做成系统级体验：推送 → 一键进审批                                     | 手机最大的差异化价值                                                   |
-| 容器桌面串流（WebRTC 键鼠回传） | 砍。远期可"看"，不做"控"                                              | 小屏远程桌面是伪需求                                                   |
-| 终端 xterm pane                 | 砍。远期只读 tail                                                     | 手机打字进终端体验极差                                                 |
-| dockview 六 pane 分屏           | 砍，改全屏页间切换                                                    | 手机没有多窗格空间                                                     |
-| 会话/文件/定时三 panel          | 保留；文件只读浏览 + 预览                                             | 三视图是同一 agent 的三种看法                                          |
-| 会话信息 = 上下文环             | 用 `chart.bar.xaxis`；服务端给 `context_window` 再改回环              | 环只能空着等于骗人                                                     |
-| 助手消息是内容                  | 全宽裸文本，不加气泡                                                  | Messages 就是全宽文本                                                  |
-| 用户气泡有尾巴                  | 只靠底色区分，排版与助手一致                                          | 尾巴是拟物残留                                                         |
-| 明暗切换要做                    | 什么都不用做（asset catalog 变体 + 设置三档）                         | 跟随系统                                                               |
-| 配置面（providers 等 6 页）     | **不砍**，给同等能力：可 push 的栈、list↔detail、schema 驱动表单      | 取舍原则是"手机能不能把 memoh 的形态表达清楚"                          |
-| 逐页表单                        | 写**一个** schema → 原生表单渲染器                                    | 上游加字段自动跟上                                                     |
-| provider 密钥                   | 照接口写，但**本地不落任何 provider 密钥**（Keychain 只放登录 token） | 密钥不落客户端                                                         |
-| 5 步建 bot 向导                 | 不做向导；单页表单 + 轮询                                             | 建 bot 是重决策                                                        |
-| 定时任务只读                    | **完整编辑**                                                          | 与桌面同结构                                                           |
-| 自托管登录仅 username+password  | 保持"服务器 + 用户名 + 密码"，不做假的第三方按钮                      | OSS 服务端没有账号型 OIDC/Google 路由；Cloud 是另一个鉴权边界，见 §4.7 |
-| 工具卡完成态贴 "Done"           | 只在 running/failed 贴状态词                                          | 完成态不贴                                                             |
-| 工具失败 = 正文标红             | 标题保持中性，正文照实标红                                            | 两个不同对象                                                           |
-| running 用静态沙漏              | 用系统 spinner                                                        | 静止会被读成卡住                                                       |
-| 每条回复 7 个动作图标           | 一枚可见 `⋯`：复制 / 分享 / 从这一轮分叉                              | 其余是死按钮                                                           |
-| 列表第二行放消息预览            | 第二行**状态优先**：等你批准 / 在跑 / 兜底"来源·类型"                 | 接口不返回最后一条消息，且手机扫列表问的是"哪个有事"                   |
-| iPad 分栏                       | 先单列 + 写死 + 有 case                                               | 同时做两件会互相掩盖失败                                               |
+| 桌面端                          | iOS                                                                                  | 为什么                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| 审批在 composer panel           | 做成系统级体验：推送 → 一键进审批                                                    | 手机最大的差异化价值                                                   |
+| 容器桌面串流（WebRTC 键鼠回传） | 砍。远期可"看"，不做"控"                                                             | 小屏远程桌面是伪需求                                                   |
+| 终端 xterm pane                 | 砍。远期只读 tail                                                                    | 手机打字进终端体验极差                                                 |
+| dockview 六 pane 分屏           | 砍，改全屏页间切换                                                                   | 手机没有多窗格空间                                                     |
+| 会话/文件/定时三 panel          | 保留；文件只读浏览 + 预览                                                            | 三视图是同一 agent 的三种看法                                          |
+| 会话信息 = 上下文环             | 用 `chart.bar.xaxis`；服务端给 `context_window` 再改回环                             | 环只能空着等于骗人                                                     |
+| 助手消息是内容                  | 全宽裸文本，不加气泡                                                                 | Messages 就是全宽文本                                                  |
+| 用户气泡有尾巴                  | 只靠底色区分，排版与助手一致                                                         | 尾巴是拟物残留                                                         |
+| 明暗切换要做                    | 什么都不用做（asset catalog 变体 + 设置三档）                                        | 跟随系统                                                               |
+| 配置面（providers 等 6 页）     | **不砍**，给同等能力：可 push 的栈、list↔detail、schema 驱动表单                     | 取舍原则是"手机能不能把 memoh 的形态表达清楚"                          |
+| 逐页表单                        | 写**一个** schema → 原生表单渲染器                                                   | 上游加字段自动跟上                                                     |
+| provider 密钥                   | 照接口写，但**本地不落任何 provider 密钥**（Keychain 只放登录 token）                | 密钥不落客户端                                                         |
+| 5 步建 bot 向导                 | 不做向导；单页表单 + 轮询                                                            | 建 bot 是重决策                                                        |
+| 定时任务只读                    | **完整编辑**                                                                         | 与桌面同结构                                                           |
+| Cloud 与自托管登录边界          | 首页对齐 Cloud，官方入口先做有明确反馈的 UI 占位；自托管继续用服务器 + 用户名 + 密码 | OSS 服务端没有账号型 OIDC/Google 路由；Cloud 是另一个鉴权边界，见 §4.7 |
+| 工具卡完成态贴 "Done"           | 只在 running/failed 贴状态词                                                         | 完成态不贴                                                             |
+| 工具失败 = 正文标红             | 标题保持中性，正文照实标红                                                           | 两个不同对象                                                           |
+| running 用静态沙漏              | 用系统 spinner                                                                       | 静止会被读成卡住                                                       |
+| 每条回复 7 个动作图标           | 一枚可见 `⋯`：复制 / 分享 / 从这一轮分叉                                             | 其余是死按钮                                                           |
+| 列表第二行放消息预览            | 第二行**状态优先**：等你批准 / 在跑 / 兜底"来源·类型"                                | 接口不返回最后一条消息，且手机扫列表问的是"哪个有事"                   |
+| iPad 分栏                       | 先单列 + 写死 + 有 case                                                              | 同时做两件会互相掩盖失败                                               |
 
 ### 3.4 明确不做
 
@@ -385,6 +388,11 @@ pnpm ios:release:testflight -- --upload  # 取下一个构建号、归档、签�
 
 **Cloud 原生登录的预留（服务端合同先行，手机端不猜端点）：**
 
+当前 iOS 登录首页先展示与 Web/Desktop 一致的 GitHub、Google、邮箱入口，但三者仅是
+**有明确反馈的前端占位**：只做本地邮箱形状校验，按下后说明 Cloud 登录尚未开放，不发网络请求、
+不拉起 WebView，也不收集凭据。自部署作为独立入口放在其下，进入现有的 server + username +
+password 流程。以下合同落地后再把占位接成真实登录：
+
 1. 用 `ASWebAuthenticationSession` 走 Authorization Code + PKCE，复用 Cloud 的 email/OAuth/MFA
    页面；不把 Google token 或 Web cookie 偷进 App。
 2. Cloud 用一次性 code 回调 App，App 换可撤销的移动端 access/refresh credential；回应
@@ -556,8 +564,16 @@ hosted XCTest。
   所以先按现状看着）。
 - **根 README 没提 iOS 客户端**。上游 README 有中英日三份，加一节要同步三份；iOS 侧的入口是
   `AGENTS.md` → 本文。
-- **UI 自动化是定向覆盖，不是全导航录制**：onboarding 与 files 两条旅程已实跑；聊天工具、
-  审批、错误态用场景台人工看图。设置、bot 新建/编辑、schedule 与完整跨页返回仍缺一条统一旅程。
+- **UI 自动化仍是定向覆盖，不是全导航录制**：保留在树里的 onboarding / login / files
+  三条旅程已实跑。2026-09-19 还把精简前 commit `c93589a` 的会话、bot、schedule、设置、语言、
+  通知旅程拿来对当前代码与当前 fixture 补跑：会话发送/流式/工具顺序与压缩端点、schedule
+  新建→编辑→删除及请求体、外观 light/dark/true-black、语言即时切换、通知三类事件、bot
+  创建→切换→消息发往新 bot 都取得了界面和服务端证据。旧断言里的三处文案已变化
+  （`Tasks: N · On: N`、`Run finished/failed`、`Messages compacted: N`），不能把陈旧文案红项算产品失败。
+  **仍有一个未收口风险**：自绘返回、会话信息与 bot 保存入口在 Maestro 合成点击下会间歇性
+  “命令完成但页面/请求无变化”；同一次流程的系统边缘返回或第二次点击能继续，旧 UX 评审也有
+  同类记录。它可能是合成点击与 RN/ScrollView 的交互，也可能影响真手指；在真机重复手点确认前
+  不标 Human QA、也不声称全导航无问题。审批/错误态继续由场景台与纯逻辑覆盖。
 - **逐帧性能已实测**（iPhone 17 Pro Simulator / 60Hz）：17 / 101 / 601 行转录的追加主线程中位
   约 `0.15–0.20 / 0.49 / 2.38 ms`，p95 最高约 `0.54 / 1.35 / 2.66 ms`；三档在阅读模式下
   首行位移、距底收缩、停止增长后距底均为 `0pt`。25ms 人为 stall 的 hitch rate 为 `1.0`，

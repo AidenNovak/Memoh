@@ -1594,6 +1594,15 @@ const server = createServer(async (request, response) => {
   }
 
   /**
+   * 自部署登录前的身份探测。真客户端不会先把口令发给一个未知地址：只有 `/ping`
+   * 明确回答 `status: "ok"`，并且空载荷 `/auth/login` 证明登录路由存在后，才会提交
+   * 用户名与密码。fixture 必须保留这道边界，不能只靠 verification seed 绕过去。
+   */
+  if (path === '/ping' && method === 'GET') {
+    return json(response, 200, { status: 'ok' });
+  }
+
+  /**
    写侧的两个故障开关（端到端旅程用）。
 
    `POST /__auth-fault {"mode":"reject"|"normal"}`：登录回 401。
@@ -1620,6 +1629,16 @@ const server = createServer(async (request, response) => {
   }
 
   if (path === '/auth/login' && method === 'POST') {
+    const body = await readBody(request);
+    // 空载荷是客户端的安全探针，不是真登录，不能消耗一次性登录故障额度。
+    if (
+      typeof body.username !== 'string' ||
+      body.username.trim() === '' ||
+      typeof body.password !== 'string' ||
+      body.password === ''
+    ) {
+      return json(response, 400, { message: 'username and password are required' });
+    }
     // 凭据被拒：真服务端的形状是 401 + `message`，客户端据此说"用户名或密码不对"。
     // 由 `POST /__auth-fault {"mode":"reject"}` 打开（E2E 的首次使用路径要**先走一遍失败**：
     // 只验成功那条路，"登录失败时界面说了什么"就永远没人看过）。

@@ -3,41 +3,44 @@
  *
  * ## 这一版重排了什么
  *
- * 上一版把**服务器地址**和用户名、密码并排放在同一张卡片里、三行等权重。实际上这三样
- * 不是一回事：用户名和密码是每次登录都要打的，服务器地址是**装完一次就不该再碰**的。
- * 混在一起就有两个后果——用户会以为每次都得填一个地址；而且一行"地址错"的错误看起来
- * 和"密码错"一样近，于是他去反复重输密码。
+ * 信息层级对齐 Cloud 登录页（web/desktop）：品牌 → 标题「登录或注册」→ Cloud 的
+ * 三种入口（GitHub / Google / 邮箱）→ 自部署入口。以前整屏只有
+ * 服务器 + 用户名 + 密码，等于把"自部署"当成了唯一入口——但第一次打开 App 的人
+ * 先问的往往是"有没有官方服务"，这屏要同时回答两个问题。
  *
- * 所以：主卡片只留用户名 + 密码；服务器地址收到下面的**一行摘要**（`host:port`），
- * 点"更改"才展开成输入框。摘要里保留端口——自托管的人常同时跑几个实例，
- * 抹掉端口这行就没意义了。
+ * ## Cloud 三个入口是**诚实的占位**，不是假按钮
  *
- * 错误也补了一档：**地址格式不对**（漏 `http://`、粘进空格）和**连不上**（网断、主机没起）
- * 是两件不同的事，以前都报"连不上"，用户就没有下一步动作可做。判断在
- * `features/auth/server.ts`（能直测）。
+ * Cloud 的账号鉴权在另一个控制面（`memoh-ios-dev.md` §4.7）：当前 Web 客户端走
+ * `/api/v1` 的 email code / OAuth / MFA + secure cookie，移动端要用
+ * `ASWebAuthenticationSession` + PKCE 的一次性 code 合同——**服务端合同还没落地**。
+ * 在那之前这三个入口遵守三条：
  *
- * ## 这一屏的错误分档（`docs/research/ios-error-and-feedback.md`）
+ * 1. **不发任何网络请求**（按下只改本地 state，不 import client / fetch）；
+ * 2. **不收集凭据**（邮箱那一格只做本地格式校验，值不出这台手机）；
+ * 3. **占位必须诚实**：按下后出现本地化的"Cloud 登录尚未开放，当前不会发送信息"，
+ *    并走 `announceForAccessibility` 播报——不是装死，也不是跳 WebView。
+ *
+ * ## 自部署入口在 Cloud 下方，单独标出
+ *
+ * 「Self-hosted / 自部署」单独一组，点开才进入原来的 服务器 + 用户名 + 密码 流程。
+ * 那套流程的安全性质原样保留：`discoverMemohServer` 先于口令发送、探测命中的
+ * base URL 与 JWT 进 Keychain、错误分档（地址错 / 不是 Memoh / 连不上 / 密码错）、
+ * 发布构建默认 `https://memoh.yetodawn.com`（见下面 `DEFAULT_SERVER`）。
+ *
+ * 例外：`AuthGateScreen` 传来 `noticeKey`（如"登录过期了"）时，说明这个用户**本来就
+ * 登在自部署服务器上**，直接落自部署那一半——把他先带去 Cloud 入口是答非所问。
+ *
+ * ## 自部署这一半的错误分档
  *
  * 登录页是**唯一**一个 401 含义与别处相反的地方：在 App 里 401 = "登录过期了"，而在这里
  * 401 = "用户名或密码不对"。所以这一屏**自己**决定 401 的文案，不走 `error.unauthorized`。
  *
  * 另外两处按 HIG 改的地方：
  *
- * - **不再把服务端原文打到屏幕上**。以前失败时走的是 `caught.message`，那是给开发者看的
- *   （"HTTP 502"、网关的 HTML 片段）。现在走 `features/errors/present.ts`：只有服务端给了
+ * - **不把服务端原文打到屏幕上**。失败时走 `features/errors/present.ts`：只有服务端给了
  *   类型化错误码、且那条 message 是写给人看的，才原样带出来当补充说明。
- * - **缺用户名/缺密码**不再是笼统的"登录失败"：那是**校验**不是**登录被拒**，
- *   对应到具体那一个空着的框，说法也不同（HIG Writing："给正例，别说教"）。
- *
- * ## 为什么这里**没有** Google 登录按钮
- *
- * 桌面端和 iOS 今天都只有用户名 + 密码，因为**服务端就没有第三方登录**：线上实例的
- * swagger 里 `/auth/*` 只有 `login` 与 `refresh` 两条；那些带 oauth 的路径（providers、
- * connectors、mcp、email 底下）是给模型供应商和邮箱用的，跟账号无关。
- * 客户端加一个按钮只会得到一个必然失败的按钮。
- * 要做得先改服务端（fork `AidenNovak/Memoh`）：验 Google ID token → 换发本服务 JWT ——
- * 而且一旦第三方成为主账号入口，App Store 4.8 还会要求等价的另一种登录方式（Sign in with
- * Apple），所以那是"两份服务端工作"，不是一个客户端的活。
+ * - **缺用户名/缺密码**不是笼统的"登录失败"：那是**校验**不是**登录被拒**，
+ *   对应到具体那一个空着的框。
  */
 import React, { useCallback, useState } from 'react';
 import {
@@ -52,10 +55,12 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, MemohClient } from '../api/client.ts';
 import { getFreshToken, saveSession } from '../api/credentials.ts';
+import { canContinueWithEmail, shouldShowEmailError } from '../features/auth/cloud.ts';
 import {
   discoverMemohServer,
   hostOf,
@@ -89,6 +94,9 @@ interface LoginError {
   reasonKey?: string;
 }
 
+/** 这一屏的两半：Cloud 官方入口（默认）与自部署流程。 */
+type LoginMode = 'cloud' | 'selfHosted';
+
 const DEV_SERVER = 'http://127.0.0.1:18080';
 const PUBLIC_SERVER = 'https://memoh.yetodawn.com';
 const DEFAULT_SERVER = __DEV__ ? DEV_SERVER : PUBLIC_SERVER;
@@ -110,6 +118,21 @@ export function LoginScreen({
   const insets = useSafeAreaInsets();
   const t = useT();
 
+  /* 有 noticeKey 说明用户原本就登在自部署服务器上（会话过期之类），直接落自部署
+     那一半；否则默认 Cloud 入口（见文件头）。 */
+  const [mode, setMode] = useState<LoginMode>(noticeKey === undefined ? 'cloud' : 'selfHosted');
+
+  // ---- Cloud 占位区：只改本地 state，不发请求、不收集凭据（见文件头三条）。 ----
+  const [email, setEmail] = useState('');
+  /** 三个占位入口共用的"尚未开放"反馈。出现后不自动消失（错误/反馈不做 time-boxed）。 */
+  const [cloudNotice, setCloudNotice] = useState(false);
+  const emailCanContinue = canContinueWithEmail(email);
+  const showEmailError = shouldShowEmailError(email);
+  useAnnounceOnAppear(cloudNotice ? t('login.cloud.unavailable') : null);
+  useAnnounceOnAppear(showEmailError ? t('login.cloud.email.invalid') : null);
+  const showCloudNotice = useCallback(() => setCloudNotice(true), []);
+
+  // ---- 自部署流程（原有逻辑，安全顺序原样保留）。 ----
   const [server, setServer] = useState(DEFAULT_SERVER);
   /** 服务器地址默认折起（见文件头注释）。出错时**自动展开**，好让用户能就地改。 */
   const [editingServer, setEditingServer] = useState(false);
@@ -118,9 +141,9 @@ export function LoginScreen({
   const [busy, setBusy] = useState(false);
   /**
    一次失败的分量：**标题（发生了什么）+ 补充说明（为什么，可选）**。
-   形状照 Apple 的错误对象（`localizedDescription` + `localizedRecoverySuggestion`），
-   见 `docs/research/ios-error-and-feedback.md` R13/R14。这里没有动作按钮——登录页的动作
-   就是那个 Sign in 按钮本身，再挂一个"重试"只是把同一个动作说两遍。
+   形状照 Apple 的错误对象（`localizedDescription` + `localizedRecoverySuggestion`）。
+   这里没有动作按钮——登录页的动作就是那个 Sign in 按钮本身，再挂一个"重试"
+   只是把同一个动作说两遍。
    */
   const [error, setError] = useState<LoginError | null>(
     noticeKey === undefined ? null : { key: noticeKey },
@@ -235,11 +258,11 @@ export function LoginScreen({
 
         <Text
           style={[
-            typography.largeTitle,
+            typography.title1,
             { color: palette.label, textAlign: 'center', marginBottom: spacing.sm },
           ]}
         >
-          {t('login.title')}
+          {mode === 'cloud' ? t('login.title') : t('login.selfhosted.title')}
         </Text>
         <Text
           style={[
@@ -247,74 +270,194 @@ export function LoginScreen({
             { color: palette.secondaryLabel, textAlign: 'center', marginBottom: spacing.xxl },
           ]}
         >
-          {t('login.subtitle')}
+          {mode === 'cloud' ? t('login.subtitle') : t('login.selfhosted.subtitle')}
         </Text>
 
-        <View
-          style={{
-            backgroundColor: palette.card,
-            overflow: 'hidden',
-            ...radiusStyle(radius.md),
-          }}
-        >
-          <FormRow
-            label={t('login.username')}
-            // testID 是给自动化用的：这两格没有可见标识，按坐标点会随键盘高度与机型
-            // 漂移，而端到端旅程必须能**确定地**把字打进去（见 verification/e2e）。
-            testID="login-username-input"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="username"
-          />
-          <FormRow
-            label={t('login.password')}
-            testID="login-password-input"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-            onSubmitEditing={() => void submit()}
-            returnKeyType="go"
-            last
-          />
-        </View>
+        {mode === 'cloud' ? (
+          <View>
+            {/* Cloud 官方入口：三个都是诚实占位（见文件头三条）。
+                按钮形态对齐 Cloud 登录页：白底卡片、品牌图标 + 全称。 */}
+            <CloudButton
+              testID="login-cloud-github"
+              label={t('login.cloud.github')}
+              icon={require('../../assets/images/github-mark.png')}
+              onPress={showCloudNotice}
+            />
+            <CloudButton
+              testID="login-cloud-google"
+              label={t('login.cloud.google')}
+              icon={require('../../assets/images/google-mark-color.png')}
+              preserveIconColor
+              onPress={showCloudNotice}
+            />
 
-        {/* 服务器地址：折起来是一行"服务器 · 主机:端口  更改"，点开才是输入框。
-            它不是每次登录都要碰的东西，所以不占主卡片的位置。 */}
-        <View style={{ marginTop: spacing.lg }}>
-          <Pressable
-            testID="login-server-toggle"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: editingServer }}
-            onPress={() => setEditingServer((previous) => !previous)}
-            style={({ pressed }) => [
-              {
+            {/* 分隔「或」：两条发丝线夹一个词，与 Cloud 登录页同一语言。 */}
+            <View
+              style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: spacing.sm,
-                minHeight: 44,
-                paddingHorizontal: spacing.sm,
-                opacity: pressed ? PRESS_OPACITY.control : 1,
-              },
-            ]}
-          >
-            <Text style={[typography.footnote, { color: palette.secondaryLabel }]}>
-              {t('login.server')}
-            </Text>
-            <Text
-              style={[typography.footnote, { color: palette.label, flexShrink: 1 }]}
-              numberOfLines={1}
+                gap: spacing.md,
+                marginVertical: spacing.lg,
+              }}
             >
-              {hostOf(server)}
-            </Text>
-            <Text style={[typography.footnote, { color: palette.accent }]}>
-              {editingServer ? t('common.done') : t('login.server.change')}
-            </Text>
-          </Pressable>
+              <View style={[styles.hairline, { backgroundColor: palette.separator }]} />
+              <Text style={[typography.footnote, { color: palette.tertiaryLabel }]}>
+                {t('login.cloud.divider')}
+              </Text>
+              <View style={[styles.hairline, { backgroundColor: palette.separator }]} />
+            </View>
 
-          {editingServer ? (
+            <TextInput
+              testID="login-cloud-email-input"
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('login.cloud.email.placeholder')}
+              placeholderTextColor={palette.placeholder}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              style={[
+                typography.body,
+                {
+                  color: palette.label,
+                  backgroundColor: palette.card,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: palette.separator,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  minHeight: 48,
+                  ...radiusStyle(radius.md),
+                },
+              ]}
+            />
+
+            {/*
+              邮箱格式反馈：只有**填过且不对**才出现（空着不报错——用户可能还没填到这一格）。
+              与自部署的错误一样走播报，不用空转的 accessibilityLiveRegion。
+            */}
+            {showEmailError ? (
+              <Text
+                testID="login-cloud-email-error"
+                style={[typography.footnote, { color: palette.destructive, marginTop: spacing.xs }]}
+              >
+                {t('login.cloud.email.invalid')}
+              </Text>
+            ) : null}
+
+            <Pressable
+              testID="login-cloud-email-continue"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !emailCanContinue }}
+              disabled={!emailCanContinue}
+              onPress={showCloudNotice}
+              style={({ pressed }) => [
+                styles.blockButton,
+                {
+                  backgroundColor: emailCanContinue ? palette.accent : palette.field,
+                  marginTop: spacing.md,
+                  opacity: pressed ? PRESS_OPACITY.button : 1,
+                  ...radiusStyle(radius.md),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  typography.headline,
+                  {
+                    color: emailCanContinue ? palette.onAccent : palette.tertiaryLabel,
+                  },
+                ]}
+              >
+                {t('login.cloud.email.continue')}
+              </Text>
+            </Pressable>
+
+            {/* 占位反馈：诚实地说"还没开放"，出现后不自动消失，且会被播报。 */}
+            {cloudNotice ? (
+              <View
+                testID="login-cloud-notice"
+                accessible
+                accessibilityLabel={t('login.cloud.unavailable')}
+                style={{ marginTop: spacing.md }}
+              >
+                <Text style={[typography.footnote, { color: palette.secondaryLabel }]}>
+                  {t('login.cloud.unavailable')}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* 自部署：单独一组、单独标出，点开才进入服务器 + 用户名 + 密码。 */}
+            <Text
+              style={[
+                typography.footnote,
+                {
+                  color: palette.secondaryLabel,
+                  marginTop: spacing.xxl,
+                  marginBottom: spacing.xs,
+                  marginHorizontal: spacing.sm,
+                },
+              ]}
+            >
+              {t('login.selfhosted.section')}
+            </Text>
+            <Pressable
+              testID="login-selfhosted-toggle"
+              accessibilityRole="button"
+              onPress={() => setMode('selfHosted')}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  minHeight: 48,
+                  paddingHorizontal: spacing.lg,
+                  backgroundColor: pressed ? palette.field : palette.card,
+                  ...radiusStyle(radius.md),
+                },
+              ]}
+            >
+              <Text style={[typography.body, { color: palette.label, flex: 1 }]}>
+                {t('login.selfhosted.enter')}
+              </Text>
+              <SymbolView
+                name="chevron.right"
+                size={14}
+                tintColor={palette.tertiaryLabel}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
+            </Pressable>
+          </View>
+        ) : (
+          <View>
+            {/* 返回 Cloud 入口：行内小控件，44pt 触控目标。 */}
+            <Pressable
+              testID="login-selfhosted-back"
+              accessibilityRole="button"
+              onPress={() => setMode('cloud')}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  alignSelf: 'flex-start',
+                  minHeight: 44,
+                  paddingRight: spacing.md,
+                  marginBottom: spacing.sm,
+                  opacity: pressed ? PRESS_OPACITY.control : 1,
+                },
+              ]}
+            >
+              <SymbolView
+                name="chevron.backward"
+                size={16}
+                tintColor={palette.accent}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
+              <Text style={[typography.body, { color: palette.accent }]}>{t('common.back')}</Text>
+            </Pressable>
+
             <View
               style={{
                 backgroundColor: palette.card,
@@ -323,107 +466,228 @@ export function LoginScreen({
               }}
             >
               <FormRow
-                testID="login-server-input"
-                label={t('login.server')}
-                value={server}
-                onChangeText={setServer}
-                placeholder={t('login.server.placeholder')}
-                keyboardType="url"
+                label={t('login.username')}
+                // testID 是给自动化用的：这两格没有可见标识，按坐标点会随键盘高度与机型
+                // 漂移，而端到端旅程必须能**确定地**把字打进去。
+                testID="login-username-input"
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="URL"
+                textContentType="username"
+              />
+              <FormRow
+                label={t('login.password')}
+                testID="login-password-input"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textContentType="password"
+                onSubmitEditing={() => void submit()}
+                returnKeyType="go"
                 last
               />
             </View>
-          ) : null}
 
-          {/*
-            常驻说明：这两样东西（地址、账号）**不是这个 App 自己长出来的**，而上一版
-            全屏 16 条 `login.*` 文案里没有一条说它们从哪来——第一次用的人卡在登录页时，
-            屏幕上没有任何地方能回答"我该填什么"。
+            {/* 服务器地址：折起来是一行"服务器 · 主机:端口  更改"，点开才是输入框。
+                它不是每次登录都要碰的东西，所以不占主卡片的位置。 */}
+            <View style={{ marginTop: spacing.lg }}>
+              <Pressable
+                testID="login-server-toggle"
+                accessibilityRole="button"
+                accessibilityState={{ expanded: editingServer }}
+                onPress={() => setEditingServer((previous) => !previous)}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    minHeight: 44,
+                    paddingHorizontal: spacing.sm,
+                    opacity: pressed ? PRESS_OPACITY.control : 1,
+                  },
+                ]}
+              >
+                <Text style={[typography.footnote, { color: palette.secondaryLabel }]}>
+                  {t('login.server')}
+                </Text>
+                <Text
+                  style={[typography.footnote, { color: palette.label, flexShrink: 1 }]}
+                  numberOfLines={1}
+                >
+                  {hostOf(server)}
+                </Text>
+                <Text style={[typography.footnote, { color: palette.accent }]}>
+                  {editingServer ? t('common.done') : t('login.server.change')}
+                </Text>
+              </Pressable>
 
-            放在折起那一行的下面（而不是塞进引导页）：用户真正需要它的时刻就是**看着
-            这两个输入框**的时候。只讲事实与出处（谁给、去哪儿看），不讲道理。
-          */}
-          <Text
-            style={[
-              typography.footnote,
-              {
-                color: palette.secondaryLabel,
-                marginTop: spacing.xs,
-                marginHorizontal: spacing.sm,
-              },
-            ]}
-          >
-            {t('login.server.hint')}
-          </Text>
-        </View>
+              {editingServer ? (
+                <View
+                  style={{
+                    backgroundColor: palette.card,
+                    overflow: 'hidden',
+                    ...radiusStyle(radius.md),
+                  }}
+                >
+                  <FormRow
+                    testID="login-server-input"
+                    label={t('login.server')}
+                    value={server}
+                    onChangeText={setServer}
+                    placeholder={t('login.server.placeholder')}
+                    keyboardType="url"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="URL"
+                    last
+                  />
+                </View>
+              ) : null}
 
-        {/*
-          ⚠️ 这里以前写的是 `accessibilityLiveRegion="polite"`。**它在 iOS 上是空转的**
-          （RN 的类型定义写着 `@platform android`，iOS 侧实现没有消费者），所以"登录失败"
-          对读屏用户从来没有出现过。现在走 `useAnnounceOnAppear` + 系统的
-          `AccessibilityInfo.announceForAccessibility`。见 `lib/accessibility.ts` 的说明。
-        */}
-        {error === null ? null : (
-          <View
-            testID="login-error"
-            accessible
-            accessibilityLabel={t(error.key)}
-            style={{ marginTop: spacing.md, minHeight: 20 }}
-          >
-            <Text style={[typography.footnote, { color: palette.destructive }]}>
-              {t(error.key)}
-            </Text>
-            {error.reasonKey === undefined ? null : (
-              <Text style={[typography.caption, { color: palette.secondaryLabel }]}>
-                {t(error.reasonKey)}
+              {/*
+                常驻说明：这两样东西（地址、账号）**不是这个 App 自己长出来的**——
+                第一次用的人卡在登录页时，屏幕上要有个地方能回答"我该填什么"。
+                放在折起那一行的下面：用户真正需要它的时刻就是**看着这两个输入框**的时候。
+              */}
+              <Text
+                style={[
+                  typography.footnote,
+                  {
+                    color: palette.secondaryLabel,
+                    marginTop: spacing.xs,
+                    marginHorizontal: spacing.sm,
+                  },
+                ]}
+              >
+                {t('login.server.hint')}
               </Text>
-            )}
-          </View>
-        )}
+            </View>
 
-        <Pressable
-          testID="login-submit"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canSubmit, busy }}
-          accessibilityLabel={busy ? t('login.submitting') : t('login.submit')}
-          disabled={!canSubmit}
-          onPress={() => void submit()}
-          style={({ pressed }) => [
-            styles.submit,
-            {
-              backgroundColor: canSubmit ? palette.accent : palette.field,
-              marginTop: spacing.xxl,
-              opacity: pressed ? PRESS_OPACITY.button : 1,
-              ...radiusStyle(radius.pill),
-            },
-          ]}
-        >
-          {busy ? (
-            <ActivityIndicator color={palette.onAccent} />
-          ) : (
-            <Text
-              style={[
-                typography.headline,
-                { color: canSubmit ? palette.onAccent : palette.tertiaryLabel },
+            {/*
+              ⚠️ 这里以前写的是 `accessibilityLiveRegion="polite"`。**它在 iOS 上是空转的**，
+              所以"登录失败"对读屏用户从来没有出现过。现在走 `useAnnounceOnAppear` + 系统的
+              `AccessibilityInfo.announceForAccessibility`。见 `lib/accessibility.ts` 的说明。
+            */}
+            {error === null ? null : (
+              <View
+                testID="login-error"
+                accessible
+                accessibilityLabel={t(error.key)}
+                style={{ marginTop: spacing.md, minHeight: 20 }}
+              >
+                <Text style={[typography.footnote, { color: palette.destructive }]}>
+                  {t(error.key)}
+                </Text>
+                {error.reasonKey === undefined ? null : (
+                  <Text style={[typography.caption, { color: palette.secondaryLabel }]}>
+                    {t(error.reasonKey)}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <Pressable
+              testID="login-submit"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canSubmit, busy }}
+              accessibilityLabel={busy ? t('login.submitting') : t('login.submit')}
+              disabled={!canSubmit}
+              onPress={() => void submit()}
+              style={({ pressed }) => [
+                styles.blockButton,
+                {
+                  backgroundColor: canSubmit ? palette.accent : palette.field,
+                  marginTop: spacing.xxl,
+                  opacity: pressed ? PRESS_OPACITY.button : 1,
+                  ...radiusStyle(radius.pill),
+                },
               ]}
             >
-              {t('login.submit')}
-            </Text>
-          )}
-        </Pressable>
+              {busy ? (
+                <ActivityIndicator color={palette.onAccent} />
+              ) : (
+                <Text
+                  style={[
+                    typography.headline,
+                    { color: canSubmit ? palette.onAccent : palette.tertiaryLabel },
+                  ]}
+                >
+                  {t('login.submit')}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 /**
- * 分组表单行（系统「设置」的形态）。
+ * Cloud 占位入口的按钮（GitHub / Google）。
  *
- * 之前用"全大写小标签悬浮在输入框上方"是 Web/Material 的模式，在 iOS 上会显得
- * 不是原生——而且实测那个布局的**组内距（12pt）比组间距（11pt）还大**，眼睛会把
- * 标签归到上一个框，读起来是乱的。
+ * 形态对齐 Cloud 登录页：白底卡片、发丝描边、品牌图标 + 全称。GitHub 的单色资源跟随
+ * label 语义色；Google 保留官方四色标记，不能为了暗色模式把品牌图标染成单色。图标本身
+ * 是装饰，按钮的无障碍标签就是那句全称。
+ */
+function CloudButton({
+  testID,
+  label,
+  icon,
+  preserveIconColor = false,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  icon: number;
+  preserveIconColor?: boolean;
+  onPress: () => void;
+}) {
+  const palette = usePalette();
+  const { spacing, radius, typography } = useTheme();
+
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.sm,
+          minHeight: 48,
+          marginBottom: spacing.md,
+          backgroundColor: palette.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: palette.separator,
+          opacity: pressed ? PRESS_OPACITY.button : 1,
+          ...radiusStyle(radius.md),
+        },
+      ]}
+    >
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ width: 20, height: 20 }}
+      >
+        <Image
+          source={icon}
+          style={{ width: 20, height: 20 }}
+          tintColor={preserveIconColor ? undefined : palette.label}
+          contentFit="contain"
+        />
+      </View>
+      <Text style={[typography.headline, { color: palette.label }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * 分组表单行（系统「设置」的形态）。
  *
  * 原生做法是：一张 inset 圆角卡片，行内左侧标签、右侧输入，行高 44pt（系统最小
  * 触控目标），行间 0.5pt 发丝线且左缩进对齐文字起点。
@@ -470,9 +734,13 @@ function FormRow({
 }
 
 const styles = StyleSheet.create({
-  submit: {
+  blockButton: {
     minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  hairline: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
   },
 });

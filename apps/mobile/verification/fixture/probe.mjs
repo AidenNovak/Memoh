@@ -1385,6 +1385,7 @@ async function checkFiles() {
  */
 async function checkE2eHooks() {
   console.log('\n— 端到端旅程的钩子 —');
+  const credentials = { username: 'fixture', password: 'fixture' };
 
   async function fault(path, body) {
     const response = await fetch(`${BASE}${path}`, {
@@ -1396,13 +1397,25 @@ async function checkE2eHooks() {
   }
 
   // ① 登录必拒。默认必须是**正常**——随开随坏会让所有别的验收莫名其妙红。
-  const beforeLogin = await call('/auth/login', { method: 'POST', body: {} });
+  const discoveryProbe = await call('/auth/login', { method: 'POST', body: {} });
+  check(
+    '空登录载荷只证明路由存在（400）',
+    discoveryProbe.status === 400,
+    show(discoveryProbe.status),
+  );
+  const beforeLogin = await call('/auth/login', { method: 'POST', body: credentials });
   check('默认登录是正常的', beforeLogin.status === 200, show(beforeLogin.status));
-  await fault('/__auth-fault', { mode: 'reject' });
-  const rejected = await call('/auth/login', { method: 'POST', body: {} });
+  await fault('/__auth-fault', { mode: 'reject', times: 1 });
+  const guardedProbe = await call('/auth/login', { method: 'POST', body: {} });
+  check(
+    '空登录载荷不消耗一次性 401 故障额度',
+    guardedProbe.status === 400,
+    show(guardedProbe.status),
+  );
+  const rejected = await call('/auth/login', { method: 'POST', body: credentials });
   check('打开后登录回 401', rejected.status === 401, show(rejected.status));
   await fault('/__auth-fault', { mode: 'normal' });
-  const restored = await call('/auth/login', { method: 'POST', body: {} });
+  const restored = await call('/auth/login', { method: 'POST', body: credentials });
   check('关掉之后恢复', restored.status === 200, show(restored.status));
 
   // ② 写必败：bot 的两种写都要挡住（设置页改名字走 PUT，改模型走 POST）。
@@ -1537,7 +1550,7 @@ async function checkE2eHooks() {
 
   // 切场景必须把钩子清干净（否则上一条旅程的故障会跟到下一条）。
   await setScenario('default');
-  const afterSwitch = await call('/auth/login', { method: 'POST', body: {} });
+  const afterSwitch = await call('/auth/login', { method: 'POST', body: credentials });
   const sessionsAfter = (await call(`/bots/${BOT}/sessions`)).body?.items ?? [];
   check(
     '切场景把登录故障与新建会话都清掉',

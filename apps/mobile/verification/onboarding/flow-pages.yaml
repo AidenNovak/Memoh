@@ -27,6 +27,8 @@ appId: ai.memoh.ios
 - tapOn: 'Get started'
 - waitForAnimationToEnd:
     timeout: 3000
-# 终点是登录页——引导不拦人。
-- assertVisible: 'Sign in'
+# 终点是 Cloud 登录首页——引导不拦人。
+- assertVisible: 'Log in or sign up'
+- assertVisible:
+    id: 'login-selfhosted-toggle'
 - takeScreenshot: onboarding-04-login

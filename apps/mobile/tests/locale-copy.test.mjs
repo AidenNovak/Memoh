@@ -74,6 +74,9 @@ const LATIN_WORD = /[A-Za-z][A-Za-z_]+/g;
  */
 const ALLOWED_LATIN = new Map([
   ['Memoh', '产品名，中文句子里的品牌名不翻译'],
+  ['Cloud', '产品名「Memoh Cloud」的一部分（`login.cloud.unavailable`），与 Memoh 同理不译'],
+  ['GitHub', '品牌名，GitHub 官方中文材料里也不译'],
+  ['Google', '品牌名，Google 官方中文材料里也不译'],
   ['App', 'iOS 自己的说法（苹果中文文档里就是「App」），全表 10 处一致'],
   ['iOS', '平台名，苹果自己不译'],
   ['Office', '文件格式名（`files.preview.kind.sheet`＝「Office 文档」）'],

@@ -57,3 +57,13 @@ export type {
   NativeScheduleListViewModel,
   NativeScheduleViewProps,
 } from './schedule/NativeScheduleView';
+
+export { NativeBotFormView } from './bots/NativeBotFormView';
+export type {
+  NativeBotAvatar,
+  NativeBotFormConfirm,
+  NativeBotFormModel,
+  NativeBotFormRow,
+  NativeBotFormSection,
+  NativeBotFormViewProps,
+} from './bots/NativeBotFormView';

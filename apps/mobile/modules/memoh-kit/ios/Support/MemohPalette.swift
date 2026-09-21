@@ -61,6 +61,11 @@ enum MemohPalette {
     traits.userInterfaceStyle == .dark ? Palette.darkAccent : Palette.lightAccent
   }
 
+  /** 品牌紫底上的文字色（实心主按钮）。值同 RN `tokens.ts` 的 `onAccent`。 */
+  static func onAccent(_ traits: UITraitCollection) -> UIColor {
+    traits.userInterfaceStyle == .dark ? Palette.darkOnAccent : Palette.lightOnAccent
+  }
+
   /** 品牌紫的淡底（内置头像的方块底）。深色那份本身带 alpha。 */
   static func accentSoft(_ traits: UITraitCollection) -> UIColor {
     traits.userInterfaceStyle == .dark ? Palette.darkAccentSoft : Palette.lightAccentSoft
@@ -109,6 +114,7 @@ enum MemohPalette {
     static let lightUserBubble = UIColor(hex: 0xEEE5FE)
     static let lightAccent = UIColor(hex: 0x764BE5)
     static let lightAccentSoft = UIColor(hex: 0xF1EFFF)
+    static let lightOnAccent = UIColor(hex: 0xFAFAFB)
     static let lightSuccess = UIColor(hex: 0x34C759)
     static let lightWarning = UIColor(hex: 0xB25E00)
 
@@ -122,6 +128,7 @@ enum MemohPalette {
     static let darkUserBubble = UIColor(hex: 0x532D8D)
     static let darkAccent = UIColor(hex: 0xA490FF)
     static let darkAccentSoft = UIColor(hex: 0x2E274E, alpha: 0x73 / 255)
+    static let darkOnAccent = UIColor(hex: 0x191816)
     static let darkSuccess = UIColor(hex: 0x30D158)
     static let darkWarning = UIColor(hex: 0xFF9F0A)
   }

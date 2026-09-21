@@ -225,5 +225,15 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setEditorJSON(value)
       }
     }
+
+    View(NativeBotFormView.self) {
+      Events("onField", "onAction", "onBack", "onRetry")
+      Prop("mode") { (view: NativeBotFormView, value: String) in
+        view.setMode(value)
+      }
+      Prop("modelJson") { (view: NativeBotFormView, value: String) in
+        view.setModelJSON(value)
+      }
+    }
   }
 }

@@ -21,7 +21,8 @@ import {
   type ModelSection,
 } from '../features/chat/models.ts';
 import type { SkillSummary } from '../api/types.ts';
-import { MachinePanelSheet } from '../ui/MachinePanelPage.tsx';
+import { presentMachinePanel } from '../features/bots/machinePanelSheet.ts';
+import { SCREENSHOT_DIRECTORY } from '../features/machine/panel.ts';
 import { presentModelPicker } from '../features/chat/modelPicker.ts';
 import { loadSkills } from '../features/chat/skills.ts';
 import { canRetry, reasonKeyOf, type ErrorPresentation } from '../features/errors/present.ts';
@@ -48,10 +49,9 @@ import { useT } from '../lib/i18n/useT.ts';
 import { hasTranslation } from '../lib/i18n/index.ts';
 import { announceForAccessibility, useAnnounceOnAppear } from '../lib/accessibility.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
-import { present } from '../lib/presentation/index.ts';
 import { pendingSendView } from '../features/chat/pending.ts';
 import { queuePreview } from '../features/chat/queue.ts';
-import { SessionInfoPage } from '../ui/SessionInfoPage.tsx';
+import { presentSessionInfo } from '../features/session/sessionInfoSheet.ts';
 import {
   buildAnswers,
   draftText,
@@ -135,6 +135,9 @@ export function ChatScreen() {
     respondUserInput,
     realtimeEnabled,
     currentBot,
+    // 会话信息面板要的两件事：读当前状态、重拉一次（面板是普通函数，用不了 hook）。
+    sessionStatusFor,
+    refreshSessionStatus,
   } = useSession();
 
   const client = state.client;
@@ -804,13 +807,20 @@ export function ChatScreen() {
   /**
    * 打开会话信息面板。
    *
-   * 拉数据搬到面板自己身上了（`SessionInfoPage` 一进来就 refresh）——面板是"点开就想
-   * 看到数"的东西，取数状态跟着它走，比让调用方替它记 `loading/failed` 更贴。
+   * 拉数据搬到面板自己身上了（它一进来就 `refresh()`）——面板是"点开就想看到数"的东西，
+   * 取数状态跟着它走，比让调用方替它记 `loading/failed` 更贴。**"不编数"那条判据也在面板里**
+   * （有没有上下文窗口由 `sessionInfoView` 判），这里只把三件事递进去：读状态、重拉、压缩。
    */
   const openInfo = useCallback(() => {
     if (isNew) return;
-    void present(SessionInfoPage, { sessionId });
-  }, [isNew, sessionId]);
+    void presentSessionInfo({
+      sessionId,
+      readStatus: () => sessionStatusFor(sessionId),
+      refresh: () => refreshSessionStatus(sessionId),
+      // 只有拿得到 client 与 botId 时才给"立即压缩"这个动作（深链进来、会话还没落地）。
+      compact: client === null || currentBot === null ? null : { client, botId: currentBot.id },
+    });
+  }, [client, currentBot, isNew, refreshSessionStatus, sessionId, sessionStatusFor]);
 
   /**
    复制成功的**第二重确认**。
@@ -879,8 +889,14 @@ export function ChatScreen() {
   const openMachine = useCallback(() => {
     const botId = currentBot?.id;
     if (botId === undefined) return;
-    void present(MachinePanelSheet, { botId });
-  }, [currentBot?.id]);
+    void (async () => {
+      const outcome = await presentMachinePanel({ client, botId });
+      if (outcome.status !== 'completed') return;
+      // 面板上的"看截图"是一个**动作**：sheet 是原生 present 的，压在 RN 栈上面——
+      // 不先等它收掉就 push，用户按了什么都不会发生（见 `machinePanelSheet.ts` 文件头）。
+      if (outcome.value.action === 'openScreenshots') router.push(`/files/${SCREENSHOT_DIRECTORY}`);
+    })();
+  }, [client, currentBot?.id, router]);
 
   const openModelPicker = useCallback(() => {
     void (async () => {

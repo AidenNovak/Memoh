@@ -13,8 +13,7 @@ import { timezoneLine } from '../features/bots/timezones.ts';
 import { useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
-import { present } from '../lib/presentation/index.ts';
-import { CronPickerSheet } from '../ui/CronPickerPage.tsx';
+import { presentCronPicker } from '../features/schedule/cronPickerSheet.ts';
 import { presentRunTargetPicker } from '../features/schedule/runTargetPicker.ts';
 
 const DAY_KEY: Record<'today' | 'tomorrow' | 'dayAfter', string> = {
@@ -168,7 +167,7 @@ export function NativeScheduleEditScreen({ scheduleId }: { scheduleId: string | 
         onEnabledChange={(event) => patch({ enabled: event.nativeEvent.enabled === true })}
         onPatternPicker={() => {
           void (async () => {
-            const outcome = await present(CronPickerSheet, { pattern: draftRef.current.pattern });
+            const outcome = await presentCronPicker({ pattern: draftRef.current.pattern });
             if (outcome.status === 'completed') patch({ pattern: outcome.value.pattern });
           })();
         }}

@@ -225,7 +225,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 3 | 登录与鉴权 | 完成；SwiftUI 持有 Cloud 占位与自部署表单、地址校验/探测、登录请求、错误反馈和 Keychain 迁移；RN 暂持启动闸门、路由、刷新与后续 API client 状态 |
 | 4 | 会话壳与列表 | 完成；SwiftUI 导航、会话列表、搜索、Bot/视图切换、刷新、游标分页、错误/空态和会话操作；RN 暂持 API、分页状态、i18n、路由与事件处理 |
 | 5 | 文件 | 完成；原生目录列表、面包屑、预览、权限/错误/空态、刷新与操作菜单；RN 暂持取数、路径安全、i18n 与路由，diff 等待服务端模型 |
-| 6 | 定时任务 | 原生列表、编辑表单与删除确认 |
+| 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 原生 schema 表单覆盖配置模块 |
 | 8 | Chat | 原生消息、composer、审批与 `ask_user` |
 | 9 | App 壳收口 | 移除剩余 Expo Router/RN UI、桥接状态与不再需要的 RN 依赖 |
@@ -270,6 +270,29 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   崩溃。仍需 Human QA：登录后根目录/子目录 push、预览文本/图片/错误态、刷新、显示更多、复制
   路径/下载提示、最大字号、VoiceOver、深色/OLED；PR 保持 Draft。
 - **下一模块**：定时任务原生列表、编辑表单与删除确认（模块 6）。
+
+#### 模块 6 验收记录（`feat/ios-native-schedule`）
+
+- **原生 ownership**：`NativeScheduleView` 持有 `NavigationStack`、定时任务 `List`、启用
+  `Toggle`、加载/权限/错误（不可重试时不给 Retry）/空态、下拉刷新、编辑 `Form`
+  （名称/描述/命令/cron 表达式/启用/调用上限/下次运行预览/时区）、删除确认框与返回；
+  列表与编辑两个 host 由同一 store 切换，坏 JSON 时保留上一份有效模型。
+- **RN ownership**：`NativeScheduleScreen` 与 `NativeScheduleEditScreen` 继续调用既有
+  `useSchedules` / `useScheduleEditor`、API client、cron 解析与校验、权限判据、i18n 和路由，
+  通过类型化 JSON/event bridge 下发模型；cron 保持可编辑文本，未在 Swift 重写解析；
+  `save` 增加 `override` 参数以便原生开关/表单直接提交目标值，服务端协议无变化。
+- **自动化证据**：mobile typecheck、i18n check、lint（0 errors，仅仓库既有 warnings）、
+  Prettier、`git diff --check`、Swift 前端解析和带模拟器签名的 Xcode 构建通过。
+- **真实联调证据**：`vultr-sg` `memoh-dev` 实例，管理员凭据只在服务器进程内读取、
+  未进入输出或提交：`/auth/login`、`/bots`、`GET /bots/{id}/schedule`、
+  `/schedule/logs` 均 200；新建 → 详情 → 更新 → 禁用/启用往返 → 删除全链路成功，
+  删除后复查为 404，测试数据已清理。
+- **模拟器证据**：Xcode 模拟器构建（arm64/x86_64）通过。仍需 Human QA：列表开关、
+  新建/编辑/删除交互、cron 输入校验、权限降级态、最大字号、VoiceOver、深色/OLED；
+  PR 保持 Draft 直到人工验收。
+- **Kimi K3**：按约定优先派发，因账号 403 `access_terminated_error` 未产出代码，
+  证据留在批次记录；实现由主会话完成。
+- **下一模块**：Bot 设置与 schema 表单（模块 7）；不得把 Bot 配置 UI 顺手并入本 PR。
 
 ---
 

@@ -199,5 +199,31 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setViewModelJSON(value)
       }
     }
+
+    View(NativeScheduleView.self) {
+      Events(
+        "onRefresh",
+        "onRetry",
+        "onNew",
+        "onOpen",
+        "onToggle",
+        "onBack",
+        "onFieldChange",
+        "onPatternPicker",
+        "onEnabledChange",
+        "onRunTarget",
+        "onSave",
+        "onDelete"
+      )
+      Prop("mode") { (view: NativeScheduleView, value: String) in
+        view.setMode(value)
+      }
+      Prop("listModelJson") { (view: NativeScheduleView, value: String) in
+        view.setListJSON(value)
+      }
+      Prop("editorModelJson") { (view: NativeScheduleView, value: String) in
+        view.setEditorJSON(value)
+      }
+    }
   }
 }

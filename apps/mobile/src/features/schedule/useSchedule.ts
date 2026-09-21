@@ -240,36 +240,40 @@ export function useScheduleEditor(
    * 保存失败**不给"重试"按钮**：Save 就在屏幕上，用户再按一次就是重试；
    * 面板上再挂一个只是把同一个动作说两遍（见 `docs/research/ios-error-and-feedback.md` R19）。
    */
-  const save = useCallback(async (): Promise<Schedule | null> => {
-    if (client === null || botId === null) return null;
-    setSaving(true);
-    setError(null);
-    try {
-      const saved =
-        scheduleId === null
-          ? await client.createSchedule(botId, createPayload(draft))
-          : await client.updateSchedule(
-              botId,
-              scheduleId,
-              updatePayload({
-                name: draft.name,
-                description: draft.description,
-                pattern: draft.pattern,
-                command: draft.command,
-                enabled: draft.enabled,
-                maxCalls: draft.maxCalls,
-                // 整块回写：只改用户改过的项，其余原样带回去（见文件头）。
-                execution: draft.execution,
-              }),
-            );
-      return normalizeSchedule(saved);
-    } catch (err) {
-      setError(presentError(err));
-      return null;
-    } finally {
-      setSaving(false);
-    }
-  }, [botId, client, draft, scheduleId]);
+  const save = useCallback(
+    async (override: Partial<ScheduleDraft> = {}): Promise<Schedule | null> => {
+      if (client === null || botId === null) return null;
+      setSaving(true);
+      setError(null);
+      const nextDraft = { ...draft, ...override };
+      try {
+        const saved =
+          scheduleId === null
+            ? await client.createSchedule(botId, createPayload(nextDraft))
+            : await client.updateSchedule(
+                botId,
+                scheduleId,
+                updatePayload({
+                  name: nextDraft.name,
+                  description: nextDraft.description,
+                  pattern: nextDraft.pattern,
+                  command: nextDraft.command,
+                  enabled: nextDraft.enabled,
+                  maxCalls: nextDraft.maxCalls,
+                  // 整块回写：只改用户改过的项，其余原样带回去（见文件头）。
+                  execution: nextDraft.execution,
+                }),
+              );
+        return normalizeSchedule(saved);
+      } catch (err) {
+        setError(presentError(err));
+        return null;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [botId, client, draft, scheduleId],
+  );
 
   return { draft, patch, loading, saving, error, running, save };
 }

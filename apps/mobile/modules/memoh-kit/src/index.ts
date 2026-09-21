@@ -50,3 +50,10 @@ export type {
   NativeFilePreviewViewModel,
   NativeFilePreviewViewProps,
 } from './files/NativeFilePreviewView';
+
+export { NativeScheduleView } from './schedule/NativeScheduleView';
+export type {
+  NativeScheduleEditorViewModel,
+  NativeScheduleListViewModel,
+  NativeScheduleViewProps,
+} from './schedule/NativeScheduleView';

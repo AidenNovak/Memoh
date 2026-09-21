@@ -80,22 +80,10 @@ function ThemedRoot() {
                 }}
               >
                 {/*
-                  出席会话的宿主路由。
-
-                  **为什么形态声明在这里而不是页面里**：`presentation` 是原生栈在 push
-                  那一刻读的——在路由组件内部用 `<Stack.Screen>` 或 `setOptions()` 设置
-                  都太晚，结果就是"以为开了 sheet，其实是一张全屏卡片"（实测踩过：内容
-                  画到状态栏底下、没有抓手、没有圆角边距）。
-                  页面自己仍然可以覆盖 detent / 抓手 / 能不能侧滑——那些是挂载后生效的。
+                  这一层不再有 presented 路由：所有 sheet（审批 / ask_user / 各选择器 /
+                  会话信息 / 机器面板）都由原生 presenter 呈现（`ChatSheetPresenter`），
+                  RN 侧只剩"发一条 JSON + 等一个结论"（`lib/presentation/nativePicker.ts`）。
                 */}
-                <Stack.Screen
-                  name="presented/[presentationId]"
-                  options={{
-                    headerShown: false,
-                    presentation: 'formSheet',
-                    contentStyle: { backgroundColor: palette.background },
-                  }}
-                />
                 {/*
                   `(tabs)` 这一屏**必须有一个 title**，哪怕它自己没有导航栏。
 

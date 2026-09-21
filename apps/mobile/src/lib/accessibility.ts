@@ -1,24 +1,12 @@
 /**
- * 无障碍：减少动效，以及**让读屏知道屏幕上刚刚出现了什么**。
+ * 无障碍：**让读屏知道屏幕上刚刚出现了什么**。
  *
- * ## 为什么必须做
+ * ## 减少动效（Reduce Motion）现在归原生
  *
- * iOS 有个系统级开关「减弱动态效果」，前庭功能障碍的用户会因界面动效而眩晕。
- * Lody 把这条写成了硬规则：**每个动画路径都要查它并早退**。
- *
- * 我们目前的动效很少（列表出现、键盘、sheet），但**越少越容易漏**——因为不常写，
- * 写的时候想不起来这个开关。所以把它做成一个必须显式调用的 hook。
- *
- * ## 为什么自己写而不用 RN 自带的
- *
- * RN 0.76 起有 `useReducedMotion`，但**本项目用的 0.86.3 没有从主入口导出它**
- * （`Libraries/Components/AccessibilityInfo/AccessibilityInfo.js` 只有
- * `export default AccessibilityInfo`，没有具名 hook 导出）。查过再写，
- * 免得 import 一个不存在的符号在运行时才炸。
- *
- * 这里基于它确实有的两个东西实现：`AccessibilityInfo.isReduceMotionEnabled()`
- * （异步查询）与 `AccessibilityInfo.addEventListener('reduceMotionChanged', …)`
- * （运行时变化——用户在设置里切的时候要立刻生效，不能等下次启动）。
+ * 这里原来有一套 `useReducedMotionPreference()` / `useReducedMotion()` / `motionDuration()`：
+ * 三态（`unknown | reduce | allow`）是为了表达"系统查询还没回来时先别动"。模块 9A 之后
+ * 只剩引导页还有动画，而它已换成 SwiftUI——那边用 `@Environment(\.accessibilityReduceMotion)`
+ * （同步已知，比三态更严格），所以这三个 hook 连同它们的判据一起删掉了（2026-09-21）。
  *
  * ## ⚠️ 播报错误**不能**用 `accessibilityLiveRegion`
  *
@@ -32,77 +20,8 @@
  * 它是"写了看起来对、实际是空转"的那一类属性，比不写更危险。
  * iOS 侧唯一正确的机制是 `AccessibilityInfo.announceForAccessibility`，也就是下面这两个。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { AccessibilityInfo } from 'react-native';
-
-/**
- * 「减弱动态效果」的**当前结论**。
- *
- * 三态而不是布尔：系统查询是异步的，**在它回来之前我们并不知道答案**。把它压成
- * `false`（旧写法）会造成一个具体的错误——开了这个开关的人，冷启动 onboarding 时
- * 标记的入场动画会先跑起来，几十毫秒后才被掐断，看到的是一次"抽一下"的入场，
- * 正是这个人要求不要的东西。`'unknown'` 让调用方能表达"宁可先静一下，等结论"。
- */
-export type ReducedMotionPreference = 'unknown' | 'reduce' | 'allow';
-
-/**
- * 当前「减弱动态效果」的设置。
- *
- * 判据（调用方该怎么用，来自 HIG · Accessibility · Reduce Motion）：
- *
- * - `'allow'` → 正常播；
- * - `'reduce'` → 直接到终态，不播；
- * - `'unknown'` → **不要启动动画**，等它变成上面两种再决定。观感上是一瞬间的静止，
- *   而不是"先动一下再收住"。
- */
-export function useReducedMotionPreference(): ReducedMotionPreference {
-  const [preference, setPreference] = useState<ReducedMotionPreference>('unknown');
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => {
-        if (!cancelled) setPreference(enabled ? 'reduce' : 'allow');
-      })
-      .catch(() => {
-        // 查不到就当作"不要求减少动效"——那是系统的默认值。
-        if (!cancelled) setPreference('allow');
-      });
-
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', (enabled) => {
-      setPreference(enabled ? 'reduce' : 'allow');
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.remove();
-    };
-  }, []);
-
-  return preference;
-}
-
-/**
- * 布尔版本，**只用在"动画已经在播、需要中途收敛"的场合**（例如把时长收敛到 0）。
- *
- * 新写的动画路径请用 `useReducedMotionPreference()`：这个包装在首帧会把
- * `'unknown'` 当成 `false`（= 允许动效），于是又会漏出上面说的"先动一下"。
- */
-export function useReducedMotion(): boolean {
-  return useReducedMotionPreference() === 'reduce';
-}
-
-/**
- * 把一个动效时长按用户偏好收敛。
- *
- * 用法：`duration={motionDuration(reduceMotion, 250)}`。
- * 减少动效时返回 0 而不是直接跳过动画——跳过会让 `onAnimationEnd` 之类的回调
- * 永远不触发，那是个隐蔽的 bug。
- */
-export function motionDuration(reduceMotion: boolean, milliseconds: number): number {
-  return reduceMotion ? 0 : milliseconds;
-}
 
 /**
  * 让读屏把这句话念出来。
@@ -132,7 +51,7 @@ export function announceForAccessibility(text: string): void {
  * `null`/空串是"没有话要说"，不播报。
  *
  * 反复翻转的状态**不要**用这个（弱网下每几秒翻一次的"重连中"会把读屏用户淹掉）——
- * 那种情况用可点的状态条，见 `ui/ConnectionBadge.tsx`。
+ * 那种情况用可点的状态条。
  */
 export function useAnnounceOnAppear(text: string | null | undefined): void {
   const previous = useRef<string | null>(null);

@@ -45,6 +45,10 @@ sources=(
   # 真构建兜底——见文件头"不检查"那一段。
   "$KIT/Notifications/NotificationContract.swift"
   "$KIT/Notifications/MemohNotifications.swift"
+  # 登录契约 / Keychain / URLSession 服务不依赖 Expo，可在真 iOS SDK 下完整类型检查。
+  "$KIT/Authentication/AuthContract.swift"
+  "$KIT/Authentication/AuthKeychain.swift"
+  "$KIT/Authentication/MemohAuthService.swift"
 )
 
 echo "对 ${#sources[@]} 个 MemohKit 文件做类型检查（iphonesimulator SDK，DEBUG）…"

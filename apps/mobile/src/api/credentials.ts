@@ -1,22 +1,15 @@
 /**
- * 会话凭据存储。
+ * Temporary JS projection of the native iOS session.
  *
- * token 必须进 **Keychain**，不是 UserDefaults，也不是 cookie 那套（那是 Web 的）。
- * `expo-secure-store` 在 iOS 上就是 Keychain；这里额外把 profile 一起存下来，
- * 因为 `/auth/refresh` **不返回** `user_id` / `role` / `display_name` / `timezone`，
- * 只有登录那一次才有。
- *
- * 注意 `WHEN_UNLOCKED_THIS_DEVICE_ONLY` 的取舍：后台被唤醒时若设备已锁，读不到
- * Keychain。本项目没有后台任务需求，安全性优先。
+ * Swift owns the `memoh.session.v1` Keychain item. RN keeps only an in-memory copy because the
+ * existing API and WebSocket clients need synchronous token reads until the final app-shell pass.
  */
-import * as SecureStore from 'expo-secure-store';
-
-const KEY = 'memoh.session.v1';
+import { nativeAuth } from '@memoh-ios/kit';
 
 export interface StoredSession {
   baseUrl: string;
   token: string;
-  /** ISO8601，来自服务端。 */
+  /** ISO8601 from the server. */
   expiresAt: string;
   userId: string;
   username: string;
@@ -33,23 +26,37 @@ function isSession(value: unknown): value is StoredSession {
   const candidate = value as Record<string, unknown>;
   return (
     typeof candidate.baseUrl === 'string' &&
+    candidate.baseUrl !== '' &&
     typeof candidate.token === 'string' &&
+    candidate.token !== '' &&
     typeof candidate.expiresAt === 'string' &&
-    typeof candidate.userId === 'string'
+    candidate.expiresAt !== '' &&
+    typeof candidate.userId === 'string' &&
+    candidate.userId !== '' &&
+    typeof candidate.username === 'string' &&
+    candidate.username !== '' &&
+    typeof candidate.displayName === 'string' &&
+    typeof candidate.role === 'string' &&
+    typeof candidate.timezone === 'string'
   );
 }
 
-/** 读一次到内存；后续 `getSession()` 不再碰 Keychain。 */
+function parseSession(raw: string | null | undefined): StoredSession | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isSession(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read native Keychain once; later synchronous reads use only the memory projection. */
 export async function loadSession(): Promise<StoredSession | null> {
   if (loaded) return cached;
   try {
-    const raw = await SecureStore.getItemAsync(KEY, {
-      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-    if (raw !== null && raw !== '') {
-      const parsed: unknown = JSON.parse(raw);
-      cached = isSession(parsed) ? parsed : null;
-    }
+    const auth = nativeAuth();
+    cached = auth === null ? null : parseSession(await auth.authLoadSession());
   } catch {
     cached = null;
   }
@@ -61,25 +68,35 @@ export function getSession(): StoredSession | null {
   return cached;
 }
 
+/** Used by authenticated refresh; native code validates the same complete session shape again. */
 export async function saveSession(session: StoredSession): Promise<void> {
   cached = session;
   loaded = true;
-  await SecureStore.setItemAsync(KEY, JSON.stringify(session), {
-    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-  });
+  const auth = nativeAuth();
+  if (auth === null) throw new Error('Native authentication module is unavailable');
+  await auth.authSaveSession(JSON.stringify(session));
+}
+
+/** Adopt the already-persisted native login result without writing the Keychain twice. */
+export function adoptNativeSession(raw: string | undefined): StoredSession | null {
+  const session = parseSession(raw);
+  if (session === null) return null;
+  cached = session;
+  loaded = true;
+  return session;
 }
 
 export async function clearSession(): Promise<void> {
   cached = null;
   loaded = true;
   try {
-    await SecureStore.deleteItemAsync(KEY);
+    await nativeAuth()?.authClearSession();
   } catch {
-    // 已经不存在也算清干净了。
+    // The in-memory credential is gone, so the auth gate must still return to signed out.
   }
 }
 
-/** 仍然有效的 token；已过期返回 null（没有 refresh token 可以救）。 */
+/** A token that is still valid; expired credentials cannot be refreshed without a refresh token. */
 export function getFreshToken(now: number = Date.now()): string | null {
   if (cached === null) return null;
   const expires = Date.parse(cached.expiresAt);
@@ -87,10 +104,7 @@ export function getFreshToken(now: number = Date.now()): string | null {
   return expires > now ? cached.token : null;
 }
 
-/**
- * 是否该静默续期：过期时间在 `windowMs` 之内。
- * 服务端签发 168h，所以在还剩 84h（一半）的时候续，给足冗余。
- */
+/** Refresh once the remaining lifetime enters the default half-life window (84 hours). */
 export function shouldRefresh(windowMs = 84 * 60 * 60 * 1000, now: number = Date.now()): boolean {
   if (cached === null) return false;
   const expires = Date.parse(cached.expiresAt);

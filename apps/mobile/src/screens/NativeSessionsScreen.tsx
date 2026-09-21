@@ -5,8 +5,8 @@ import { Alert, View } from 'react-native';
 
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
-import { present } from '../lib/presentation/index.ts';
 import { forkTarget, forkTitle } from '../features/session/actions.ts';
+import { presentRenameSession } from '../features/session/renamePicker.ts';
 import { useSessionActivity } from '../features/activity/useSessionActivity.ts';
 import { canRetry, presentError, reasonKeyOf } from '../features/errors/present.ts';
 import {
@@ -19,7 +19,6 @@ import { useConnectionState, useSession, type SessionSummary } from '../features
 import { sessionDisplayTitle } from '../features/session/displayTitle.ts';
 import { sessionSourceLabel } from '../features/session/sourceLabel.ts';
 import { sessionsFooter } from '../features/session/paging.ts';
-import { RenameSessionSheet } from '../ui/RenameSessionPage.tsx';
 import type { HubView } from '../features/bots/surfaces.ts';
 
 export function NativeSessionsScreen({
@@ -93,7 +92,13 @@ export function NativeSessionsScreen({
       const session = state.sessions.find((candidate) => candidate.id === sessionId);
       if (session === undefined) return;
       if (action === 'rename') {
-        void present(RenameSessionSheet, { sessionId: session.id, title: session.title });
+        void presentRenameSession({
+          client: state.client,
+          botId: state.currentBotId,
+          sessionId: session.id,
+          title: session.title,
+          refreshSessions,
+        });
         return;
       }
       if (action !== 'fork' || state.client === null || state.currentBotId === null) return;

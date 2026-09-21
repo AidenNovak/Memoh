@@ -5,8 +5,9 @@
  *
  * **原生持有**可见 UI 与直接交互：分组表单（SwiftUI inset-grouped `Form`）、页头、
  * 底部保存条、删除确认框与"未保存改动"返回拦截。**RN 保留**：取数（bot/settings/checks/
- * 模型目录）、差分保存（`patchFrom` 只发改过的字段）、删除、名称与权限判据、选择器 sheet
- * （模型/头像/语言/时区仍是 RN `present()` 的页）、i18n、路由与侧滑手势开关。
+ * 模型目录）、差分保存（`patchFrom` 只发改过的字段）、删除、名称与权限判据、选择器
+ * （模型/头像/语言/时区已改成**原生 sheet**：RN 只组装请求与判结论，见
+ * `features/*Picker.ts`）、i18n、路由与侧滑手势开关。
  *
  * 原生侧是一份通用表单模型（`NativeBotFormModel`），本页把 `features/bots/*` 算好的
  * 结果映射成分组与行；原生不认识 bot、i18n 和路由。
@@ -43,11 +44,10 @@ import { timezoneValue } from '../features/bots/timezones.ts';
 import { useConnectionState, useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
-import { present } from '../lib/presentation/index.ts';
-import { ModelPickerSheet } from '../ui/ModelPickerPage.tsx';
-import { AvatarPickerSheet } from '../ui/AvatarPickerPage.tsx';
-import { LanguagePickerSheet } from '../ui/LanguagePickerPage.tsx';
-import { TimezonePickerSheet } from '../ui/TimezonePickerPage.tsx';
+import { presentModelPicker } from '../features/chat/modelPicker.ts';
+import { presentAvatarPicker } from '../features/bots/avatarPicker.ts';
+import { presentLanguagePicker } from '../features/bots/languagePicker.ts';
+import { presentTimezonePicker } from '../features/bots/timezonePicker.ts';
 import {
   canRetry,
   presentError,
@@ -206,19 +206,19 @@ export function NativeBotSettingsScreen({ botId }: { botId: string }) {
   const pickModel = useCallback(() => {
     if (draft === null) return;
     void (async () => {
-      const outcome = await present(ModelPickerSheet, {
-        modelId: draft.modelId,
-        reasoningEffort: draft.reasoningEffort,
+      const outcome = await presentModelPicker({
+        client: state.client,
+        choice: { modelId: draft.modelId, reasoningEffort: draft.reasoningEffort },
       });
       if (outcome.status !== 'completed') return;
       update({ modelId: outcome.value.modelId, reasoningEffort: outcome.value.reasoningEffort });
     })();
-  }, [draft, update]);
+  }, [draft, state.client, update]);
 
   const pickAvatar = useCallback(() => {
     if (draft === null) return;
     void (async () => {
-      const outcome = await present(AvatarPickerSheet, { avatarUrl: draft.avatarUrl });
+      const outcome = await presentAvatarPicker({ avatarUrl: draft.avatarUrl });
       if (outcome.status !== 'completed') return;
       update({ avatarUrl: outcome.value.avatarUrl });
     })();
@@ -227,7 +227,7 @@ export function NativeBotSettingsScreen({ botId }: { botId: string }) {
   const pickLanguage = useCallback(() => {
     if (draft === null) return;
     void (async () => {
-      const outcome = await present(LanguagePickerSheet, { language: draft.language });
+      const outcome = await presentLanguagePicker({ language: draft.language });
       if (outcome.status !== 'completed') return;
       update({ language: outcome.value.language });
     })();
@@ -236,7 +236,7 @@ export function NativeBotSettingsScreen({ botId }: { botId: string }) {
   const pickTimezone = useCallback(() => {
     if (draft === null) return;
     void (async () => {
-      const outcome = await present(TimezonePickerSheet, { timezone: draft.timezone });
+      const outcome = await presentTimezonePicker({ timezone: draft.timezone });
       if (outcome.status !== 'completed') return;
       update({ timezone: outcome.value.timezone });
     })();

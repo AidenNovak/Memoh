@@ -22,7 +22,7 @@ import {
 } from '../features/chat/models.ts';
 import type { SkillSummary } from '../api/types.ts';
 import { MachinePanelSheet } from '../ui/MachinePanelPage.tsx';
-import { ModelPickerSheet } from '../ui/ModelPickerPage.tsx';
+import { presentModelPicker } from '../features/chat/modelPicker.ts';
 import { loadSkills } from '../features/chat/skills.ts';
 import { canRetry, reasonKeyOf, type ErrorPresentation } from '../features/errors/present.ts';
 import {
@@ -884,11 +884,11 @@ export function ChatScreen() {
 
   const openModelPicker = useCallback(() => {
     void (async () => {
-      const outcome = await present(ModelPickerSheet, choice);
+      const outcome = await presentModelPicker({ client, choice });
       if (outcome.status !== 'completed') return;
       setChoice(outcome.value);
     })();
-  }, [choice]);
+  }, [choice, client]);
 
   /**
    用户一动键盘就是在重试，把上一次的失败提示收掉（发送失败之后最常见的动作就是改一下再发）。

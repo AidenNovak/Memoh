@@ -13,7 +13,9 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       "onRemoteRegistrationFailed",
       // Chat 的两个原生 sheet（审批 / ask_user）的回答出口。
       "onChatApprovalChoose",
-      "onChatUserInputEvent"
+      "onChatUserInputEvent",
+      // 通用选择器 sheet 的出口（选中 / 输入 / 搜索 / 下滑关闭）。
+      "onPickerEvent"
     )
 
     OnCreate {
@@ -329,5 +331,28 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setModelJSON(value)
       }
     }
+
+    // 通用选择器 sheet（模型/头像/语言/时区/运行位置/切 agent/重命名）：**可滑掉**，
+    // 与上面两个"不可滑掉"的审批类 sheet 是两种语义，别混。下滑关闭会回 `dismissed`，
+    // 调用方的 promise 才有着落。
+    AsyncFunction("pickerPresent") { (json: String) in
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.presentPicker(json) { [weak self] payload in
+          self?.sendEvent("onPickerEvent", payload)
+        }
+      }
+    }.runOnQueue(.main)
+
+    AsyncFunction("pickerUpdate") { (json: String) in
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.updatePicker(json)
+      }
+    }.runOnQueue(.main)
+
+    AsyncFunction("pickerDismiss") {
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.dismissPicker()
+      }
+    }.runOnQueue(.main)
   }
 }

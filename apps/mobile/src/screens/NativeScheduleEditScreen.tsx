@@ -15,7 +15,7 @@ import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
 import { present } from '../lib/presentation/index.ts';
 import { CronPickerSheet } from '../ui/CronPickerPage.tsx';
-import { RunTargetPickerSheet } from '../ui/RunTargetPickerPage.tsx';
+import { presentRunTargetPicker } from '../features/schedule/runTargetPicker.ts';
 
 const DAY_KEY: Record<'today' | 'tomorrow' | 'dayAfter', string> = {
   today: 'schedule.day.today',
@@ -174,7 +174,9 @@ export function NativeScheduleEditScreen({ scheduleId }: { scheduleId: string | 
         }}
         onRunTarget={() => {
           void (async () => {
-            const outcome = await present(RunTargetPickerSheet, {
+            const outcome = await presentRunTargetPicker({
+              client: state.client,
+              botId: currentBot?.id ?? null,
               runTarget: draftRef.current.execution.runTarget,
               targetSessionId: draftRef.current.execution.targetSessionId,
             });

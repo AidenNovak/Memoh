@@ -1,14 +1,16 @@
 import SwiftUI
 import UIKit
 
-/// 审批 / ask_user 两个 sheet 的呈现层（SwiftUI 内容 + UIKit 承载）。
+/// 审批 / ask_user / 通用选择器三个 sheet 的呈现层（SwiftUI 内容 + UIKit 承载）。
 ///
-/// 这两件事在 RN 侧本来是 presented 页（`ui/ApprovalPage.tsx` / `ui/UserInputPage.tsx`），
-/// 现在改成模块级函数调起的原生 sheet。RN 保留全部状态与判据（什么时候该出现、点了之后
-/// 发什么帧、答案长什么样），原生只画 + 把交互回成事件。
+/// 这三件事在 RN 侧本来是 presented 页（`ui/ApprovalPage.tsx` / `ui/UserInputPage.tsx` /
+/// 7 个选择器页），现在改成模块级函数调起的原生 sheet。RN 保留全部状态与判据（什么时候
+/// 该出现、点了之后发什么帧、答案长什么样），原生只画 + 把交互回成事件。
 ///
-/// **不可滑掉**（`isModalInPresentation`）：run 停在 `waiting_decision` 上，侧滑关掉它等于
-/// 让 run 静默挂死，而用户以为自己回应过了——原 RN 文件头第 2 条硬要求。
+/// **审批与提问不可滑掉**（`isModalInPresentation`）：run 停在 `waiting_decision` 上，侧滑
+/// 关掉它等于让 run 静默挂死，而用户以为自己回应过了——原 RN 文件头第 2 条硬要求。
+/// **选择器可滑掉**（`presentPicker`）：它是"挑一个"的瞬时流程，用户想走就走；代价是下滑
+/// 关闭必须回一个 `dismissed`（见 `PickerDismissDelegate`）。
 ///
 /// 这里**不 import ExpoModulesCore**：事件出口由模块注册处（`MemohKitModule`）注入，
 /// 这个文件只依赖 Foundation/UIKit/SwiftUI + 同模块的 Support 件，便于单独类型检查。
@@ -21,6 +23,10 @@ final class ChatSheetPresenter {
   private var approvalController: UIHostingController<ApprovalSheetView>?
   private var userInputStore: UserInputSheetStore?
   private var userInputController: UIHostingController<UserInputSheetView>?
+  private var pickerStore: PickerSheetStore?
+  private var pickerController: UIHostingController<PickerSheetView>?
+  /// `sheet.delegate` 是 weak，所以这份 delegate 得由这里强持有（下滑关闭的上报口）。
+  private var pickerDismissDelegate: PickerDismissDelegate?
 
   /**
    正在消失的 sheet。
@@ -90,6 +96,65 @@ final class ChatSheetPresenter {
     dismissSheet(controller)
   }
 
+  // MARK: - 通用选择器
+
+  /// 7 个选择器页共用的那张 sheet。**可滑掉**：与审批/提问相反，滑掉不是错误——它是"算了"。
+  ///
+  /// 事件出口与收尾动作都注入进 store：内容层不认识 presenter，只认识"回事件"与"关掉自己"。
+  func presentPicker(_ json: String, emit: @escaping ([String: Any]) -> Void) {
+    // 坏 JSON 不画界面（先例见 `presentApproval`）。但这里**必须给一个结论**：RN 那边正
+    // await 着这张 sheet，既没有 sheet 也没有事件的话，那一行调用点会永远等下去
+    // （点胶囊看起来像没反应）。回一个 `dismissed` 就是"没得选"——与 RN 侧"桥不在时按
+    // cancelled 处理"是同一条约定（见 `lib/presentation/nativePicker.ts` 文件头）。
+    guard let model = try? PickerSheetModel.decode(json) else {
+      emit(["type": "dismissed"])
+      return
+    }
+
+    if let store = pickerStore, pickerController != nil {
+      // 幂等：sheet 已经在，只换模型（RN 每次搜索/刷新都重发一份），不重复 present。
+      store.emit = emit
+      store.model = model
+      return
+    }
+
+    // 没有可挂的宿主（窗口还没就绪）：同上，给结论而不是让调用方干等。
+    guard let host = topViewController() else {
+      emit(["type": "dismissed"])
+      return
+    }
+    let store = PickerSheetStore(model: model, emit: emit) { [weak self] in
+      // 选中之后自动关：收尾与"回 dismissed"无关，所以走 dismissPicker（它会先 settle）。
+      self?.dismissPicker()
+    }
+    let controller = UIHostingController(rootView: PickerSheetView(store: store))
+    controller.view.backgroundColor = .clear
+    configurePickerSheet(controller)
+    pickerStore = store
+    pickerController = controller
+    host.present(controller, animated: true)
+  }
+
+  /// 只换模型（搜索过滤、加载完成、保存失败重画……）。sheet 不在就什么都不做——
+  /// 迟到的更新不该把一张已经关掉的 sheet 又拉起来。
+  func updatePicker(_ json: String) {
+    guard let store = pickerStore, pickerController != nil else { return }
+    guard let model = try? PickerSheetModel.decode(json) else { return }
+    store.model = model
+  }
+
+  /// 由 RN 关掉（选中之后、或调用方不再需要这张 sheet）。
+  ///
+  /// 先 `settle()` 再关：这不是"用户滑掉了"，不该再回一个 `dismissed`——RN 那边这个
+  /// promise 已经（或即将）由 `select` / 调用方自己了结。
+  func dismissPicker() {
+    guard let controller = pickerController else { return }
+    pickerStore?.settle()
+    pickerController = nil
+    pickerStore = nil
+    dismissSheet(controller)
+  }
+
   // MARK: - 承载
 
   /// detent + 抓手 + 不可滑掉：内容高度不固定（工具入参可能很长），半屏够看清工具名与
@@ -99,6 +164,30 @@ final class ChatSheetPresenter {
     sheet.detents = [.medium(), .large()]
     sheet.prefersGrabberVisible = true
     controller.isModalInPresentation = true
+  }
+
+  /// 选择器的承载：与审批同一套 detent 与抓手，两处不同——
+  ///
+  /// 1. **可滑掉**（`isModalInPresentation = false`）：它是"挑一个"的瞬时流程。
+  /// 2. 挂一个 delegate：用户下滑关掉时拿 `presentationControllerDidDismiss` 回一个
+  ///    `dismissed`（见 `PickerDismissDelegate`）。
+  private func configurePickerSheet(_ controller: UIViewController) {
+    guard let sheet = controller.sheetPresentationController else { return }
+    sheet.detents = [.medium(), .large()]
+    sheet.prefersGrabberVisible = true
+    let delegate = PickerDismissDelegate { [weak self] in self?.pickerDidDismiss() }
+    sheet.delegate = delegate
+    pickerDismissDelegate = delegate
+    controller.isModalInPresentation = false
+  }
+
+  /// 用户下滑关掉：上报一次（由 store 防重复），然后把这一份收干净。
+  private func pickerDidDismiss() {
+    guard pickerController != nil else { return }
+    pickerStore?.reportDismissOnce()
+    pickerController = nil
+    pickerStore = nil
+    pickerDismissDelegate = nil
   }
 
   private func dismissSheet(_ controller: UIViewController) {
@@ -124,6 +213,32 @@ final class ChatSheetPresenter {
       controller = presented
     }
     return controller
+  }
+}
+
+/**
+ 用户下滑关掉选择器：这是"取消"，必须回一个 `dismissed`。
+
+ 不回的话 RN 那边这次 `presentNativePicker` 的 promise 永远不解决，调用方一直等在那儿
+ ——界面看起来像点了没反应。审批/提问不可滑掉，所以它们不需要这一段。
+
+ 与 `onDisappear` 是**两条路**（交互关闭时两条都会到）：重复上报由 store 的 `settled`
+ 挡掉，谁先到谁算。
+
+ 单独一个 NSObject 子类，而不是让 `ChatSheetPresenter` 自己实现协议：那个类是审批/提问
+ 共用的承载，不值得为了这一件事把 NSObject 继承搅进它（`sheet.delegate` 是 weak，所以
+ 这里必须有人强持有）。
+ */
+@MainActor
+final class PickerDismissDelegate: NSObject, UISheetPresentationControllerDelegate {
+  private let onDismiss: () -> Void
+
+  init(onDismiss: @escaping () -> Void) {
+    self.onDismiss = onDismiss
+  }
+
+  func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+    onDismiss()
   }
 }
 
@@ -155,7 +270,10 @@ private final class UserInputSheetStore: ObservableObject {
 ///
 /// sheet 没有主题模式下发（呈现层不认识 RN 的 `mode`，模块注册的函数只带 JSON），所以取色
 /// 跟随系统外观：动态 `UIColor` 会跟着 sheet 自己的 appearance 走。
-private enum SheetColor {
+///
+/// 内部可见：选择器那张 sheet（`NativePickerSheet.swift`）与审批/提问是同一个家族的
+/// 承载，取色必须同一份——各抄一份色表迟早会漂成两种灰。
+enum SheetColor {
   static var label: Color { Color(uiColor: UIColor { MemohPalette.label($0) }) }
   static var secondary: Color { Color(uiColor: UIColor { MemohPalette.secondaryLabel($0) }) }
   static var separator: Color { Color(uiColor: UIColor { MemohPalette.separator($0) }) }
@@ -163,6 +281,9 @@ private enum SheetColor {
   static var accent: Color { Color(uiColor: UIColor { MemohPalette.accent($0) }) }
   static var onAccent: Color { Color(uiColor: UIColor { MemohPalette.onAccent($0) }) }
   static var card: Color { Color(uiColor: UIColor { MemohPalette.card($0) }) }
+
+  /// 品牌淡底：选择器的网格格子用它（RN `accentSoft`，同 `BotAvatar` 的方块底）。
+  static var accentSoft: Color { Color(uiColor: UIColor { MemohPalette.accentSoft($0) }) }
 
   /// RN `field`：与 `MemohPalette.inset` 同值（浅色 `#F4F4F4` / 深色 `#242424`）。
   static var field: Color { Color(uiColor: UIColor { MemohPalette.inset($0) }) }

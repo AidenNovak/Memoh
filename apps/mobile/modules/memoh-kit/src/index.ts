@@ -102,3 +102,10 @@ export type {
   NativeBotFormSection,
   NativeBotFormViewProps,
 } from './bots/NativeBotFormView';
+
+export { NativeOnboardingView } from './onboarding/NativeOnboardingView';
+export type {
+  NativeOnboardingModel,
+  NativeOnboardingPage,
+  NativeOnboardingViewProps,
+} from './onboarding/NativeOnboardingView';

@@ -317,5 +317,17 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         ChatSheetPresenter.shared.dismissUserInput()
       }
     }.runOnQueue(.main)
+
+    // MARK: - 首启引导
+
+    View(NativeOnboardingView.self) {
+      Events("onDone")
+      Prop("mode") { (view: NativeOnboardingView, value: String) in
+        view.setMode(value)
+      }
+      Prop("modelJson") { (view: NativeOnboardingView, value: String) in
+        view.setModelJSON(value)
+      }
+    }
   }
 }

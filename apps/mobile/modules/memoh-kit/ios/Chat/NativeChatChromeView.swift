@@ -9,6 +9,11 @@ import UIKit
 private final class ChatChromeStore: ObservableObject {
   @Published var model: ChatChromeModel?
   @Published var mode = "system"
+  /// 顶部安全区（由宿主从 `safeAreaInsets.top` 传进来）。
+  ///
+  /// 这一块嵌在 RN 的 flex 布局里、位于屏幕最上方，而 RN 那版 `ChatHeader` 也是自己
+  /// `paddingTop: insets.top`——外层没替它让出状态栏，所以原生这一版同样自己让。
+  @Published var topInset: CGFloat = 0
 
   var onBack: () -> Void = {}
   var onOpenInfo: () -> Void = {}
@@ -91,24 +96,51 @@ private struct NoticeRow: View {
 
 /// 顶栏本体。
 ///
-/// 用 `NavigationStack` + `.toolbar` 而不是自绘一行：安全区、命中区、Dynamic Type 下的
-/// 标题收缩、读屏顺序都归系统管——自绘一遍只会把这些重新做错一次。
+/// **自绘一行，不用 `NavigationStack` + `.toolbar`**：这一块是嵌在 RN flex 布局里的
+/// **条带**，高度要回授给 RN（见文件尾 `reportHeight`）。而 `NavigationStack` 是"填满"型
+/// 容器——`sizeThatFits` 在无限高提议下会把提议值当理想高，量出来是个巨大的数，RN 拿到
+/// 就把条带撑满整屏（消息区与输入区被挤掉，导航栏里的图标也被裁没）。
+/// 2026-09-21 真机验收就是这么发现的（TestFlight build 8）。
 ///
-/// 内容体就是 notices：没有横条时它是空的，此时这一块只剩导航栏（高度由回授给 RN）。
+/// 自绘之后高度是确定的：顶栏一行（≥44pt）+ notices + 顶部安全区。安全区由宿主
+/// 从 `safeAreaInsets.top` 传进来（RN 那版 `ChatHeader` 也是自己 `paddingTop: insets.top`，
+/// 外层没替它让）。
+///
+/// 标题仍然可点（点它看会话信息），且**不跟着 `showInfo` 走**——与 RN 版一致，
+/// 那一项只管右上角那颗可见入口。
 private struct ChatChromePage: View {
   @ObservedObject var store: ChatChromeStore
 
   var body: some View {
-    NavigationStack {
+    VStack(alignment: .leading, spacing: 0) {
+      headerRow
       notices
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          ToolbarItem(placement: .topBarLeading) { backItem }
-          ToolbarItem(placement: .principal) { titleItem }
-          ToolbarItemGroup(placement: .topBarTrailing) { trailingItems }
-        }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color(uiColor: UIColor { MemohPalette.card($0) }))
+    .overlay(alignment: .bottom) {
+      // 与内容区的分界：RN 版是一条 hairline（`ChatHeader` 的 borderBottom）。
+      Rectangle()
+        .fill(Color(uiColor: UIColor { MemohPalette.separator($0) }))
+        .frame(height: 1 / UIScreen.main.scale)
     }
     .preferredColorScheme(store.colorScheme)
+  }
+
+  /// 顶栏一行：返回 / 标题（可点）/ 断档提示 / 机器 / 信息。
+  ///
+  /// 标题那一格 `maxWidth: .infinity` + 截断：RN 版标题是 `flex: 1`，长标题截断而不是
+  /// 把右边的图标挤出去——两颗图标必须始终在屏幕上（它们在这一屏没有别的入口）。
+  private var headerRow: some View {
+    HStack(spacing: 8) {
+      backItem
+      titleItem
+      Spacer(minLength: 8)
+      trailingItems
+    }
+    .padding(.top, store.topInset)
+    .padding(.horizontal, 16)
+    .frame(minHeight: 44 + store.topInset)
   }
 
   @ViewBuilder
@@ -139,12 +171,15 @@ private struct ChatChromePage: View {
   }
 
   /// 标题即入口：点它看会话信息（设计基线里"标题可点 = 会话信息"）。
-  /// 这与 RN 版一致——它不跟着 `showInfo` 走，那一项只管右下角那颗可见入口。
+  /// 这与 RN 版一致——它不跟着 `showInfo` 走，那一项只管右上角那颗可见入口。
+  ///
+  /// 占满剩余宽度并截断（`lineLimit(1)` + `maxWidth: .infinity`）：长标题截断而不是把
+  /// 右边的图标挤出屏幕。
   @ViewBuilder
   private var titleItem: some View {
     if let model = store.model {
       Button(action: store.onOpenInfo) {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
           Text(model.title)
             .font(.headline)
             .lineLimit(1)
@@ -155,7 +190,7 @@ private struct ChatChromePage: View {
               .lineLimit(1)
           }
         }
-        .frame(minWidth: 44, minHeight: 44)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -236,7 +271,16 @@ final class NativeChatChromeView: ExpoView {
   override func layoutSubviews() {
     super.layoutSubviews()
     host.view.frame = bounds
+    syncTopInset()
     reportHeight()
+  }
+
+  /// 把 UIKit 的安全区交给 SwiftUI 那一层（顶栏自己让出状态栏，见 store 的注释）。
+  private func syncTopInset() {
+    let inset = safeAreaInsets.top
+    if abs(store.topInset - inset) >= 0.5 {
+      store.topInset = inset
+    }
   }
 
   override func didMoveToWindow() {
@@ -273,12 +317,19 @@ final class NativeChatChromeView: ExpoView {
   ///
   /// 差不到 0.5pt 就不报：RN 那边收到事件会 setState，来回抖动会把整屏重排。
   /// 宽度还没出来（≤ 0）时跳过——量不出正确的多行高度。
+  ///
+  /// ⚠️ **量出 0 是"测量失败"，不是"没有内容"**：2026-09-21 真机验收踩过——当时这一块
+  /// 的根视图是 `NavigationStack`，`sizeThatFits` 对它返回 0（不是整屏高），RN 拿到就把
+  /// 条带高度设成 0，整个顶栏（返回键、标题、两颗图标）被压没。自绘之后高度是确定的
+  /// （实测 103pt @ inset 59），这里再兜一道下限：顶栏永远至少有"安全区 + 一行"。
   private func reportHeight() {
     guard bounds.width > 0 else { return }
     let size = host.sizeThatFits(in: CGSize(width: bounds.width, height: .greatestFiniteMagnitude))
-    guard size.height.isFinite, abs(size.height - lastHeight) >= 0.5 else { return }
-    lastHeight = size.height
-    onHeight(["height": Double(size.height)])
+    guard size.height.isFinite else { return }
+    let height = max(size.height, safeAreaInsets.top + 44)
+    guard abs(height - lastHeight) >= 0.5 else { return }
+    lastHeight = height
+    onHeight(["height": Double(height)])
   }
 
   private func detachHost() {

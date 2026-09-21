@@ -490,12 +490,18 @@ final class NativeChatBarView: ExpoView {
   ///
   /// 差不到 0.5pt 就不报：RN 那边收到事件会 setState，来回抖动会把整屏重排。
   /// 宽度还没出来（≤ 0）时跳过——量不出正确的多行高度。
+  ///
+  /// 量出 0 是"测量失败"而不是"没有内容"：这一族（顶栏/底栏）都靠回授定高，压成 0 的
+  /// 后果是整块控件消失（顶栏 2026-09-21 真机踩过）。这里兜一道下限——输入行本身就有
+  /// 34pt 加内边距。
   private func reportHeight() {
     guard bounds.width > 0 else { return }
     let size = host.sizeThatFits(in: CGSize(width: bounds.width, height: .greatestFiniteMagnitude))
-    guard size.height.isFinite, abs(size.height - lastHeight) >= 0.5 else { return }
-    lastHeight = size.height
-    onHeight(["height": Double(size.height)])
+    guard size.height.isFinite else { return }
+    let height = max(size.height, 50)
+    guard abs(height - lastHeight) >= 0.5 else { return }
+    lastHeight = height
+    onHeight(["height": Double(height)])
   }
 
   private func detachHost() {

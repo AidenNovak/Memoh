@@ -27,6 +27,12 @@ struct NativeScheduleListModel: Decodable, Equatable {
   let timezone: String
   let rows: [Row]
   let toggleEnabled: Bool
+  /// Hub 顶层件（大标题 / 视图切换 / agent 菜单 / 连接行 / 新建会话）。
+  ///
+  /// 可选：独立使用这一页时不下发，此时就是一张纯列表。可选字段在合成的 `init(from:)`
+  /// 里就是 `decodeIfPresent`，不带 `hub` 的下发解码照旧成功。
+  /// **编辑页不画**这些件——它没有这份模型，也不该有：编辑是"离开列表去做一件事"。
+  let hub: HubChromeModel?
 
   static func decode(_ json: String) throws -> NativeScheduleListModel {
     try JSONDecoder().decode(Self.self, from: Data(json.utf8))
@@ -95,6 +101,12 @@ private final class NativeScheduleStore: ObservableObject {
   var onRunTarget: () -> Void = {}
   var onSave: () -> Void = {}
   var onDelete: () -> Void = {}
+  /// Hub 顶层件的四个动作。原生只转发：切视图/切 agent 要不要跳路由、连接怎么重试，
+  /// 都是 RN 的判断。
+  var onSelectView: (String) -> Void = { _ in }
+  var onSelectBot: (String) -> Void = { _ in }
+  var onNewSession: () -> Void = {}
+  var onRetryConnection: () -> Void = {}
 
   var colorScheme: ColorScheme? { MemohAppearanceMode.colorScheme(mode) }
   var background: Color { MemohAppearanceMode.formBackground(mode) }
@@ -119,6 +131,12 @@ private struct NativeSchedulePage: View {
     NavigationStack {
       List {
         if let model = store.listModel {
+          // 视图切换与连接行排在内容之前，且**不跟内容状态走**：列表在加载 / 报错 /
+          // 无权限时，视图切换器仍是离开这一屏的唯一入口，藏起来等于把人关在里面。
+          if let hub = model.hub {
+            HubChromePicker(model: hub) { store.onSelectView($0) }
+            HubChromeConnectionRow(model: hub, onRetry: store.onRetryConnection)
+          }
           listContent(model)
         } else {
           ProgressView().frame(maxWidth: .infinity, minHeight: 140)
@@ -128,19 +146,40 @@ private struct NativeSchedulePage: View {
       .listStyle(.insetGrouped)
       .scrollContentBackground(.hidden)
       .background(store.background)
-      .navigationTitle(store.listModel?.title ?? "")
+      .navigationTitle(pageTitle)
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
+        if let hub = store.listModel?.hub {
+          ToolbarItem(placement: .topBarLeading) {
+            HubChromeBotMenu(model: hub) { store.onSelectBot($0) }
+          }
+        }
+        // 同一根 toolbar 上两颗 `＋`：左起是这一页自己的"新建定时任务"（`schedule-new`，
+        // 原样保留），右边是 Hub 的"新建会话"（`hub-new-session`）。
+        //
+        // 用 ToolbarItemGroup 而不是两个独立的 ToolbarItem：组内按**声明顺序**从左到右排
+        //（与 `NativeChatChromeView` 的 trailingItems 同一条约定），分开声明时两者的先后
+        // 由系统决定，而"Hub 的 ＋ 在定时任务的 ＋ 右边"是这一屏的硬要求。
+        ToolbarItemGroup(placement: .topBarTrailing) {
           Button(action: store.onNew) {
             Image(systemName: "plus")
           }
           .accessibilityLabel(Text(store.listModel?.newLabel ?? "New"))
           .accessibilityIdentifier("schedule-new")
+          if let hub = store.listModel?.hub {
+            HubChromeNewSessionButton(model: hub, onNewSession: store.onNewSession)
+          }
         }
       }
       .refreshable { store.onRefresh() }
     }
     .preferredColorScheme(store.colorScheme)
+  }
+
+  /// 大标题：Hub 壳里就是**当前视图名**（RN 下发的 `hub.title`，与 Files / Sessions 同源），
+  /// 独立使用时退回这一页自己的标题。
+  private var pageTitle: String {
+    guard let model = store.listModel else { return "" }
+    return model.hub?.title ?? model.title
   }
 
   @ViewBuilder
@@ -352,6 +391,11 @@ final class NativeScheduleView: ExpoView {
   let onRunTarget = EventDispatcher()
   let onSave = EventDispatcher()
   let onDelete = EventDispatcher()
+  // Hub 顶层件的四个事件。载荷键名是桥契约：`view` / `botId`，空载荷的两个不带字段。
+  let onViewChange = EventDispatcher()
+  let onSelectBot = EventDispatcher()
+  let onNewSession = EventDispatcher()
+  let onRetryConnection = EventDispatcher()
 
   private let store: NativeScheduleStore
   private let host: UIHostingController<NativeSchedulePage>
@@ -377,6 +421,10 @@ final class NativeScheduleView: ExpoView {
     store.onRunTarget = { [weak self] in self?.onRunTarget([:]) }
     store.onSave = { [weak self] in self?.onSave([:]) }
     store.onDelete = { [weak self] in self?.onDelete([:]) }
+    store.onSelectView = { [weak self] id in self?.onViewChange(["view": id]) }
+    store.onSelectBot = { [weak self] id in self?.onSelectBot(["botId": id]) }
+    store.onNewSession = { [weak self] in self?.onNewSession([:]) }
+    store.onRetryConnection = { [weak self] in self?.onRetryConnection([:]) }
   }
 
   override func layoutSubviews() {

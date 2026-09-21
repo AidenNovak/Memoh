@@ -2,6 +2,7 @@ import React, { useState, type ComponentType } from 'react';
 import { Text, View, type ViewProps } from 'react-native';
 
 import { resolveMemohNativeView } from '../nativeView';
+import type { NativeHubChromeModel } from '../hub/NativeHubChrome';
 
 export interface NativeScheduleListViewModel {
   status: 'idle' | 'loading' | 'ready' | 'empty' | 'permission' | 'error';
@@ -19,6 +20,8 @@ export interface NativeScheduleListViewModel {
   footer: string;
   timezone: string;
   toggleEnabled: boolean;
+  /** Hub 顶层件（大标题 / 视图切换 / agent 菜单 / 连接行 / 新建会话）；缺省 = 不画。 */
+  hub?: NativeHubChromeModel | null;
   rows: {
     id: string;
     name: string;
@@ -83,6 +86,14 @@ export interface NativeScheduleViewProps extends ViewProps {
   onRunTarget?: (event: { nativeEvent: Record<string, never> }) => void;
   onSave?: (event: { nativeEvent: Record<string, never> }) => void;
   onDelete?: (event: { nativeEvent: Record<string, never> }) => void;
+  /** Hub：切视图（`sessions` | `files` | `schedule`）。只在列表页出现。 */
+  onViewChange?: (event: { nativeEvent: { view?: string } }) => void;
+  /** Hub：切 agent / 新建 agent（`botId === '__new__'`）。只在列表页出现。 */
+  onSelectBot?: (event: { nativeEvent: { botId?: string } }) => void;
+  /** Hub：新建会话。只在列表页出现。 */
+  onNewSession?: (event: { nativeEvent: Record<string, never> }) => void;
+  /** Hub：点连接行重试。只在列表页出现。 */
+  onRetryConnection?: (event: { nativeEvent: Record<string, never> }) => void;
   unavailableLabel?: string;
 }
 

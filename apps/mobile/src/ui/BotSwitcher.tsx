@@ -2,19 +2,19 @@
  * Bot（agent）切换器。
  *
  * Memoh 是"多 bot"的：一个用户可以有好几个 agent，各自有自己的云电脑和记忆。
- * 所以在列表页顶部需要一个轻量的切换入口。用原生 ActionSheet 语义（底部弹出），
+ * 所以在列表页顶部需要一个轻量的切换入口。用原生 sheet（底部弹出），
  * 而不是自己画一个下拉菜单。
  */
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { present } from '../lib/presentation/present.ts';
+import { presentBotSwitchPicker } from '../features/bots/botSwitchPicker.ts';
 import { useT } from '../lib/i18n/useT.ts';
-import { BotSwitchSheet } from './BotSwitchPage.tsx';
 import { PRESS_OPACITY } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
+import { canManageBot } from '../features/bots/permissions.ts';
 import { useSession } from '../features/session/store.tsx';
 
 /**
@@ -22,35 +22,59 @@ import { useSession } from '../features/session/store.tsx';
  *
  * 抽成 hook 是因为**两个地方都要它**：会话页的 agent 行、设置 tab 的 agent 卡片。
  *
- * 形态从系统 ActionSheet 换成了 `present()` 出来的原生 sheet（`BotSwitchSheet`）——
- * 原因见那个文件：桌面端每一项是"头像 + 名字 + 当前项打勾"，底下还有「新建 Bot」，
+ * 形态是原生 sheet（`features/bots/botSwitchPicker.ts` 组装模型，原生画）——不是系统
+ * ActionSheet：桌面端每一项是"头像 + 名字 + 当前项打勾"，底下还有「新建 Bot」，
  * 这两样 ActionSheet 都画不出来。
  *
  * 结论分支：选了某个 bot → `selectBot`；选了「新建 Bot」→ push 建 bot 表单；
- * 侧滑关掉 → 什么都不做（`present` 永远不会 reject）。
+ * 选了「Agent settings」→ push 当前 bot 的设置页；侧滑关掉 → 什么都不做
+ * （`presentNativePicker` 永远不会 reject）。
+ *
+ * 跳转留在这一层（选择器不认识路由）：原生只把"他点了哪一行"报回来。
  */
 export function useAgentSwitcher(): () => void {
   const router = useRouter();
-  const { currentBot, selectBot } = useSession();
+  const { state, currentBot, selectBot } = useSession();
   const [busy, setBusy] = useState(false);
+  const currentBotId = currentBot?.id ?? null;
+  const canManageCurrent = canManageBot(currentBot);
 
   const open = useCallback(() => {
     if (busy) return;
     setBusy(true);
     void (async () => {
       try {
-        const outcome = await present(BotSwitchSheet);
+        const outcome = await presentBotSwitchPicker({
+          bots: state.bots,
+          botsLoading: state.botsLoading,
+          botsError: state.botsError,
+          currentBotId,
+          canManageCurrent,
+        });
         if (outcome.status !== 'completed') return;
         if (outcome.value.kind === 'new') {
           router.push('/bots/new');
           return;
         }
-        if (outcome.value.botId !== (currentBot?.id ?? null)) selectBot(outcome.value.botId);
+        if (outcome.value.kind === 'settings') {
+          router.push(`/bots/edit?botId=${encodeURIComponent(outcome.value.botId)}`);
+          return;
+        }
+        if (outcome.value.botId !== currentBotId) selectBot(outcome.value.botId);
       } finally {
         setBusy(false);
       }
     })();
-  }, [busy, currentBot?.id, router, selectBot]);
+  }, [
+    busy,
+    canManageCurrent,
+    currentBotId,
+    router,
+    selectBot,
+    state.bots,
+    state.botsError,
+    state.botsLoading,
+  ]);
 
   return open;
 }

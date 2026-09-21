@@ -29,6 +29,15 @@ export type {
   NativeChatUserInputPayload,
 } from './chat/NativeChatSheets';
 
+export { nativePicker } from './picker/NativePicker';
+export type {
+  NativePicker,
+  NativePickerEvent,
+  NativePickerEventMap,
+  NativePickerEventPayload,
+  NativePickerSubscription,
+} from './picker/NativePicker';
+
 export { NativeAppearanceView } from './appearance/NativeAppearanceView';
 export type { NativeAppearanceViewProps } from './appearance/NativeAppearanceView';
 

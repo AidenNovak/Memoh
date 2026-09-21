@@ -228,7 +228,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
 | 8 | Chat | 完成；原生顶栏/横条/队列/斜杠/composer/审批/ask_user；RN 暂持 store、WS、判据与路由 |
-| 9 | App 壳收口 | 进行中；拆为 9A（剩余可见 UI 原生化）与 9B（运行时核心换 Swift）。9A1（Hub 顶层件）、9A2（Onboarding）已完成 |
+| 9 | App 壳收口 | 进行中；拆为 9A（剩余可见 UI 原生化）与 9B（运行时核心换 Swift）。9A1（Hub 顶层件）、9A2（Onboarding）、9A3a（通用选择器 sheet）已完成 |
 
 每个 PR 必须写清：本模块范围、原生与 RN 各自仍持有什么、行为兼容性、自动化与模拟器证据、
 Human QA 状态，以及下一模块；合并前不得把后续模块顺手带入。
@@ -396,6 +396,29 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
 - **孤儿**：`features/onboarding/motion.ts` 与 `lib/accessibility.ts` 的
   `useReducedMotionPreference` 已无调用方（保留，交给 9A 收尾统一清）。
 - **下一模块**：9A3a（通用原生选择器 sheet 覆盖 7 个选择器）。
+
+#### 模块 9A3a 验收记录（`feat/ios-native-pickers`）
+
+- **原生 ownership**：`Chat/PickerSheetContract.swift` + `Chat/NativePickerSheet.swift`——
+  一个**通用选择器 sheet**（可滑掉、detents、抓手、受控搜索框、insetGrouped 分组、
+  list/grid 两种布局、底部单字段输入区、加载/失败/空态），覆盖 7 个选择器：
+  模型（provider 分组 + 厂商标 + 强度段）、头像（网格 + 自定义网址）、语言、时区、
+  运行位置（分组 + 分页动作行）、切 agent、重命名（单字段表单）。
+- **行值是不透明字符串**（`valueJson`）：原生不解析业务语义；两个例外字段由 RN 判——
+  `disabled`（有问题的 agent 行置灰）与 `staysOpen`（"显示更多"/切换运行目标这类
+  "点了还要继续选"的行：原生只上报不结算，关不关由 RN 说了算）。
+- **RN ownership**：`lib/presentation/nativePicker.ts` 把结果翻译回既有
+  `{status:'completed'|'cancelled', value}` 形状，6 处调用点的判据一行未动；
+  7 个页面的业务判据（拉目录、分组、搜索过滤、强度档位、runTarget 校验、分页游标、
+  renamePatch 差分与 PATCH、agent 权限与 issue 计数）逐行搬进 `features/**/*Picker.ts`。
+- **删除**：`ui/{ModelPickerPage,AvatarPickerPage,LanguagePickerPage,TimezonePickerPage,RunTargetPickerPage,BotSwitchPage,RenameSessionPage}.tsx`。
+- **自动化证据**：mobile typecheck、lint（0 errors，12 warnings）、三元/按压态/i18n/格式、
+  `git diff --check`、Xcode Debug Simulator 构建（arm64/x86_64）通过；
+  模拟器安装启动无崩溃。
+- **已知取舍**：同层只允许一张选择器（已在台上时新的回 cancelled，避免两次出席串台）；
+  桥不在（旧 dev client）时按 cancelled 静默返回；provider 图标是裸 slug，
+  `MemohKitAssets` 只有 3 张 PNG，取不到退回 `cube`（不留白）。
+- **下一模块**：9A3b（cron 表单 + 会话信息/机器面板信息 sheet）。
 
 ---
 

@@ -2,9 +2,9 @@
  * 新建 bot 的 RN 薄桥（模块 7）。
  *
  * 原生持有分组表单（基本信息 / 访问档位 / 提交）；RN 保留表单状态、名字可用性
- * （本地判形状与保留字 → 400ms 防抖问服务端）、头像选择器（RN `present()` 的页）、
- * 提交与路由（先创建、再 push 进度页轮询）。判据全部留在 `features/bots/create.ts`，
- * 与桌面端 `new.vue` 的对齐关系见原文件头，未改。
+ * （本地判形状与保留字 → 400ms 防抖问服务端）、头像选择器（原生 sheet：RN 只组装请求，
+ * 见 `features/bots/avatarPicker.ts`）、提交与路由（先创建、再 push 进度页轮询）。
+ * 判据全部留在 `features/bots/create.ts`，与桌面端 `new.vue` 的对齐关系见原文件头，未改。
  */
 import { NativeBotFormView, type NativeBotFormModel } from '@memoh-ios/kit';
 import { useRouter } from 'expo-router';
@@ -25,8 +25,7 @@ import { avatarFor, avatarValueKey } from '../features/bots/avatar.ts';
 import { useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
-import { present } from '../lib/presentation/index.ts';
-import { AvatarPickerSheet } from '../ui/AvatarPickerPage.tsx';
+import { presentAvatarPicker } from '../features/bots/avatarPicker.ts';
 
 /** 防抖时长与桌面端一致（`new.vue` 的 400ms）。 */
 const NAME_DEBOUNCE_MS = 400;
@@ -111,7 +110,7 @@ export function NativeBotCreateScreen() {
 
   const pickAvatar = useCallback(() => {
     void (async () => {
-      const outcome = await present(AvatarPickerSheet, { avatarUrl: form.avatarUrl });
+      const outcome = await presentAvatarPicker({ avatarUrl: form.avatarUrl });
       if (outcome.status !== 'completed') return;
       patch({ avatarUrl: outcome.value.avatarUrl });
     })();

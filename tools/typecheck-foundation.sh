@@ -37,6 +37,9 @@ sources=(
   # bot 表单契约：Codable 模型，只用 Foundation。
   "$KIT/Support/MemohAvatarPlan.swift"
   "$KIT/Bots/BotFormContract.swift"
+  # Chat 条带与 sheet 契约：同上，只用 Foundation。
+  "$KIT/Chat/ChatChromeContract.swift"
+  "$KIT/Chat/ChatSheetsContract.swift"
 )
 
 echo "对 ${#sources[@]} 个 Foundation-only 文件做类型检查（macOS SDK，不需要 Xcode）…"

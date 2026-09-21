@@ -1,6 +1,34 @@
 export { NativeMessageList } from './chat/NativeMessageList';
 export type { NativeMessageListProps } from './chat/NativeMessageList';
 
+export { NativeChatChromeView } from './chat/NativeChatChromeView';
+export type {
+  NativeChatChromeModel,
+  NativeChatChromeNotice,
+  NativeChatChromeViewProps,
+} from './chat/NativeChatChromeView';
+
+export { NativeChatBarView } from './chat/NativeChatBarView';
+export type {
+  NativeChatBarModel,
+  NativeChatBarPending,
+  NativeChatBarQueue,
+  NativeChatBarQueueItem,
+  NativeChatBarSlash,
+  NativeChatBarSlashItem,
+  NativeChatBarViewProps,
+} from './chat/NativeChatBarView';
+
+export { nativeChatSheets } from './chat/NativeChatSheets';
+export type {
+  NativeChatApprovalChoosePayload,
+  NativeChatSheetEvent,
+  NativeChatSheetEventMap,
+  NativeChatSheets,
+  NativeChatSheetSubscription,
+  NativeChatUserInputPayload,
+} from './chat/NativeChatSheets';
+
 export { NativeAppearanceView } from './appearance/NativeAppearanceView';
 export type { NativeAppearanceViewProps } from './appearance/NativeAppearanceView';
 

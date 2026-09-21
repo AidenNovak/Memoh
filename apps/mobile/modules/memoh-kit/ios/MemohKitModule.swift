@@ -10,7 +10,10 @@ public final class MemohKitModule: Module, @unchecked Sendable {
       "onNotificationPresented",
       "onNotificationOpened",
       "onRemoteToken",
-      "onRemoteRegistrationFailed"
+      "onRemoteRegistrationFailed",
+      // Chat 的两个原生 sheet（审批 / ask_user）的回答出口。
+      "onChatApprovalChoose",
+      "onChatUserInputEvent"
     )
 
     OnCreate {
@@ -235,5 +238,70 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setModelJSON(value)
       }
     }
+
+    // MARK: - Chat 条带（顶栏 / 底栏）与 sheet（审批 / ask_user）
+
+    View(NativeChatChromeView.self) {
+      Events("onBack", "onOpenInfo", "onOpenMachine", "onNoticeAction", "onHeight")
+      Prop("mode") { (view: NativeChatChromeView, value: String) in
+        view.setMode(value)
+      }
+      Prop("modelJson") { (view: NativeChatChromeView, value: String) in
+        view.setModelJSON(value)
+      }
+    }
+
+    View(NativeChatBarView.self) {
+      Events(
+        "onField",
+        "onSend",
+        "onStop",
+        "onPill",
+        "onQueueRemove",
+        "onQueueSteer",
+        "onPendingAction",
+        "onSlashPick",
+        "onSlashRetry",
+        "onHeight"
+      )
+      Prop("mode") { (view: NativeChatBarView, value: String) in
+        view.setMode(value)
+      }
+      Prop("modelJson") { (view: NativeChatBarView, value: String) in
+        view.setModelJSON(value)
+      }
+    }
+
+    // 两个 sheet 都由 ChatSheetPresenter 呈现；必须在主线程（UIKit 呈现是 UI 侧调用）。
+    // `.runOnQueue(.main)` 保证跑在主队列，但 Swift 6 静态分析认不出这层，
+    // 所以用 `assumeIsolated` 把"已在主队列"这个事实告诉编译器。
+    // present 幂等：sheet 已在就只换模型，不重复 present。
+    AsyncFunction("chatPresentApproval") { (json: String) in
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.presentApproval(json) { [weak self] payload in
+          self?.sendEvent("onChatApprovalChoose", payload)
+        }
+      }
+    }.runOnQueue(.main)
+
+    AsyncFunction("chatDismissApproval") {
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.dismissApproval()
+      }
+    }.runOnQueue(.main)
+
+    AsyncFunction("chatPresentUserInput") { (json: String) in
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.presentUserInput(json) { [weak self] payload in
+          self?.sendEvent("onChatUserInputEvent", payload)
+        }
+      }
+    }.runOnQueue(.main)
+
+    AsyncFunction("chatDismissUserInput") {
+      MainActor.assumeIsolated {
+        ChatSheetPresenter.shared.dismissUserInput()
+      }
+    }.runOnQueue(.main)
   }
 }

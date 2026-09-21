@@ -227,7 +227,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 5 | 文件 | 完成；原生目录列表、面包屑、预览、权限/错误/空态、刷新与操作菜单；RN 暂持取数、路径安全、i18n 与路由，diff 等待服务端模型 |
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
-| 8 | Chat | 原生消息、composer、审批与 `ask_user` |
+| 8 | Chat | 完成；原生顶栏/横条/队列/斜杠/composer/审批/ask_user；RN 暂持 store、WS、判据与路由 |
 | 9 | App 壳收口 | 移除剩余 Expo Router/RN UI、桥接状态与不再需要的 RN 依赖 |
 
 每个 PR 必须写清：本模块范围、原生与 RN 各自仍持有什么、行为兼容性、自动化与模拟器证据、
@@ -321,6 +321,32 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   仍需 Human QA：设置页各字段编辑与保存、检查展开/复制、删除确认、新建全流程、
   最大字号、VoiceOver、深色/OLED；`Human QA passed` 保持未勾选，待人工验收。
 - **下一模块**：Chat 原生消息列表、composer、审批与 `ask_user`（模块 8）。
+
+#### 模块 8 验收记录（`feat/ios-native-chat`）
+
+- **原生 ownership**：`NativeChatChromeView`（顶栏 + 连接/只读/run 失败/历史失败/复制提示
+  横条）、`NativeChatBarView`（待发队列、待发状态条、斜杠菜单、模型胶囊、受控输入行与
+  发送/停止键）、审批与 `ask_user` 两个 UIKit detents sheet（`ChatSheetPresenter`，
+  不可滑掉、拒绝先问理由的两步流在原生本地态）。消息列表本已是原生（`NativeMessageList`）。
+  嵌入条带的高度用 `sizeThatFits` 回授 RN（`onHeight` 事件）——这是本模块新立的桥接形态。
+- **RN ownership**：会话 store、WebSocket、节流投影、队列/待发/斜杠/按钮语义的全部判据
+  （`features/chat/*`）、模型目录与技能清单、审批选项的三层文案兜底、ask_user 草稿与
+  `buildAnswers`、读屏播报、路由。`usePresentedPage` 的两个 chat sheet 换成模块级
+  present/dismiss + 事件订阅，出席/关闭判据（`waiting_decision` 为权威）原样保留。
+- **删除**：`ui/ChatHeader.tsx`、`ChatNotices`、`QueueStrip`、`PendingSendStrip`、
+  `SlashMenu`、`ChatComposer`、`ApprovalPage`、`UserInputPage`（逐一验证无第二处引用）。
+- **自动化证据**：mobile typecheck、lint（0 errors，13 个既有 warning）、三元、按压态、
+  i18n（588×2）、Prettier、`git diff --check`；两个 Swift typecheck 脚本（显式清单加入
+  `ChatChromeContract` / `ChatSheetsContract`）；Xcode Debug Simulator 构建（arm64/x86_64）
+  通过；iOS 26.5 模拟器安装启动 `ai.memoh.ios` 无崩溃。
+- **真实联调证据**：`vultr-sg` `memoh-dev`（凭据只在服务器进程内）：会话创建 → 详情 →
+  历史消息 → `/status` → 重命名均 200，删除后复查 404；`/queue` 按部署实测 404，
+  与 `queue.ts` 的能力探测判据一致（该部署不支持队列，非回归）。
+- **已知取舍**：待发条失败态的红字（`tone` 字段）是在审查时补回契约的；只读账号下
+  模型胶囊仍可见（原 RN 同样位置）；sheet 之上的 sheet 未特判（协议上不会同时出现）。
+  仍需 Human QA：发消息/停止/队列/斜杠/审批两种决定/ask_user 单题与多题、键盘遮挡、
+  最大字号、VoiceOver、深色/OLED；`Human QA passed` 保持未勾选。
+- **下一模块**：App 壳收口（模块 9）：移除剩余 Expo Router/RN UI、桥接状态与依赖。
 
 ---
 

@@ -49,6 +49,10 @@ sources=(
   "$KIT/Authentication/AuthContract.swift"
   "$KIT/Authentication/AuthKeychain.swift"
   "$KIT/Authentication/MemohAuthService.swift"
+  # 头像（设置卡片与 bot 设置页头共用）：SwiftUI + UIKit，不 import ExpoModulesCore。
+  "$KIT/Support/MemohAssets.swift"
+  "$KIT/Support/MemohAvatarPlan.swift"
+  "$KIT/Support/MemohAvatarView.swift"
 )
 
 echo "对 ${#sources[@]} 个 MemohKit 文件做类型检查（iphonesimulator SDK，DEBUG）…"

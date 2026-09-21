@@ -226,7 +226,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 4 | 会话壳与列表 | 完成；SwiftUI 导航、会话列表、搜索、Bot/视图切换、刷新、游标分页、错误/空态和会话操作；RN 暂持 API、分页状态、i18n、路由与事件处理 |
 | 5 | 文件 | 完成；原生目录列表、面包屑、预览、权限/错误/空态、刷新与操作菜单；RN 暂持取数、路径安全、i18n 与路由，diff 等待服务端模型 |
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
-| 7 | Bot 设置与表单 | 原生 schema 表单覆盖配置模块 |
+| 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
 | 8 | Chat | 原生消息、composer、审批与 `ask_user` |
 | 9 | App 壳收口 | 移除剩余 Expo Router/RN UI、桥接状态与不再需要的 RN 依赖 |
 
@@ -293,6 +293,34 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
 - **Kimi K3**：按约定优先派发，因账号 403 `access_terminated_error` 未产出代码，
   证据留在批次记录；实现由主会话完成。
 - **下一模块**：Bot 设置与 schema 表单（模块 7）；不得把 Bot 配置 UI 顺手并入本 PR。
+
+#### 模块 7 验收记录（`feat/ios-native-bots`）
+
+- **原生 ownership**：新增通用表单 `NativeBotFormView`（SwiftUI inset-grouped `Form`），
+  以一份 JSON 视图模型覆盖三屏：bot 设置（基本信息/对话/桌面/运行检查/危险操作分组、
+  页头头像、底部吸附保存条、删除确认框、"未保存改动"返回拦截）、新建 bot（显示名/URL 名
+  与可用性提示、头像入口、ACL 单选、提交）、新建进度（三行阶段态、重试/完成）。
+  头像计划/画法提成共享件 `MemohAvatarPlan` / `MemohAvatarView`（模块 2 设置卡片同步复用，
+  语义不变）；`MemohPalette` 补 `onAccent`（值同 RN token）。
+- **RN ownership**：`NativeBotSettingsScreen` / `NativeBotCreateScreen` /
+  `NativeBotCreateProgressScreen` 继续持有全部判据——取数（bot/settings/checks/模型目录）、
+  `patchFrom` 差分保存、删除、名称本地校验与 400ms 防抖查重、模型/头像/语言/时区选择器
+  （仍是 RN `present()` 的页）、检查面板展开态、复制技术细节、侧滑手势开关与路由。
+  原生只把点击回成 `onField` / `onAction` / `onBack` / `onRetry`。
+- **兼容性**：`tools/typecheck-foundation.sh` 与 `tools/typecheck-kit.sh` 的显式文件清单
+  加入新契约与共享头像件（契约 2 个、UIKit 3 个）；无服务端协议变化，无新增 i18n key。
+- **自动化证据**：mobile typecheck、i18n check（588×2）、三元/按压态、lint
+  （0 errors；13 个既有 warning，其中 2 个随被替换屏幕原样搬入新桥）、Prettier、
+  `git diff --check`、两个 Swift typecheck 脚本、Xcode Debug Simulator 构建
+  （arm64/x86_64）全部通过。
+- **真实联调证据**：`vultr-sg` `memoh-dev` 实例，管理员凭据只在服务器进程内读取：
+  `GET /bots/{id}`、`GET /settings`、`GET /checks`（5 项）均 200；`PUT /bots/{id}`
+  （display_name）与 `POST /settings`（language）写往返成功并已还原原值。
+  未测试 `POST /bots` 真实创建——那会拉起一个真实工作区容器，超出本模块的只读+往返范围。
+- **模拟器证据**：iOS 26.5 模拟器安装并启动 `ai.memoh.ios` 成功，进程存活无崩溃。
+  仍需 Human QA：设置页各字段编辑与保存、检查展开/复制、删除确认、新建全流程、
+  最大字号、VoiceOver、深色/OLED；`Human QA passed` 保持未勾选，待人工验收。
+- **下一模块**：Chat 原生消息列表、composer、审批与 `ask_user`（模块 8）。
 
 ---
 

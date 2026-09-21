@@ -8,18 +8,8 @@ import Foundation
 ///
 /// 复杂的部分（语言选项、头像计划）以 JSON 字符串过桥（`AGENTS.md`：复杂数组走 JSON）。
 struct SettingsViewModel: Decodable, Equatable {
-  struct Avatar: Decodable, Equatable {
-    enum Kind: String, Decodable { case mark, builtin, remote }
-
-    let kind: Kind
-    /// `builtin` 时的 SF Symbol 名。由 RN 的内置头像表给出，原生**不复制**那张表。
-    let symbol: String?
-    /// `remote` 时的图片地址。**不会**是 `memoh:` 这类内部标识——RN 已经归一化过，
-    /// 原生不会为一个假地址发请求。
-    let uri: String?
-    /// RN 实时连接恢复时变为 true；远程头像失败后据此最多重试一次。
-    let connectionOpen: Bool
-  }
+  /// 头像计划与画法抽到 `Support/MemohAvatarView.swift`，bot 设置页头共用同一份。
+  typealias Avatar = MemohAvatarPlan
 
   struct Agent: Decodable, Equatable {
     let header: String

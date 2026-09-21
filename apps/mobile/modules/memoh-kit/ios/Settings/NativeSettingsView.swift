@@ -158,86 +158,6 @@ private struct StatusPill: View {
   }
 }
 
-/// agent 卡片上的头像。
-///
-/// 画法与 RN `ui/BotAvatar.tsx` 三种情况一一对应，取值来自 RN 归一化后的计划：
-/// 远程图 / 内置头像（SF Symbol + 品牌淡底）/ 吉祥物。**不会**为一个 `memoh:` 标识去发请求
-/// （RN 已经把它翻成内置头像或吉祥物）。
-private struct AgentAvatarView: View {
-  let avatar: SettingsViewModel.Avatar
-
-  @State private var remoteFailed = false
-  @State private var retriedOnOpen = false
-  @State private var attempt = 0
-
-  private static let size: CGFloat = 38
-
-  var body: some View {
-    Group {
-      switch avatar.kind {
-      case .remote: remote
-      case .builtin: builtin
-      case .mark: mark
-      }
-    }
-    .frame(width: Self.size, height: Self.size)
-    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-    .accessibilityHidden(true)
-    .onChange(of: avatar.uri) {
-      remoteFailed = false
-      retriedOnOpen = false
-      attempt = 0
-    }
-    .onChange(of: avatar.connectionOpen) { _, isOpen in
-      guard isOpen, remoteFailed, !retriedOnOpen else { return }
-      remoteFailed = false
-      retriedOnOpen = true
-      attempt += 1
-    }
-  }
-
-  @ViewBuilder private var remote: some View {
-    if let raw = avatar.uri, let url = URL(string: raw), !remoteFailed {
-      AsyncImage(url: url) { phase in
-        if let image = phase.image {
-          image.resizable().scaledToFill()
-        } else if phase.error != nil {
-          Color.clear.onAppear { remoteFailed = true }
-        } else {
-          // 还在加载：中性底。先亮出吉祥物再换成真头像会看起来像“头像变来变去”。
-          Color(uiColor: UIColor { MemohPalette.inset($0) })
-        }
-      }
-      .id(attempt)
-    } else {
-      mark
-    }
-  }
-
-  private var builtin: some View {
-    ZStack {
-      Color(uiColor: UIColor { MemohPalette.accentSoft($0) })
-      Image(systemName: avatar.symbol ?? "sparkles")
-        .font(.system(size: 21))
-        .foregroundStyle(Color(uiColor: UIColor { MemohPalette.accent($0) }))
-    }
-  }
-
-  @ViewBuilder private var mark: some View {
-    if let image = MemohAssets.image(named: "brand-mark") {
-      Image(uiImage: image).resizable().scaledToFill()
-    } else {
-      // 图片资源缺失时也不画空方块：退回一枚系统图形，至少它是个明确的东西。
-      ZStack {
-        Color(uiColor: UIColor { MemohPalette.inset($0) })
-        Image(systemName: "sparkles")
-          .font(.system(size: 21))
-          .foregroundStyle(.secondary)
-      }
-    }
-  }
-}
-
 /// 卡片内容：头像 + 名字 + 状态 + 副标题 + chevron。整张卡片是一个按钮（"换一个"）。
 private struct AgentCardLabel: View {
   let agent: SettingsViewModel.Agent
@@ -246,7 +166,7 @@ private struct AgentCardLabel: View {
 
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
-      AgentAvatarView(avatar: agent.avatar)
+      MemohAvatarView(avatar: agent.avatar)
       VStack(alignment: .leading, spacing: 2) {
         if dynamicTypeSize.isAccessibilitySize {
           Text(agent.name).font(.headline)

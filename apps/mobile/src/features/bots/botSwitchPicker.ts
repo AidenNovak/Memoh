@@ -34,6 +34,7 @@ import {
 import type { PresentationResult } from '../../lib/presentation/sessions.ts';
 import type { ErrorPresentation } from '../errors/present.ts';
 import { agentPlaceholderKey } from './label.ts';
+import { nativeAvatarPlan } from './nativeAvatar.ts';
 
 /** 结论：选了某个 bot、要新建一个、或要进当前 bot 的设置。取消就是 `cancelled`。 */
 export type BotSwitchResult =
@@ -47,12 +48,19 @@ export interface BotSwitchPickerParams {
   currentBotId: string | null;
   /** 能不能管理**当前**这个 bot（`features/bots/permissions.ts` 的判据，调用方已经判好）。 */
   canManageCurrent: boolean;
+  /**
+   * 实时连接是不是已恢复（`useConnectionState() === 'open'`）。
+   *
+   * 只喂给每行那颗头像：远程头像加载失败后原生据此最多重试一次（`features/bots/avatar.ts`
+   * 的 `avatarRetryOnConnection`）。这一层不碰 React，所以由调用方把结论传进来。
+   */
+  connectionOpen: boolean;
 }
 
 export function presentBotSwitchPicker(
   params: BotSwitchPickerParams,
 ): Promise<PresentationResult<BotSwitchResult>> {
-  const { bots, botsError, botsLoading, canManageCurrent, currentBotId } = params;
+  const { bots, botsError, botsLoading, canManageCurrent, currentBotId, connectionOpen } = params;
 
   const actions: NativePickerSection['rows'] = [
     {
@@ -98,6 +106,9 @@ export function presentBotSwitchPicker(
                   id: bot.id,
                   label: bot.display_name !== '' ? bot.display_name : bot.name,
                   detail: blocked ? t('bots.issue', { count: bot.check_issue_count }) : '',
+                  // 每一行都带头像（远程图 / 内置图形 / 吉祥物），判据全在
+                  // `features/bots/nativeAvatar.ts`——原页那一列画的就是 `BotAvatar`。
+                  avatar: nativeAvatarPlan(bot.avatar_url ?? '', connectionOpen),
                   selected: bot.id === currentBotId,
                   // 有毛病的行**灰掉且不响应**（原生照 `disabled` 画）：判据是 `check_state`，
                   // 不是 `bot.status === 'error'`——那个值服务端永远不会给（见文件头表格）。

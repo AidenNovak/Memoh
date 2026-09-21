@@ -73,6 +73,8 @@ export function NativeScheduleScreen({
         pendingSends: state.pendingSends,
         realtimeEnabled,
         currentBot,
+        // agent 菜单的头像计划要这一条（`connection` 是给连接行文案用的同一份状态）。
+        connectionOpen: connection === 'open',
       },
       t,
     );

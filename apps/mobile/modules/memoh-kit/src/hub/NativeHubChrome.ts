@@ -19,6 +19,8 @@
  * 缺省（`hub` 为 `undefined` / `null`）＝ 这一屏不画顶层件：老 dev client 与还没接上的
  * 调用方都走这条路，不是错误。
  */
+import type { NativeSettingsAvatar } from '../settings/NativeSettingsView';
+
 export interface NativeHubChromeModel {
   /** 当前视图名（大标题）。 */
   title: string;
@@ -56,6 +58,13 @@ export interface NativeHubChromeBotOption {
   /** 状态文案；空串 = 不显示。 */
   statusLabel: string;
   selected: boolean;
+  /**
+   * 这一项要画的头像（远程图 / 内置图形 / 吉祥物）。
+   *
+   * 与选择器行上的 `avatar` 是**同一份计划**（`features/bots/nativeAvatar.ts`）：原生只按它
+   * 画，不判"这个 bot 有没有头像"。缺省 = 旧原生按老画法画一颗系统图标。
+   */
+  avatar?: NativeSettingsAvatar;
 }
 
 /** 连接行：主行 + 可选次级行（"还有几条没发出去"）+ 整行的无障碍提示。 */

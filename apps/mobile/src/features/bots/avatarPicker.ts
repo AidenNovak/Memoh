@@ -17,18 +17,19 @@
  * 三种值都走同一条差分保存（`features/bots/settings.ts` 的 `patchFrom`），服务端形状照旧
  * ——没有新端点、没有新字段。为什么这么存、代价是什么，见 `avatarPresets.ts` 的文件头。
  *
- * ## 网格里画的是什么（与原页的差别，明说）
+ * ## 网格里画的是什么
  *
  * 原页每一格画的是**真组件**（`BotAvatar`：远程图 / 吉祥物 / 内置图形），因为"选择器里
- * 看到的必须就是列表里将要画出来的样子"。原生网格只能画 SF Symbol 符号块
- * （契约里行只有 `symbol` 一个图形字段），所以：
+ * 看到的必须就是列表里将要画出来的样子"。契约里现在有 `avatar` 这一栏（`MemohAvatarPlan`），
+ * 所以格子回到原页那样：RN 把归一化好的头像计划下发（`features/bots/nativeAvatar.ts`），
+ * 原生按它画——「默认」格是 Memoh 吉祥物，内置那 10 枚是各自的图形。
  *
- * - 内置那 10 枚：同一个符号名，图形一模一样（`BUILTIN_AVATARS.symbol`）。
- * - 「默认」那一格：原页画的是 Memoh 吉祥物（`brand-mark.png`），这里退成系统人物剪影
- *   `person.crop.circle`——与 `HubChrome.swift` / `NativeSessionsView.swift` 里
- *   "这个 bot 没有头像"用的是同一颗 glyph，不是新发明一个形状。
- * - **当前值是远程图片时不画缩略图**（原页会画）：`symbol` 是 SF Symbol 名，塞不进一张
- *   网络图。判据没丢——自定义那一栏仍然填着它。
+ * 仍然**没有**的一格是"当前值本身"：原页给远程图也画一张缩略图，这里没有那样一格（格子
+ * 只有「默认」与内置那 10 枚，与改动前一致）。判据没丢——自定义那一栏仍然填着那个网址。
+ *
+ * `symbol` 仍然一起给（内置那 10 枚给同一个 SF Symbol 名，「默认」格给系统人物剪影
+ * `person.crop.circle`）：它是**兜底**——旧 dev client 的原生还不认识 `avatar`，
+ * 那时按老画法画一颗符号，不会变成空格子。
  *
  * 自定义那一栏也变了一处：原页只在"输入框里有字"时才画「用这个图片」那一行（空的时候
  * 没有东西可提交），原生那颗按钮**常显**。空着按它 = 提交空串 = 回到「默认」，
@@ -45,23 +46,34 @@ import {
 import type { PresentationResult } from '../../lib/presentation/sessions.ts';
 import { avatarFor } from './avatar.ts';
 import { BUILTIN_AVATARS, builtinAvatarToken, isBuiltinAvatar } from './avatarPresets.ts';
+import { nativeAvatarPlan } from './nativeAvatar.ts';
 
 export interface AvatarPickerParams {
   /** 当前草稿值（空串 = 默认吉祥物；`memoh:avatar/<slug>` = 内置；其余 = 自定义网址）。 */
   avatarUrl: string;
+  /**
+   * 实时连接是不是已恢复（`useConnectionState() === 'open'`）。
+   *
+   * 只喂给每一格的头像计划：远程头像失败后原生据此最多重试一次。这一层不碰 React，
+   * 所以由调用方把结论传进来（新建 bot 页与 bot 设置页各传一次）。
+   */
+  connectionOpen: boolean;
 }
 
 export interface AvatarPickerResult {
   avatarUrl: string;
 }
 
-/** 「默认」那一格的图形。见文件头：吉祥物是图片资源，原生网格只认 SF Symbol 名。 */
+/**
+ * 「默认」那一格的兜底图形。见文件头：吉祥物是图片资源，`symbol` 塞不进它，只有
+ * 旧原生（还不认识 `avatar`）才会用到这一颗系统人物剪影。
+ */
 const DEFAULT_SYMBOL = 'person.crop.circle';
 
 export function presentAvatarPicker(
   params: AvatarPickerParams,
 ): Promise<PresentationResult<AvatarPickerResult>> {
-  const current = params.avatarUrl;
+  const { avatarUrl: current, connectionOpen } = params;
 
   // 自定义网址那一栏的初值：**当前值就是网址**时才填进去（见文件头第 1 条）。
   let custom = current !== '' && !isBuiltinAvatar(current) ? current : '';
@@ -80,20 +92,28 @@ export function presentAvatarPicker(
         layout: 'grid',
         rows: [
           // 「默认」排第一个：它是"我什么都不挑"的那个选项，也是现在不加任何东西时的样子。
+          // 头像计划给空串 = `mark`（吉祥物），与原页那一格画的是同一枚图。
           {
             id: 'default',
             label: t('avatar.default'),
             symbol: DEFAULT_SYMBOL,
+            avatar: nativeAvatarPlan('', connectionOpen),
             selected: defaultSelected,
             valueJson: JSON.stringify({ avatarUrl: '' }),
           },
-          ...BUILTIN_AVATARS.map((preset) => ({
-            id: preset.slug,
-            label: t(preset.nameKey),
-            symbol: symbolName(preset.symbol),
-            selected: selectedSlug === preset.slug,
-            valueJson: JSON.stringify({ avatarUrl: builtinAvatarToken(preset) }),
-          })),
+          ...BUILTIN_AVATARS.map((preset) => {
+            const token = builtinAvatarToken(preset);
+            return {
+              id: preset.slug,
+              label: t(preset.nameKey),
+              symbol: symbolName(preset.symbol),
+              // 走**同一处**归一化（存进库里的是 `memoh:avatar/<slug>`，这里把它翻回来）：
+              // 选择器里的图形与列表里将要画出来的那张图必然一致。
+              avatar: nativeAvatarPlan(token, connectionOpen),
+              selected: selectedSlug === preset.slug,
+              valueJson: JSON.stringify({ avatarUrl: token }),
+            };
+          }),
         ],
       },
     ],

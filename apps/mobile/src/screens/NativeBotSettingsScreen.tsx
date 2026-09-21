@@ -14,8 +14,6 @@
  */
 import {
   NativeBotFormView,
-  symbolName,
-  type NativeBotAvatar,
   type NativeBotFormModel,
   type NativeBotFormRow,
   type NativeBotFormSection,
@@ -38,7 +36,7 @@ import { copyText } from '../features/files/clipboard.ts';
 import { announceForAccessibility } from '../lib/accessibility.ts';
 import { effortLabelKey, loadCatalog, type ModelSection } from '../features/chat/models.ts';
 import { avatarFor, avatarValueKey } from '../features/bots/avatar.ts';
-import { builtinAvatarBySlug } from '../features/bots/avatarPresets.ts';
+import { nativeAvatarPlan } from '../features/bots/nativeAvatar.ts';
 import { AUTO_LANGUAGE, languageLabel } from '../features/bots/languages.ts';
 import { timezoneValue } from '../features/bots/timezones.ts';
 import { useConnectionState, useSession } from '../features/session/store.tsx';
@@ -65,19 +63,6 @@ const FAILURE_TITLE_KEY: Record<'load' | 'save' | 'delete', string> = {
 /** 检查语气 → 表单行语气（同一套字面量，直接透传）。 */
 function toneOf(tone: CheckTone): string {
   return tone;
-}
-
-/** 头像计划 → 原生要画的东西（与设置页同一个 helper 形状）。 */
-function nativeAvatar(avatarUrl: string, connectionOpen: boolean): NativeBotAvatar {
-  const plan = avatarFor({ avatar_url: avatarUrl });
-  if (plan.kind === 'remote') return { kind: 'remote', uri: plan.uri, connectionOpen };
-  if (plan.kind === 'builtin') {
-    const preset = builtinAvatarBySlug(plan.slug);
-    if (preset !== undefined) {
-      return { kind: 'builtin', symbol: symbolName(preset.symbol), connectionOpen };
-    }
-  }
-  return { kind: 'mark', connectionOpen };
 }
 
 function titleOf(bot: Bot): string {
@@ -218,11 +203,11 @@ export function NativeBotSettingsScreen({ botId }: { botId: string }) {
   const pickAvatar = useCallback(() => {
     if (draft === null) return;
     void (async () => {
-      const outcome = await presentAvatarPicker({ avatarUrl: draft.avatarUrl });
+      const outcome = await presentAvatarPicker({ avatarUrl: draft.avatarUrl, connectionOpen });
       if (outcome.status !== 'completed') return;
       update({ avatarUrl: outcome.value.avatarUrl });
     })();
-  }, [draft, update]);
+  }, [connectionOpen, draft, update]);
 
   const pickLanguage = useCallback(() => {
     if (draft === null) return;
@@ -510,7 +495,8 @@ export function NativeBotSettingsScreen({ botId }: { botId: string }) {
       status: 'ready',
       title: titleOf(bot),
       subtitle: bot.name,
-      avatar: nativeAvatar(draft.avatarUrl, connectionOpen),
+      // 头像计划与设置页、会话页、两个选择器**同一处组装**（`features/bots/nativeAvatar.ts`）。
+      avatar: nativeAvatarPlan(draft.avatarUrl, connectionOpen),
       sections,
       saveBarVisible: dirty || savedAt !== null,
       saveBarLabel: dirty ? t('botSettings.unsaved') : t('botSettings.saved'),

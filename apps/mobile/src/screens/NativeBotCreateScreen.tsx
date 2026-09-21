@@ -22,7 +22,7 @@ import {
   type NameStatus,
 } from '../features/bots/create.ts';
 import { avatarFor, avatarValueKey } from '../features/bots/avatar.ts';
-import { useSession } from '../features/session/store.tsx';
+import { useConnectionState, useSession } from '../features/session/store.tsx';
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
 import { presentAvatarPicker } from '../features/bots/avatarPicker.ts';
@@ -44,6 +44,8 @@ export function NativeBotCreateScreen() {
   const router = useRouter();
   const { mode } = useTheme();
   const { state } = useSession();
+  // 头像选择器每一格的头像计划要知道"连接恢复了没有"（远程头像失败后原生最多重试一次）。
+  const connectionOpen = useConnectionState() === 'open';
 
   const [form, setForm] = useState<BotFormState>(emptyBotForm);
   const [error, setError] = useState<string | null>(null);
@@ -110,11 +112,11 @@ export function NativeBotCreateScreen() {
 
   const pickAvatar = useCallback(() => {
     void (async () => {
-      const outcome = await presentAvatarPicker({ avatarUrl: form.avatarUrl });
+      const outcome = await presentAvatarPicker({ avatarUrl: form.avatarUrl, connectionOpen });
       if (outcome.status !== 'completed') return;
       patch({ avatarUrl: outcome.value.avatarUrl });
     })();
-  }, [form.avatarUrl, patch]);
+  }, [connectionOpen, form.avatarUrl, patch]);
 
   const submit = useCallback(() => {
     if (!canSubmit(form) || state.client === null) return;

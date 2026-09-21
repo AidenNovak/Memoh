@@ -54,8 +54,16 @@ struct PickerSheetModel: Decodable, Equatable {
     let label: String
     /// 副文案（次级灰）；空串不画。
     let detail: String
-    /// SF Symbol 名。list 布局里画在行首，grid 布局里是格子里的那颗符号；空串 = 不画。
+    /// SF Symbol 名。**兜底用**：`avatar` 为 nil 时，list 布局画在行首、grid 布局画在格子里；
+    /// `avatar` 非 nil 时它是死字段（真头像已经说了这件事）；空串 = 连兜底都没有，不画。
     let symbol: String
+    /**
+     行首 / 格子里的头像计划（RN 归一化后下发，画法见 `Support/MemohAvatarView.swift`）。
+
+     `nil` = 这一行没有头像（老模型没这个字段、或 RN 判它不该有）——**按 `symbol` 画**，
+     也就是改动前的样子，不会变成空白方块。
+     */
+    let avatar: MemohAvatarPlan?
     let selected: Bool
     /// **不透明字符串**：RN 自己序列化的结果（例如 `{"modelId":"k3","reasoningEffort":null}`），
     /// 选中时原样回给 RN。原生不 parse 它，也不拿它比较。
@@ -107,6 +115,9 @@ struct PickerSheetModel: Decodable, Equatable {
       label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
       detail = try c.decodeIfPresent(String.self, forKey: .detail) ?? ""
       symbol = try c.decodeIfPresent(String.self, forKey: .symbol) ?? ""
+      // `try?` 而不是直接 `try`：头像是一行上的**附加件**，它自己的载荷坏了（缺 `kind` 之类）
+      // 只该让这一行退回 `symbol`，不该让整张 sheet 解不出来（文件头那条"缺字段 = 那一块不画"）。
+      avatar = try? c.decodeIfPresent(MemohAvatarPlan.self, forKey: .avatar)
       selected = try c.decodeIfPresent(Bool.self, forKey: .selected) ?? false
       valueJson = try c.decodeIfPresent(String.self, forKey: .valueJson) ?? ""
       disabled = try c.decodeIfPresent(Bool.self, forKey: .disabled) ?? false
@@ -121,7 +132,7 @@ struct PickerSheetModel: Decodable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-      case id, label, detail, symbol, selected, valueJson, disabled, staysOpen
+      case id, label, detail, symbol, avatar, selected, valueJson, disabled, staysOpen
       case kind, value, mono, tone, downValueJson, upValueJson, chips
     }
   }

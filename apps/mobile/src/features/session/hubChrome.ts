@@ -13,11 +13,12 @@
  * 这里只算**数据**，不碰 React、不碰路由、不碰任何组件：原生侧只画，它不认识 bot、
  * i18n 和权限（判据全在 RN）。
  */
-import type { NativeHubChromeModel } from '@memoh-ios/kit';
+import type { NativeHubChromeModel, NativeSettingsAvatar } from '@memoh-ios/kit';
 
 import type { ConnectionState } from '../../api/realtime.ts';
 import type { Bot } from '../../api/types.ts';
 import { agentStatus } from '../bots/label.ts';
+import { nativeAvatarPlan } from '../bots/nativeAvatar.ts';
 import type { HubView } from '../bots/surfaces.ts';
 
 /**
@@ -63,6 +64,12 @@ export interface HubBotOption {
   name: string;
   statusLabel: string;
   selected: boolean;
+  /**
+   * 这一项要画的头像（远程图 / 内置图形 / 吉祥物）。**必填**：菜单每一项都有头像，
+   * 缺一个就是"某个 agent 那一行空着"——组装处一律填满，判据全在
+   * `features/bots/nativeAvatar.ts`（原生不复制那张表）。
+   */
+  avatar: NativeSettingsAvatar;
 }
 
 /** 视图切换器的一段。 */
@@ -109,11 +116,16 @@ export function hubConnectionModel(
  * 名字优先用 `display_name`（那是用户给这个 agent 起的名字），没设过才退回 `name`
  * （URL 名）；状态走 `agentStatus`——**同一处判据**，与设置页的 agent 卡片、会话页顶部的
  * 切换器是同一个函数（`features/bots/label.ts`）。
+ *
+ * `connectionOpen` 只喂给头像计划（远程头像失败后原生据此最多重试一次），由调用方把
+ * `useConnectionState() === 'open'` 传进来——连接状态是 React 上下文里的东西，这一层
+ * （纯函数、不碰 React）拿不到。
  */
 export function hubBotRows(
   bots: readonly Bot[],
   currentBotId: string | null,
   t: Translate,
+  connectionOpen: boolean,
 ): HubBotOption[] {
   return bots.map((bot) => {
     const status = agentStatus(bot, t);
@@ -122,6 +134,8 @@ export function hubBotRows(
       name: bot.display_name !== '' ? bot.display_name : bot.name,
       statusLabel: status.label ?? '',
       selected: bot.id === currentBotId,
+      // 没有 `avatar_url`（服务端 omitempty 时整个 key 都不在）时 `avatarFor` 落回吉祥物。
+      avatar: nativeAvatarPlan(bot.avatar_url ?? '', connectionOpen),
     };
   });
 }
@@ -184,6 +198,14 @@ export function hubChromeModel(
     pendingSends: number;
     realtimeEnabled: boolean;
     currentBot: Bot | null;
+    /**
+     * 实时连接是不是**已恢复**（`useConnectionState() === 'open'`）。
+     *
+     * 与 `connection` 是同一个上下文值的两种说法，仍然分开传：`connection` 是"现在画哪一行
+     * 连接文案"（`hubConnectionModel` 要分辨 `connecting` / `unauthorized` 那几档），
+     * 头像只关心"能不能重试那张远程图"这一条布尔。
+     */
+    connectionOpen: boolean;
   },
   t: Translate,
 ): NativeHubChromeModel {
@@ -191,7 +213,7 @@ export function hubChromeModel(
     title: t(hubTitleKey(input.visibleView)),
     viewPickerVisible: input.hubViews.length > 1,
     views: hubViewOptions(input.hubViews, input.visibleView, t),
-    bots: hubBotRows(input.bots, input.currentBotId, t),
+    bots: hubBotRows(input.bots, input.currentBotId, t, input.connectionOpen),
     viewMenuLabel: t('home.title'),
     botMenuLabel: t('home.bot.switch'),
     newBotLabel: t('bots.create'),

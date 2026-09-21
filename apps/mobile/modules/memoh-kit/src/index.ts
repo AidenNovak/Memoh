@@ -42,3 +42,11 @@ export type {
   NativeSessionsViewModel,
   NativeSessionsViewProps,
 } from './sessions/NativeSessionsView';
+
+export { NativeFilesView } from './files/NativeFilesView';
+export type { NativeFilesViewModel, NativeFilesViewProps } from './files/NativeFilesView';
+export { NativeFilePreviewView } from './files/NativeFilePreviewView';
+export type {
+  NativeFilePreviewViewModel,
+  NativeFilePreviewViewProps,
+} from './files/NativeFilePreviewView';

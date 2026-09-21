@@ -224,7 +224,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 2 | 通知与 App 设置 | 完成；原生权限分组与三行投递政策、原生设置列表（inset-grouped `Form`）、登出确认框与系统设置入口；RN 暂持路由、会话/bot/主题状态、i18n 文案与通知判据（`policy.ts` / `bridge.ts`），视图模型以 JSON 下发 |
 | 3 | 登录与鉴权 | 完成；SwiftUI 持有 Cloud 占位与自部署表单、地址校验/探测、登录请求、错误反馈和 Keychain 迁移；RN 暂持启动闸门、路由、刷新与后续 API client 状态 |
 | 4 | 会话壳与列表 | 完成；SwiftUI 导航、会话列表、搜索、Bot/视图切换、刷新、游标分页、错误/空态和会话操作；RN 暂持 API、分页状态、i18n、路由与事件处理 |
-| 5 | 文件 | 原生目录栈、预览与 diff |
+| 5 | 文件 | 完成；原生目录列表、面包屑、预览、权限/错误/空态、刷新与操作菜单；RN 暂持取数、路径安全、i18n 与路由，diff 等待服务端模型 |
 | 6 | 定时任务 | 原生列表、编辑表单与删除确认 |
 | 7 | Bot 设置与表单 | 原生 schema 表单覆盖配置模块 |
 | 8 | Chat | 原生消息、composer、审批与 `ask_user` |
@@ -251,6 +251,25 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   可见且无启动崩溃。仍需 Human QA：登录后会话列表的搜索、刷新、分页、Bot 切换、重命名/分叉，
   以及最大字号、VoiceOver、深色/OLED 外观；PR 保持 Draft 直到人工验收。
 - **下一模块**：文件目录栈、预览与 diff（模块 5）；不得把文件 UI 顺手并入本 PR。
+
+#### 模块 5 验收记录（`feat/ios-native-files`）
+
+- **原生 ownership**：`NativeFilesView` 与 `NativeFilePreviewView` 持有目录/预览列表、面包屑、
+  原生 context menu、文本行号与横向滚动、图片加载、加载/权限/非法路径/空目录/404/协议错误
+  状态和刷新/显示更多交互；路由 header 继续提供系统返回与 push 栈。
+- **RN ownership**：`NativeFilesScreen` 与 `NativeFilePreviewScreen` 继续调用既有
+  `useDirectory`、`useFilePreview`、API client、路径归一化、类型判定、下载能力和 i18n，
+  通过类型化 JSON/event bridge 下发模型；没有新增服务端端点。当前服务端没有文件 diff 模型，
+  因而不展示伪造的 diff 动作，待后续协议/Chat 模块提供真实来源。
+- **自动化证据**：mobile typecheck、lint（0 errors；仓库既有 warnings）、Prettier、
+  `git diff --check`、Swift 前端解析和 Xcode Debug Simulator build（arm64/x86_64）通过。
+- **真实联调证据**：`vultr-sg` `memoh-dev` tester secret 只在服务器上使用；`/container/fs/list`
+  返回 200（15 条）、`/container/fs/read` 返回 200、`/container/fs` stat 返回 200。用户名、密码
+  和 JWT 未进入输出或提交。Pi/Kimi K3 尝试因账号 403 `access_terminated_error` 未产出代码。
+- **模拟器证据**：iOS 26.5 专用模拟器安装并启动 `ai.memoh.ios` 成功，登录入口可见且无启动
+  崩溃。仍需 Human QA：登录后根目录/子目录 push、预览文本/图片/错误态、刷新、显示更多、复制
+  路径/下载提示、最大字号、VoiceOver、深色/OLED；PR 保持 Draft。
+- **下一模块**：定时任务原生列表、编辑表单与删除确认（模块 6）。
 
 ---
 

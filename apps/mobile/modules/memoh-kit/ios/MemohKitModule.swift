@@ -179,5 +179,25 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.setViewModelJSON(value)
       }
     }
+
+    View(NativeFilesView.self) {
+      Events("onOpen", "onNavigate", "onRefresh", "onLoadMore", "onAction")
+      Prop("mode") { (view: NativeFilesView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeFilesView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
+
+    View(NativeFilePreviewView.self) {
+      Events("onRetry", "onDownload", "onNavigate")
+      Prop("mode") { (view: NativeFilePreviewView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeFilePreviewView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
   }
 }

@@ -219,6 +219,7 @@
   "common.loading": "加载中…",
   "common.offline": "无网络连接",
   "common.retry": "重试",
+  "common.search": "搜索会话",
   "common.unknown": "未知",
   "cron.days.footer": "可以多选。",
   "cron.expression.footer": "五段：分 时 日 月 星期。",

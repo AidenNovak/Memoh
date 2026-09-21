@@ -161,5 +161,23 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         view.emptyBody = value
       }
     }
+
+    View(NativeSessionsView.self) {
+      Events(
+        "onOpenSession",
+        "onNewSession",
+        "onRefresh",
+        "onLoadMore",
+        "onSelectBot",
+        "onSelectView",
+        "onSessionAction"
+      )
+      Prop("mode") { (view: NativeSessionsView, value: String) in
+        view.setMode(value)
+      }
+      Prop("viewModelJson") { (view: NativeSessionsView, value: String) in
+        view.setViewModelJSON(value)
+      }
+    }
   }
 }

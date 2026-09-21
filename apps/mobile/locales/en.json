@@ -219,6 +219,7 @@
   "common.loading": "Loading…",
   "common.offline": "No connection",
   "common.retry": "Retry",
+  "common.search": "Search sessions",
   "common.unknown": "Unknown",
   "cron.days.footer": "Pick one or more days.",
   "cron.expression.footer": "Five fields: minute hour day month weekday.",

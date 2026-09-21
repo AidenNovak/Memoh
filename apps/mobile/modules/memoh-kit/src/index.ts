@@ -36,3 +36,9 @@ export type {
 } from './notifications/NativeNotifications';
 
 export { symbolName } from './symbolName';
+
+export { NativeSessionsView } from './sessions/NativeSessionsView';
+export type {
+  NativeSessionsViewModel,
+  NativeSessionsViewProps,
+} from './sessions/NativeSessionsView';

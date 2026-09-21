@@ -14,21 +14,21 @@
  * 是独立屏幕（`HomeScreen` / `FilesScreen` / `ScheduleScreen`），它们**不画大标题**——
  * 大标题就是当前视图名，写两遍必然有一天不一致。
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useT } from '../lib/i18n/useT.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
-import { ACCESSIBILITY_FONT_SCALE, PRESS_OPACITY } from '../lib/theme/tokens.ts';
+import { ACCESSIBILITY_FONT_SCALE } from '../lib/theme/tokens.ts';
 import { BotSwitcher } from '../ui/BotSwitcher.tsx';
 import { ConnectionBadge } from '../ui/ConnectionBadge.tsx';
 import { ViewSwitcher, type HubView } from '../ui/ViewSwitcher.tsx';
 import { hubViewsFor, visibleHubView } from '../features/bots/surfaces.ts';
 import { useSession } from '../features/session/store.tsx';
 import { FilesScreen } from './FilesScreen.tsx';
-import { HomeScreen } from './HomeScreen.tsx';
+import { NativeSessionsScreen } from './NativeSessionsScreen.tsx';
 import { ScheduleScreen } from './ScheduleScreen.tsx';
 
 /** 文件视图的根。**客户端钉死**：服务端只做 `path.Clean` + 拒 `..`，不校验前缀。 */
@@ -56,40 +56,6 @@ function parseView(raw: string | undefined): HubView {
  * 却不成比例（2026-09-18 实测这一档下它在屏幕上根本看不见）。入口的**可见性**比
  * "它跟着字号长大"重要，所以这里钉死尺寸，`hitSlop` 保证命中区仍有 48pt。
  */
-function NewSessionButton() {
-  const palette = usePalette();
-  const t = useT();
-  const router = useRouter();
-  const onPress = useCallback(() => {
-    router.push('/chat/new');
-  }, [router]);
-  return (
-    <Pressable
-      testID="hub-new-session"
-      accessibilityRole="button"
-      accessibilityLabel={t('home.newSession')}
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => ({
-        // `flexShrink: 0`：这一行里唯一不许被压缩的元素（见 agent 行的注释）。
-        flexShrink: 0,
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: pressed ? PRESS_OPACITY.control : 1,
-      })}
-    >
-      <Text
-        allowFontScaling={false}
-        style={{ color: palette.accent, fontSize: 24, lineHeight: 28 }}
-      >
-        ＋
-      </Text>
-    </Pressable>
-  );
-}
-
 export function SessionsHubScreen() {
   const palette = usePalette();
   const { spacing, typography } = useTheme();
@@ -99,7 +65,7 @@ export function SessionsHubScreen() {
   // 也让自动化验收能一条命令点到某一屏，不用先点两下图标。
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<HubView>(parseView(params.view));
-  const { currentBot, realtimeEnabled } = useSession();
+  const { currentBot } = useSession();
   const hubViews = useMemo(() => hubViewsFor(currentBot), [currentBot]);
   // `view` 保留深链意图；`visibleView` 才能挂载子页。权限未知或不允许时绝不先画受限页。
   const visibleView = visibleHubView(currentBot, view);
@@ -116,6 +82,14 @@ export function SessionsHubScreen() {
     // 不可用的目标立即收敛到 sessions。之后刷新同一个 bot 也不会把用户当前选择重置。
     if (currentBot !== null && !hubViews.includes(view)) setView('sessions');
   }, [currentBot, hubViews, view]);
+
+  // Sessions is now a single native surface. Files and Schedule remain behind this shell
+  // until their dedicated migration modules take ownership.
+  if (visibleView === 'sessions') {
+    return (
+      <NativeSessionsScreen visibleView={visibleView} hubViews={hubViews} onViewChange={setView} />
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.groupedBackground, paddingTop: insets.top }}>
@@ -201,11 +175,9 @@ export function SessionsHubScreen() {
         {/* 辅助档下把 `＋` 推到最右：它与徽章挤在一起时会被徽章的文字推着走，
             顶到屏幕外。默认档保持原样（紧跟徽章），那是视觉评审认可的形态。 */}
         {accessibilityText ? <View style={{ flex: 1 }} /> : null}
-        {visibleView === 'sessions' && realtimeEnabled ? <NewSessionButton /> : null}
       </View>
 
       <View style={{ flex: 1 }}>
-        {visibleView === 'sessions' ? <HomeScreen embedded /> : null}
         {visibleView === 'files' ? <FilesScreen path={FILES_ROOT} /> : null}
         {visibleView === 'schedule' ? <ScheduleScreen /> : null}
       </View>

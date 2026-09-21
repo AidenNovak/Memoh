@@ -228,7 +228,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
 | 8 | Chat | 完成；原生顶栏/横条/队列/斜杠/composer/审批/ask_user；RN 暂持 store、WS、判据与路由 |
-| 9 | App 壳收口 | 进行中；拆为 9A（剩余可见 UI 原生化）与 9B（运行时核心换 Swift）。9A1 完成：Hub 顶层件原生、hub 壳退成纯分发器 |
+| 9 | App 壳收口 | 进行中；拆为 9A（剩余可见 UI 原生化）与 9B（运行时核心换 Swift）。9A1（Hub 顶层件）、9A2（Onboarding）已完成 |
 
 每个 PR 必须写清：本模块范围、原生与 RN 各自仍持有什么、行为兼容性、自动化与模拟器证据、
 Human QA 状态，以及下一模块；合并前不得把后续模块顺手带入。
@@ -372,6 +372,30 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   Human QA，`Human QA passed` 保持未勾选。
 - **下一模块**：9A2（Onboarding 原生化）与 9A3（各选择器/信息页 sheet）继续 9A；
   9B（store/WS/API/路由换 Swift）最后做。
+
+#### 模块 9A2 验收记录（`feat/ios-native-onboarding`）
+
+- **原生 ownership**：`Onboarding/OnboardingContract.swift` + `NativeOnboardingView.swift`：
+  96pt 品牌标记（`MemohAssets.image(named: "brand-mark")`，取不到退回系统图形）与
+  入场（0.92→1 + 淡入，easeOutExpo 500ms）、待机呼吸（1↔1.03，翻页即停）、
+  连续滚动分页器（`scrollTargetBehavior(.paging)` + `onScrollGeometryChange`）驱动的
+  每页淡入上浮（14pt，400ms）与页码点插值（6→18pt、tertiary→accent）、
+  approval 页的符号弹一下、Reduce Motion 三条全退化、Dynamic Type 纵向兜底
+  （正文列宽 320pt，CTA 与"跳过"在滚动区外）。
+- **RN ownership**：`NativeOnboardingScreen` 组装契约（页面文案走 i18n、`progressFormat`
+  模板 + `pageCount` 由原生替换——页码在原生侧变，RN 无法知道当前页，这是本模块对契约的
+  唯一调整）；`OnboardingScreen.tsx` 从 532 行变成 3 行转出口。
+- **自动化证据**：mobile typecheck、lint（0 errors，12 warnings）、三元/按压态/i18n/格式、
+  `git diff --check`、两个 Swift typecheck 脚本（清单加入 `OnboardingContract.swift`）、
+  Xcode Debug Simulator 构建（arm64/x86_64）通过。
+- **模拟器证据**：iOS 26.5 模拟器安装启动 `ai.memoh.ios` 成功，进程存活无崩溃。
+  动效观感、分页吸附、VoiceOver 读序、辅助字号下 CTA 可达性仍需 Human QA。
+- **踩坑记录**：视图方法与模块注册差一个大小写（`setModelJson` vs `setModelJSON`），
+  编译器报的是 `failed to produce diagnostic for expression`（不是"找不到成员"）——
+  以后见到这句先核对注册用的方法名。
+- **孤儿**：`features/onboarding/motion.ts` 与 `lib/accessibility.ts` 的
+  `useReducedMotionPreference` 已无调用方（保留，交给 9A 收尾统一清）。
+- **下一模块**：9A3a（通用原生选择器 sheet 覆盖 7 个选择器）。
 
 ---
 

@@ -40,6 +40,8 @@ sources=(
   # Chat 条带与 sheet 契约：同上，只用 Foundation。
   "$KIT/Chat/ChatChromeContract.swift"
   "$KIT/Chat/ChatSheetsContract.swift"
+  # 首启引导契约：同上。
+  "$KIT/Onboarding/OnboardingContract.swift"
 )
 
 echo "对 ${#sources[@]} 个 Foundation-only 文件做类型检查（macOS SDK，不需要 Xcode）…"

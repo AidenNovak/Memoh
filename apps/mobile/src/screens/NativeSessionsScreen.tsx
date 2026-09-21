@@ -144,7 +144,9 @@ export function NativeSessionsScreen({
       loading: state.sessionsMoreLoading,
       error: state.sessionsMoreError,
     });
-    const botRows = hubBotRows(state.bots, state.currentBotId, t);
+    // 头像计划要的连接判据（远程头像失败后原生据此重试一次）；`connection` 同一个值，
+    // 这里只取"是不是 open"这一条布尔。
+    const botRows = hubBotRows(state.bots, state.currentBotId, t, connection === 'open');
     const views = hubViewOptions(hubViews, visibleView, t);
     const activityRow = (entry: (typeof active)[number]) => ({
       id: entry.sessionId,

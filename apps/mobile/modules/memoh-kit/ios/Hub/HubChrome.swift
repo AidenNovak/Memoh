@@ -41,6 +41,23 @@ struct HubChromeModel: Decodable, Equatable {
     /// 空串 = 不显示次级行。
     let statusLabel: String
     let selected: Bool
+    /// 头像计划（RN 归一化后下发，画法见 `Support/MemohAvatarView.swift`）。`nil` = 没有
+    /// 头像（老模型没这个字段）——按改动前的画法退回系统图标，不会变成空白方块。
+    let avatar: MemohAvatarPlan?
+
+    init(from decoder: Decoder) throws {
+      let c = try decoder.container(keyedBy: CodingKeys.self)
+      id = try c.decode(String.self, forKey: .id)
+      name = try c.decode(String.self, forKey: .name)
+      statusLabel = try c.decode(String.self, forKey: .statusLabel)
+      selected = try c.decode(Bool.self, forKey: .selected)
+      // `try?`：头像是一行上的附加件，它自己的载荷坏了只该让这一行退回系统图标，
+      // 不该让整份 chrome 模型解不出来（文件头那条"少字段 = 契约破了"说的是**必填**字段，
+      // 而头像按契约是可选的）。
+      avatar = try? c.decodeIfPresent(MemohAvatarPlan.self, forKey: .avatar)
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, name, statusLabel, selected, avatar }
   }
 
   /// 连接状态行。`nil` = 一切正常，不画这一行。
@@ -133,9 +150,10 @@ struct HubChromeConnectionRow: View {
 
 /// agent 菜单（toolbar leading 用）。
 ///
-/// 与 `NativeSessionsView` 的 `botMenu` 同一个形态，只多一处：label 印出**当前 agent 名**。
-/// 这一屏的壳原生化之后，"现在是谁"只在这一颗菜单上有；只画一个人形图标的话，用户得点开
-/// 才知道当前是哪个 agent（Sessions 那边由它自己的壳负责，本文件不回去改它）。
+/// 与 `NativeSessionsView` 的 `botMenu` **逐行同款**（改这里记得同步那一份）：label 是
+/// **当前 agent 的头像**，每一项是"头像 + 名字"，选中项名字后面跟一颗勾。
+/// 这一屏的壳原生化之后，"现在是谁"只在这一颗菜单上——所以它得把头像画出来，
+/// 只画一颗通用人形图标的话，用户得点开才知道当前是哪个 agent。
 ///
 /// 末尾固定一条"新建 agent"（`__new__`）——判据与文案都由 RN 给，原生只转发 id。
 struct HubChromeBotMenu: View {
@@ -149,17 +167,54 @@ struct HubChromeBotMenu: View {
           Button {
             onSelectBot(bot.id)
           } label: {
-            Label(bot.name, systemImage: bot.selected ? "checkmark" : "person")
+            item(bot)
           }
+          .accessibilityLabel(Text(bot.name))
           .accessibilityHint(Text(bot.statusLabel))
         }
         Button(model.newBotLabel) { onSelectBot("__new__") }
       } label: {
-        // 纯图标，与 Sessions 的 botMenu 一致（同一屏三个视图的 chrome 要长得一样）。
-        Image(systemName: "person.crop.circle")
+        label
       }
       .accessibilityLabel(Text(model.botMenuLabel))
       .accessibilityIdentifier("hub-bot-menu")
+    }
+  }
+
+  /// toolbar 上那一颗：当前选中 agent 的头像（26pt = 工具栏图标位）；没有头像计划
+  /// （或一个都没选中）时退回改动前那颗系统图标。
+  @ViewBuilder
+  private var label: some View {
+    if let selected = model.bots.first(where: \.selected), let avatar = selected.avatar {
+      MemohAvatarView(avatar: avatar, size: 26)
+    } else {
+      Image(systemName: "person.crop.circle")
+    }
+  }
+
+  /// 菜单里的一行：头像 + 名字，选中时名字后面跟一颗勾。
+  ///
+  /// 勾**没有换**（还是 `checkmark`），只是从 `Label` 的符号位挪到名字后面——那个位置现在
+  /// 归头像（原 RN `BotSwitchPage` 与桌面端 switcher 的每一行也是"头像 + 名字 + 右侧勾"）。
+  private func item(_ bot: HubChromeModel.BotOption) -> some View {
+    HStack(spacing: 8) {
+      avatarIcon(bot.avatar)
+      Text(bot.name)
+      if bot.selected {
+        Image(systemName: "checkmark")
+          .accessibilityHidden(true)
+      }
+    }
+  }
+
+  /// 菜单行首：有头像计划画真头像（24pt，菜单行的行高比工具栏矮一档），否则退回系统图标。
+  @ViewBuilder
+  private func avatarIcon(_ avatar: MemohAvatarPlan?) -> some View {
+    if let avatar {
+      MemohAvatarView(avatar: avatar, size: 24)
+    } else {
+      Image(systemName: "person")
+        .accessibilityHidden(true)
     }
   }
 }

@@ -35,7 +35,11 @@
  * `completed` / `cancelled`，两条路走同一条分支，不会把它带进一个没处理过的状态。
  * 代价说清楚：**选择器打不开**（点胶囊没反应），但 App 不会崩。
  */
-import { nativePicker, type NativePickerSubscription } from '@memoh-ios/kit';
+import {
+  nativePicker,
+  type NativePickerSubscription,
+  type NativeSettingsAvatar,
+} from '@memoh-ios/kit';
 
 import type { PresentationResult } from './sessions.ts';
 
@@ -98,6 +102,14 @@ export interface NativePickerRow {
   detail?: string;
   /** 行首的 SF Symbol 名（`grid` 时是格子里的图形）。 */
   symbol?: string;
+  /**
+   * 行首 / 格子里的**头像计划**（`list` 与 `grid` 都用得上）。
+   *
+   * 与 `symbol` 的关系：`avatar` 是"这个 bot / 这一枚头像到底长什么样"（远程图、内置图形、
+   * 吉祥物），判据全在 RN（`features/bots/nativeAvatar.ts`）；`symbol` 退成**兜底**——
+   * 只有 `avatar` 缺省时原生才按现在的画法画一颗符号。两样都给不会打架：原生优先看 `avatar`。
+   */
+  avatar?: NativeSettingsAvatar;
   selected?: boolean;
   /**
    * 选中这一行时回给 RN 的值。

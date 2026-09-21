@@ -15,7 +15,7 @@ import { PRESS_OPACITY } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
 import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
 import { canManageBot } from '../features/bots/permissions.ts';
-import { useSession } from '../features/session/store.tsx';
+import { useSession, useConnectionState } from '../features/session/store.tsx';
 
 /**
  * 弹出 agent 切换。
@@ -24,7 +24,8 @@ import { useSession } from '../features/session/store.tsx';
  *
  * 形态是原生 sheet（`features/bots/botSwitchPicker.ts` 组装模型，原生画）——不是系统
  * ActionSheet：桌面端每一项是"头像 + 名字 + 当前项打勾"，底下还有「新建 Bot」，
- * 这两样 ActionSheet 都画不出来。
+ * 这两样 ActionSheet 都画不出来。每一行的头像由 RN 归一化成"头像计划"下发
+ * （`features/bots/nativeAvatar.ts`），原生不判"这个 bot 有没有头像"。
  *
  * 结论分支：选了某个 bot → `selectBot`；选了「新建 Bot」→ push 建 bot 表单；
  * 选了「Agent settings」→ push 当前 bot 的设置页；侧滑关掉 → 什么都不做
@@ -38,6 +39,8 @@ export function useAgentSwitcher(): () => void {
   const [busy, setBusy] = useState(false);
   const currentBotId = currentBot?.id ?? null;
   const canManageCurrent = canManageBot(currentBot);
+  // 每一行那颗头像要知道"连接恢复了没有"（远程头像失败后原生最多重试一次）。
+  const connectionOpen = useConnectionState() === 'open';
 
   const open = useCallback(() => {
     if (busy) return;
@@ -50,6 +53,7 @@ export function useAgentSwitcher(): () => void {
           botsError: state.botsError,
           currentBotId,
           canManageCurrent,
+          connectionOpen,
         });
         if (outcome.status !== 'completed') return;
         if (outcome.value.kind === 'new') {
@@ -68,6 +72,7 @@ export function useAgentSwitcher(): () => void {
   }, [
     busy,
     canManageCurrent,
+    connectionOpen,
     currentBotId,
     router,
     selectBot,

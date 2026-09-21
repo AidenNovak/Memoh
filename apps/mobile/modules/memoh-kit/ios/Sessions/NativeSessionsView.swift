@@ -9,6 +9,22 @@ struct SessionsViewModel: Decodable, Equatable {
     let name: String
     let statusLabel: String
     let selected: Bool
+    /// 头像计划（RN 归一化后下发，画法见 `Support/MemohAvatarView.swift`）。`nil` = 没有
+    /// 头像（老模型没这个字段）——按改动前的画法退回系统图标，不会变成空白方块。
+    let avatar: MemohAvatarPlan?
+
+    init(from decoder: Decoder) throws {
+      let c = try decoder.container(keyedBy: CodingKeys.self)
+      id = try c.decode(String.self, forKey: .id)
+      name = try c.decode(String.self, forKey: .name)
+      statusLabel = try c.decode(String.self, forKey: .statusLabel)
+      selected = try c.decode(Bool.self, forKey: .selected)
+      // `try?`：头像是一行上的附加件，它自己的载荷坏了只该让这一行退回系统图标，
+      // 不该让**整份会话模型**解不出来（那会连列表、连接状态一起停在上一次的画面上）。
+      avatar = try? c.decodeIfPresent(MemohAvatarPlan.self, forKey: .avatar)
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, name, statusLabel, selected, avatar }
   }
 
   struct HubView: Decodable, Equatable, Identifiable {
@@ -179,16 +195,65 @@ private struct SessionsPageView: View {
           Button {
             store.onSelectBot(bot.id)
           } label: {
-            Label(bot.name, systemImage: bot.selected ? "checkmark" : "person")
+            botMenuItem(bot)
           }
+          .accessibilityLabel(Text(bot.name))
           .accessibilityHint(Text(bot.statusLabel))
         }
         Button(model.newBotLabel) { store.onSelectBot("__new__") }
       } label: {
-        Image(systemName: "person.crop.circle")
+        botMenuLabel(model)
       }
       .accessibilityLabel(Text(model.botMenuLabel))
       .accessibilityIdentifier("sessions-bot-menu")
+    }
+  }
+
+  /**
+   菜单 label（toolbar 上那一颗）：当前选中 agent 的头像。
+
+   尺寸 26 是**工具栏图标位**的尺寸（改动前那颗 `person.crop.circle` 也是这么大）；
+   `avatar` 为 nil（老模型）或一个都没选中时退回系统图标——就是改动前的画法。
+   */
+  @ViewBuilder
+  private func botMenuLabel(_ model: SessionsViewModel) -> some View {
+    if let selected = model.bots.first(where: \.selected), let avatar = selected.avatar {
+      MemohAvatarView(avatar: avatar, size: 26)
+    } else {
+      Image(systemName: "person.crop.circle")
+    }
+  }
+
+  /**
+   菜单里的一行 agent：头像 + 名字，选中时名字后面跟一颗勾。
+
+   为什么用自定义 label 而不是 `Label(_:systemImage:)`：那颗符号位现在是头像的。勾**没有换**
+   （还是 `checkmark`），只是从符号位挪到名字后面——原 RN `BotSwitchPage` 与桌面端 switcher
+   的每一行也是"头像 + 名字 + 右侧勾"。`avatar` 为 nil 时行首退回 `person`（改动前的兜底符号），
+   勾的位置不变：同一条菜单里每一行的形状因此是一致的。
+
+   与 `Hub/HubChrome.swift` 的 `HubChromeBotMenu` **逐行同款**（同一屏的三个视图 chrome 必须
+   长得一样），改这里记得同步那一份。
+   */
+  private func botMenuItem(_ bot: SessionsViewModel.Bot) -> some View {
+    HStack(spacing: 8) {
+      botMenuAvatar(bot.avatar)
+      Text(bot.name)
+      if bot.selected {
+        Image(systemName: "checkmark")
+          .accessibilityHidden(true)
+      }
+    }
+  }
+
+  /// 菜单行首：有头像计划画真头像（24pt，菜单行的行高比工具栏矮一档），否则退回系统图标。
+  @ViewBuilder
+  private func botMenuAvatar(_ avatar: MemohAvatarPlan?) -> some View {
+    if let avatar {
+      MemohAvatarView(avatar: avatar, size: 24)
+    } else {
+      Image(systemName: "person")
+        .accessibilityHidden(true)
     }
   }
 

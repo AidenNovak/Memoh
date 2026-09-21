@@ -31,6 +31,10 @@ import UIKit
 
  这里**不 import ExpoModulesCore**：事件出口由模块注册处注入，本文件只依赖
  Foundation/UIKit/SwiftUI + 同模块的 Support 件，便于单独类型检查。
+
+ 行可以带头像（`Row.avatar`，RN 归一化后的计划，画法在 `Support/MemohAvatarView.swift`）：
+ list 布局画在行首（28pt），grid 布局就是**格子本身**（48pt + 一圈选中描边）；`avatar`
+ 为 nil 时一律退回 `symbol`（改动前的画法），所以缺字段/坏载荷都不会画出空白方块。
  */
 
 /// 选择器 sheet 的桥接状态。模型整份替换（RN 每次过滤/刷新都重发一份），只有事件出口与
@@ -149,9 +153,23 @@ struct PickerSheetView: View {
 
   private var hasSearch: Bool { !model.searchPlaceholder.isEmpty }
 
-  private var gridColumns: [GridItem] {
-    let count = dynamicTypeSize.isAccessibilitySize ? 3 : 5
-    return Array(repeating: GridItem(.flexible(), spacing: 8), count: count)
+  /**
+   网格的列。
+
+   **带头像的网格要少一列**：48 的头像 + 两侧各 5 的选中环内边距 = 58 宽（原 RN
+   `AvatarTile` 的尺寸），而这张 sheet 的网格是排在 insetGrouped 卡片里的——5 列时每列只剩
+   五十几点（iPhone SE 那一档约 54），环会被挤到相邻格上、最后一列还会被切掉。4 列时每列
+   约 70 点，留得下那一圈。
+   */
+  private func gridColumns(_ section: PickerSheetModel.Section) -> [GridItem] {
+    let hasAvatars = section.rows.contains { $0.avatar != nil }
+    return Array(repeating: GridItem(.flexible(), spacing: 8), count: gridColumnCount(hasAvatars))
+  }
+
+  private func gridColumnCount(_ hasAvatars: Bool) -> Int {
+    if dynamicTypeSize.isAccessibilitySize { return 3 }
+    if hasAvatars { return 4 }
+    return 5
   }
 
   /// 日期格的列。`.adaptive` 自己决定一行排几格：星期 7 格在手机上正好一行，
@@ -159,6 +177,15 @@ struct PickerSheetView: View {
   private var chipColumns: [GridItem] {
     [GridItem(.adaptive(minimum: 44), spacing: 8)]
   }
+
+  /// 头像网格的三个尺寸，取原 RN `AvatarTile` 的值：48 的图 + 两侧各 5 的描边内边距 +
+  /// 2 宽的选中环（内边距就是描边待的那一圈）。
+  private static let gridAvatarSize: CGFloat = 48
+  private static let gridTileInset: CGFloat = 5
+  /// 图形自己的圆角（与 `MemohAvatarView` 的 `size * 0.29` 同一档）。
+  private static let gridTileRadius: CGFloat = 14
+  /// 选中环的圆角：图形圆角 + 那一圈内边距（环画在内边距的外沿）。
+  private static var gridRingRadius: CGFloat { gridTileRadius + gridTileInset }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -325,7 +352,7 @@ struct PickerSheetView: View {
   @ViewBuilder
   private func sectionRows(_ section: PickerSheetModel.Section) -> some View {
     if section.isGrid {
-      LazyVGrid(columns: gridColumns, spacing: 12) {
+      LazyVGrid(columns: gridColumns(section), spacing: 12) {
         ForEach(section.rows) { row in
           gridCell(row)
         }
@@ -389,19 +416,13 @@ struct PickerSheetView: View {
 
   // MARK: - 行
 
-  /// 列表行：可选的行首符号 + 主文案 + 副文案 + 右侧勾。
+  /// 列表行：可选的行首头像/符号 + 主文案 + 副文案 + 右侧勾。
   private func rowView(_ row: PickerSheetModel.Row) -> some View {
     Button {
       store.select(row)
     } label: {
       HStack(spacing: 12) {
-        if !row.symbol.isEmpty {
-          Image(systemName: row.symbol)
-            .font(.body)
-            .foregroundStyle(SheetColor.secondary)
-            .frame(width: 22)
-            .accessibilityHidden(true)
-        }
+        rowLeading(row)
         VStack(alignment: .leading, spacing: 1) {
           Text(row.label).font(.body).foregroundStyle(SheetColor.label).lineLimit(1)
           if !row.detail.isEmpty {
@@ -426,7 +447,26 @@ struct PickerSheetView: View {
     .accessibilityIdentifier("picker-row-\(row.id)")
   }
 
-  /// 网格格：方形符号块（品牌淡紫底 + 品牌紫符号），选中加一圈描边；下面一行名字。
+  /**
+   列表行首：有头像计划就画真头像（28pt），否则退回符号（`symbol` 空串时整块不画）。
+
+   28pt 是**行内**的尺寸：行高下限 44，头像比它矮一点才不会把两行文案挤成一行。符号那一支
+   保持原来的 22pt 宽（`symbol` 列的宽度是改动前就定下的，换头像不该带着它一起动）。
+   */
+  @ViewBuilder
+  private func rowLeading(_ row: PickerSheetModel.Row) -> some View {
+    if let avatar = row.avatar {
+      MemohAvatarView(avatar: avatar, size: 28)
+    } else if !row.symbol.isEmpty {
+      Image(systemName: row.symbol)
+        .font(.body)
+        .foregroundStyle(SheetColor.secondary)
+        .frame(width: 22)
+        .accessibilityHidden(true)
+    }
+  }
+
+  /// 网格格：格子图形 + 下面一行名字，选中加一圈描边。
   ///
   /// 选中态用**描边**而不是勾：这些格子本身是彩色图形，叠一个勾会脏（与
   /// `ui/AvatarPickerPage.tsx` 的 `AvatarTile` 同一条理由）。
@@ -435,24 +475,21 @@ struct PickerSheetView: View {
       store.select(row)
     } label: {
       VStack(spacing: 4) {
-        ZStack {
-          RoundedRectangle(cornerRadius: 14).fill(SheetColor.accentSoft)
-          // 没有符号名时给一颗中性 glyph，不留白（同分组图标的纪律）。
-          Image(systemName: row.symbol.isEmpty ? "cube" : row.symbol)
-            .font(.system(size: 20))
-            .foregroundStyle(SheetColor.accent)
-        }
-        .frame(width: 48, height: 48)
-        .overlay {
-          if row.selected {
-            RoundedRectangle(cornerRadius: 14).strokeBorder(SheetColor.accent, lineWidth: 2)
+        gridTile(row)
+          // 描边画在图形外面那一圈内边距里（原 `AvatarTile`：`padding 5` + `borderWidth 2`）：
+          // 贴着头像描边会切进图形本身，而叠勾会脏。
+          .padding(Self.gridTileInset)
+          .overlay {
+            if row.selected {
+              RoundedRectangle(cornerRadius: Self.gridRingRadius, style: .continuous)
+                .strokeBorder(SheetColor.accent, lineWidth: 2)
+            }
           }
-        }
         if !row.label.isEmpty {
-          Text(row.label).font(.caption2).foregroundStyle(SheetColor.secondary).lineLimit(1)
+          Text(row.label).font(.caption).foregroundStyle(SheetColor.secondary).lineLimit(1)
         }
       }
-      // 行高下限：图形 48 + 间距 + 名字（辅助字号下名字会被截断，但格子不会挤死）。
+      // 行高下限：图形 48 + 内边距 + 间距 + 名字（辅助字号下名字会被截断，但格子不会挤死）。
       .frame(minHeight: 56)
       .contentShape(Rectangle())
     }
@@ -462,6 +499,29 @@ struct PickerSheetView: View {
     .accessibilityLabel(Text(row.label))
     .accessibilityAddTraits(row.selected ? [.isSelected] : [])
     .accessibilityIdentifier("picker-row-\(row.id)")
+  }
+
+  /**
+   格子里的图形：有头像计划就画**真头像**（48pt，与列表里、页头上是同一份画法），
+   没有就退回原来的"品牌淡底 + 品牌紫符号"方块。
+
+   退回那一支不是退让而是**必须的**：`symbol` 空串时给一颗中性 glyph（同分组图标的纪律），
+   任何时候都不留白。
+   */
+  @ViewBuilder
+  private func gridTile(_ row: PickerSheetModel.Row) -> some View {
+    if let avatar = row.avatar {
+      MemohAvatarView(avatar: avatar, size: Self.gridAvatarSize)
+    } else {
+      ZStack {
+        RoundedRectangle(cornerRadius: Self.gridTileRadius).fill(SheetColor.accentSoft)
+        // 没有符号名时给一颗中性 glyph，不留白（同分组图标的纪律）。
+        Image(systemName: row.symbol.isEmpty ? "cube" : row.symbol)
+          .font(.system(size: 20))
+          .foregroundStyle(SheetColor.accent)
+      }
+      .frame(width: Self.gridAvatarSize, height: Self.gridAvatarSize)
+    }
   }
 
   // MARK: - info 布局（只读面板）

@@ -9,7 +9,7 @@
  *
  * 这一版把内容算好后以一份 JSON 视图模型下发（`NativeSettingsViewModel`）：名字、状态、
  * 副标题仍走既有的 helper（`features/bots/*`、`ui/BotSwitcher.tsx`），头像走
- * `features/bots/avatar.ts` 的归一化计划——原生**不复制**这些判据。
+ * `features/bots/nativeAvatar.ts` 那一份共用的头像计划——原生**不复制**这些判据。
  *
  * ## 为什么文案要按语言重算
  *
@@ -26,7 +26,7 @@
  * | Account | 我是谁（以及怎么登出） |
  * | About | 哪个版本、连的是哪台服务器 |
  */
-import { NativeSettingsView, symbolName, type NativeSettingsViewModel } from '@memoh-ios/kit';
+import { NativeSettingsView, type NativeSettingsViewModel } from '@memoh-ios/kit';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
@@ -41,35 +41,12 @@ import { accountNameOf } from '../features/session/account.ts';
 import { canManageBot } from '../features/bots/permissions.ts';
 import { useSessionActivity } from '../features/activity/useSessionActivity.ts';
 import { useConnectionState, useSession } from '../features/session/store.tsx';
-import { avatarFor } from '../features/bots/avatar.ts';
-import { builtinAvatarBySlug } from '../features/bots/avatarPresets.ts';
+import { nativeAvatarPlan } from '../features/bots/nativeAvatar.ts';
 import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
 import { useAgentSwitcher } from '../ui/BotSwitcher.tsx';
 import { appearanceLabelKey } from './AppearanceScreen.tsx';
 
 const SUPPORTED_LOCALE_IDS: readonly string[] = SUPPORTED_LOCALES;
-
-/**
- * 头像计划 → 原生要画的东西。
- *
- * `avatarFor` 已经把"有 url 但不是地址"的形状（`memoh:avatar/...`、认不出的 slug）
- * 归一化过了，所以原生那一侧**不会**为这类值发请求。内置头像的 SF Symbol 名来自
- * `avatarPresets`（原生不复制那张表）；取不到就退回吉祥物。
- */
-function nativeAvatar(
-  bot: Bot | null,
-  connectionOpen: boolean,
-): NativeSettingsViewModel['agent']['avatar'] {
-  const plan = avatarFor(bot);
-  if (plan.kind === 'remote') return { kind: 'remote', uri: plan.uri, connectionOpen };
-  if (plan.kind === 'builtin') {
-    const preset = builtinAvatarBySlug(plan.slug);
-    if (preset !== undefined) {
-      return { kind: 'builtin', symbol: symbolName(preset.symbol), connectionOpen };
-    }
-  }
-  return { kind: 'mark', connectionOpen };
-}
 
 /**
  * 当前 agent 的显示名。
@@ -120,7 +97,9 @@ export function SettingsScreen() {
       statusColor: status.color,
       subtitle: subtitleParts.join(' · '),
       hint: t('home.bot.switch'),
-      avatar: nativeAvatar(currentBot, connectionOpen),
+      // 头像计划与其余几处**同一处组装**（`features/bots/nativeAvatar.ts`）：没有 bot 时
+      // 给空串，`avatarFor` 会落回吉祥物——与以前直接传 `null` 是同一个结果。
+      avatar: nativeAvatarPlan(currentBot?.avatar_url ?? '', connectionOpen),
     },
     // 共享过来的 bot 是"能看能聊、不能改"：没有 `manage` 就不给一个按下去必然 403 的入口。
     botSettingsTitle:

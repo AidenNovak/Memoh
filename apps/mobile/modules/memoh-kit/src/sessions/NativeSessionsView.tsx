@@ -2,6 +2,8 @@ import React, { useState, type ComponentType } from 'react';
 import { Platform, Text, View, type ViewProps } from 'react-native';
 import { requireNativeView, requireOptionalNativeModule } from 'expo';
 
+import type { NativeSettingsAvatar } from '../settings/NativeSettingsView';
+
 export interface NativeSessionsViewModel {
   title: string;
   newSessionLabel: string;
@@ -28,7 +30,14 @@ export interface NativeSessionsViewModel {
   retryEnabled: boolean;
   moreState: 'none' | 'more' | 'loading' | 'error';
   connection?: { label: string; pendingLabel: string; retryHint: string } | null;
-  bots: { id: string; name: string; statusLabel: string; selected: boolean }[];
+  bots: {
+    id: string;
+    name: string;
+    statusLabel: string;
+    selected: boolean;
+    /** 每一行画什么头像（远程图 / 内置图形 / 吉祥物）；判据在 RN。 */
+    avatar?: NativeSettingsAvatar;
+  }[];
   views: { id: string; label: string; symbol: string; selected: boolean }[];
   pendingApprovals: { id: string; botId: string; title: string; detail: string }[];
   activeRuns: { id: string; botId: string; title: string; detail: string }[];

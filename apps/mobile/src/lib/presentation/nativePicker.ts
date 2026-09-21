@@ -20,6 +20,14 @@
  * `if (outcome.status !== 'completed') return;` 一个字都不用改。差别只有一处：
  * `present()` 会往路由栈里推一屏，这里不会——sheet 是原生自己 present 的，路由栈不动。
  *
+ * ## 三种用法共用这一份（模块 9A3b）
+ *
+ * 除了"挑一个"（`list` / `grid`），这张 sheet 还承载两类界面，靠 `Section.layout` 区分：
+ * `info`（只读信息面板：会话信息、机器面板）与 `form`（表单：cron 选择器）。
+ * 它们**不是**选择器，但仍然走同一个 facade、同一个 promise：只读面板只用 `update`
+ * （比如压缩完之后重画数字），最后靠下滑关掉（`cancelled`）收场；表单则靠 `select`
+ * 把"用户按了哪一颗键/哪一格"报回来，由 RN 重算模型再 `update` 下发。
+ *
  * ## 桥不在时的行为
  *
  * 旧 dev client（原生还没有 picker 方法）与非 iOS 平台上 `nativePicker()` 是 null。
@@ -31,11 +39,55 @@ import { nativePicker, type NativePickerSubscription } from '@memoh-ios/kit';
 
 import type { PresentationResult } from './sessions.ts';
 
-/** 列表形态。`grid` 只给头像选择器（每格是方形符号块）。 */
-export type NativePickerLayout = 'list' | 'grid';
+/** 布局形态。
+ *
+ * - `list`（默认）：可选的分组列表行。
+ * - `grid`：头像选择器那种方形符号块网格。
+ * - `info`：**只读信息面板**（会话信息、机器面板）——行画成 `label + value`；
+ *   `kind: 'progress'` 的那一行画成"标签 + 百分比 + 一条用量条"。这一种布局里**只有
+ *   `valueJson` 非空的行可点**（那是动作行："立即压缩"、"看截图"），其余一律只读。
+ * - `form`：**表单**（cron 选择器）——行按各自的 `kind` 画（radio / stepper / weekday / text）。
+ *
+ * 四种形态共用一张原生 sheet（同一套 detents、抓手、滑掉上报），见 spec §1：
+ * 不为只读面板再写第二个 presenter。
+ */
+export type NativePickerLayout = 'list' | 'grid' | 'info' | 'form';
 
 /** 选择器现在是什么状态。加载/失败**由 RN 判**，原生只按它画。 */
 export type NativePickerStatus = 'ready' | 'loading' | 'error';
+
+/**
+ * 行的形态（只有 `form` 布局用得上，`list` / `grid` 忽略它）。
+ *
+ * - `radio`：与现在的列表行一样（可选、带勾）→ 回 `select` + 这一行的 `valueJson`。
+ * - `stepper`：`−` `value` `+` 三件套 → 回 `select` + **那一颗键自己的**载荷
+ *   （`downValueJson` / `upValueJson`）。
+ * - `weekday`：`chips` 那些可点的格子 → 回 `select` + 那一格的载荷。
+ * - `text`：受控输入框 → 回 `input`。
+ * - `progress`：只读的用量行（`info` 布局里）→ 不可点。
+ */
+export type NativePickerRowKind = 'radio' | 'stepper' | 'weekday' | 'text' | 'progress';
+
+/** 语气：只影响那一行的字色（`''` = 次级灰）。**由 RN 判好**，原生不猜。 */
+export type NativePickerTone = 'destructive' | 'success' | 'warning' | '';
+
+/**
+ * 一格（`weekday` 行专用）。
+ *
+ * 文案与选中态都由 RN 给：原生不知道"周一"叫什么，也不会去拆 `"1,2,3"` 那种串
+ * （那一串是给 RN 自己读的显示值，不是原生的输入）。
+ */
+export interface NativePickerChip {
+  /** 这一格的标识；原生用它拼 testID（`picker-row-<行 id>-<格 id>`）。 */
+  id: string;
+  label: string;
+  selected?: boolean;
+  /**
+   * 这一格被按下时回给 RN 的值。与行的 `valueJson` 同一条约定：**不透明**，原生原样回传。
+   * 表单里"按了哪一格"这件事就靠它表达（RN 收到后自己重算 spec 再 `update`）。
+   */
+  valueJson: string;
+}
 
 /** 列表里的一行。 */
 export interface NativePickerRow {
@@ -53,6 +105,9 @@ export interface NativePickerRow {
    * **不透明**：原生只原样回传，不解析。RN 自己 `JSON.stringify` 一个业务对象，
    * 收到后自己 `JSON.parse`——这样"这行代表什么"只有 RN 知道（原生不该认识 `modelId`
    * 这种字段名）。
+   *
+   * 在 `info` 面板里它还兼一个作用：**非空 = 这一行是动作行**（可点，例如"立即压缩"）。
+   * 只读的行必须给空串——契约里 `valueJson` 是必填的，别漏。
    */
   valueJson: string;
   /**
@@ -68,6 +123,30 @@ export interface NativePickerRow {
    * 到 `presentNativePicker`——不接管的话，`valueJson` 会被当成"他选了这个"直接结算掉。
    */
   staysOpen?: boolean;
+  /** 行形态（`form` / `info` 布局才用得上）。缺省 = 普通列表行。 */
+  kind?: NativePickerRowKind;
+  /**
+   * `info` 行的右侧值 / `stepper` 的当前显示值（RN 补好零：`09`）/ `progress` 的 0…1 比例。
+   *
+   * 同一个字段在三种行上是三种意思，但都是"这一行现在是什么值"——契约里只有这一个位置，
+   * 再开两个字段只会让"该填哪个"更难说清。
+   */
+  value?: string;
+  /** 等宽显示；`info` 行里同时允许长按选中复制（表达式、镜像名要能复制走）。 */
+  mono?: boolean;
+  /** 语气色（只读行用得上：无效表达式是危险色、桌面不可用是警告色）。 */
+  tone?: NativePickerTone;
+  /**
+   * `stepper` 的两颗键各自的不透明载荷。
+   *
+   * 为什么是两份而不是一份 + 原生算方向：`valueJson` 的约定是"RN 序列化、原生原样回传"，
+   * 原生一旦去改里面的 `delta` 就等于解析业务载荷了。方向留在 RN：
+   * `{"action":"step","field":"hour","delta":-1}` / `…"delta":1`。
+   */
+  downValueJson?: string;
+  upValueJson?: string;
+  /** `weekday` 行的格子（星期 7 格、月份 12 格、每月几号 31 格都是它）。 */
+  chips?: NativePickerChip[];
 }
 
 export interface NativePickerSection {
@@ -76,6 +155,13 @@ export interface NativePickerSection {
   header?: string;
   /** 分组标题左侧那颗单色厂商标的资源名（`features/chat/providerIcons.ts` 的 slug）。 */
   icon?: string;
+  /**
+   * 分组脚注；空 = 不画。
+   *
+   * `info` 面板靠它承载"为什么这一格是空的"那类说明（会话信息的"没有窗口所以不给百分比"、
+   * 机器面板的"读不到用量"、cron 的"五段式"），位置与 RN 版的分组 footer 一致。
+   */
+  footer?: string;
   layout?: NativePickerLayout;
   rows: NativePickerRow[];
 }

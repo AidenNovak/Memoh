@@ -586,5 +586,6 @@
   "timezone.value.set": "{{timezone}}",
   "usage.title": "Usage",
   "usage.today": "Today",
-  "usage.total": "Total"
+  "usage.total": "Total",
+  "hub.view.sessions": "Sessions"
 }

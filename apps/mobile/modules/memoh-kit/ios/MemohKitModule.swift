@@ -184,7 +184,17 @@ public final class MemohKitModule: Module, @unchecked Sendable {
     }
 
     View(NativeFilesView.self) {
-      Events("onOpen", "onNavigate", "onRefresh", "onLoadMore", "onAction")
+      Events(
+        "onOpen",
+        "onNavigate",
+        "onRefresh",
+        "onLoadMore",
+        "onAction",
+        "onViewChange",
+        "onSelectBot",
+        "onNewSession",
+        "onRetryConnection"
+      )
       Prop("mode") { (view: NativeFilesView, value: String) in
         view.setMode(value)
       }
@@ -216,7 +226,11 @@ public final class MemohKitModule: Module, @unchecked Sendable {
         "onEnabledChange",
         "onRunTarget",
         "onSave",
-        "onDelete"
+        "onDelete",
+        "onViewChange",
+        "onSelectBot",
+        "onNewSession",
+        "onRetryConnection"
       )
       Prop("mode") { (view: NativeScheduleView, value: String) in
         view.setMode(value)

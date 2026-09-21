@@ -23,10 +23,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Bot } from '../api/types.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
-import { agentPlaceholderKey } from '../features/bots/label.ts';
+import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
 import { useSession } from '../features/session/store.tsx';
 import { BotAvatar } from './BotAvatar.tsx';
-import { agentStatus, STATUS_COLOR_KEY } from './BotSwitcher.tsx';
+import { STATUS_COLOR_KEY } from './BotSwitcher.tsx';
 
 interface Props {
   /** 待审批条数；没有聚合数据时传 null，不显示那一段。 */

@@ -53,6 +53,8 @@ sources=(
   "$KIT/Support/MemohAssets.swift"
   "$KIT/Support/MemohAvatarPlan.swift"
   "$KIT/Support/MemohAvatarView.swift"
+  # Hub 顶层件（Files/Schedule 视图的标题/切换器/agent 菜单/连接行）：同样不依赖 Expo。
+  "$KIT/Hub/HubChrome.swift"
 )
 
 echo "对 ${#sources[@]} 个 MemohKit 文件做类型检查（iphonesimulator SDK，DEBUG）…"

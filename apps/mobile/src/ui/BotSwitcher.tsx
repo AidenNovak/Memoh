@@ -14,8 +14,7 @@ import { useT } from '../lib/i18n/useT.ts';
 import { BotSwitchSheet } from './BotSwitchPage.tsx';
 import { PRESS_OPACITY } from '../lib/theme/tokens.ts';
 import { usePalette, useTheme } from '../lib/theme/context.tsx';
-import type { Bot } from '../api/types.ts';
-import { agentPlaceholderKey } from '../features/bots/label.ts';
+import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
 import { useSession } from '../features/session/store.tsx';
 
 /**
@@ -62,26 +61,6 @@ export const STATUS_COLOR_KEY = {
   warning: 'warning',
   muted: 'tertiaryLabel',
 } as const;
-
-/**
- * agent 自己的状态（不是我们这条连接的状态——那是 `ConnectionBadge` 的事）。
- *
- * 服务端 `status` 的取值域没有文档，这里只认我们已知的三个；认不出来就退回
- * `is_active`（"这个 bot 是启用的"）。宁可说得保守，也不要凭一个不认识的字符串
- * 编出一个状态。
- */
-export function agentStatus(
-  bot: Bot | null,
-  t: (key: string) => string,
-): { label: string | null; color: 'success' | 'warning' | 'muted' } {
-  if (bot === null) return { label: null, color: 'muted' };
-  if (bot.status === 'starting') return { label: t('bot.status.starting'), color: 'warning' };
-  if (bot.status === 'online') return { label: t('bot.status.online'), color: 'success' };
-  if (bot.status === 'offline') return { label: t('bot.status.offline'), color: 'muted' };
-  return bot.is_active
-    ? { label: t('bot.status.online'), color: 'success' }
-    : { label: t('bot.status.offline'), color: 'muted' };
-}
 
 /**
  * 两种形态：

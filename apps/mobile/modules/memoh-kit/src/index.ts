@@ -86,6 +86,13 @@ export type {
   NativeScheduleViewProps,
 } from './schedule/NativeScheduleView';
 
+export type {
+  NativeHubChromeBotOption,
+  NativeHubChromeConnection,
+  NativeHubChromeModel,
+  NativeHubChromeViewOption,
+} from './hub/NativeHubChrome';
+
 export { NativeBotFormView } from './bots/NativeBotFormView';
 export type {
   NativeBotAvatar,

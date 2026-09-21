@@ -43,8 +43,8 @@ import { useSessionActivity } from '../features/activity/useSessionActivity.ts';
 import { useConnectionState, useSession } from '../features/session/store.tsx';
 import { avatarFor } from '../features/bots/avatar.ts';
 import { builtinAvatarBySlug } from '../features/bots/avatarPresets.ts';
-import { agentPlaceholderKey } from '../features/bots/label.ts';
-import { agentStatus, useAgentSwitcher } from '../ui/BotSwitcher.tsx';
+import { agentPlaceholderKey, agentStatus } from '../features/bots/label.ts';
+import { useAgentSwitcher } from '../ui/BotSwitcher.tsx';
 import { appearanceLabelKey } from './AppearanceScreen.tsx';
 
 const SUPPORTED_LOCALE_IDS: readonly string[] = SUPPORTED_LOCALES;

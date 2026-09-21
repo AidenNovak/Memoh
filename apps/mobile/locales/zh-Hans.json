@@ -586,5 +586,6 @@
   "timezone.value.set": "{{timezone}}",
   "usage.title": "用量",
   "usage.today": "今天",
-  "usage.total": "总计"
+  "usage.total": "总计",
+  "hub.view.sessions": "会话"
 }

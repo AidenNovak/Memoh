@@ -2,6 +2,7 @@ import React, { useState, type ComponentType } from 'react';
 import { Text, View, type ViewProps } from 'react-native';
 
 import { resolveMemohNativeView } from '../nativeView';
+import type { NativeHubChromeModel } from '../hub/NativeHubChrome';
 
 export interface NativeFilesViewModel {
   status: 'idle' | 'loading' | 'ready' | 'empty' | 'permission' | 'invalid' | 'error';
@@ -33,6 +34,8 @@ export interface NativeFilesViewModel {
   hiddenCount: number;
   retryEnabled: boolean;
   parentPath?: string | null;
+  /** Hub 顶层件（大标题 / 视图切换 / agent 菜单 / 连接行 / 新建会话）；缺省 = 不画。 */
+  hub?: NativeHubChromeModel | null;
 }
 
 export interface NativeFilesViewProps extends ViewProps {
@@ -43,6 +46,14 @@ export interface NativeFilesViewProps extends ViewProps {
   onRefresh?: (event: { nativeEvent: Record<string, never> }) => void;
   onLoadMore?: (event: { nativeEvent: Record<string, never> }) => void;
   onAction?: (event: { nativeEvent: { path?: string; action?: string } }) => void;
+  /** Hub：切视图（`sessions` | `files` | `schedule`）。 */
+  onViewChange?: (event: { nativeEvent: { view?: string } }) => void;
+  /** Hub：切 agent / 新建 agent（`botId === '__new__'`）。 */
+  onSelectBot?: (event: { nativeEvent: { botId?: string } }) => void;
+  /** Hub：新建会话。 */
+  onNewSession?: (event: { nativeEvent: Record<string, never> }) => void;
+  /** Hub：点连接行重试。 */
+  onRetryConnection?: (event: { nativeEvent: Record<string, never> }) => void;
   unavailableLabel?: string;
 }
 

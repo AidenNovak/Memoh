@@ -3,35 +3,24 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { ConnectionState } from '../api/realtime.ts';
 import { useT } from '../lib/i18n/useT.ts';
 import { useTheme } from '../lib/theme/context.tsx';
 import { present } from '../lib/presentation/index.ts';
 import { forkTarget, forkTitle } from '../features/session/actions.ts';
 import { useSessionActivity } from '../features/activity/useSessionActivity.ts';
 import { canRetry, presentError, reasonKeyOf } from '../features/errors/present.ts';
-import { agentStatus } from '../ui/BotSwitcher.tsx';
+import {
+  hubBotRows,
+  hubConnectionModel,
+  hubTitleKey,
+  hubViewOptions,
+} from '../features/session/hubChrome.ts';
 import { useConnectionState, useSession, type SessionSummary } from '../features/session/store.tsx';
 import { sessionDisplayTitle } from '../features/session/displayTitle.ts';
 import { sessionSourceLabel } from '../features/session/sourceLabel.ts';
 import { sessionsFooter } from '../features/session/paging.ts';
 import { RenameSessionSheet } from '../ui/RenameSessionPage.tsx';
 import type { HubView } from '../features/bots/surfaces.ts';
-
-const CONNECTION_LABELS: Record<ConnectionState, string> = {
-  idle: 'chat.connecting',
-  connecting: 'chat.connecting',
-  reconnecting: 'chat.reconnecting',
-  closed: 'chat.disconnected',
-  unauthorized: 'chat.expired',
-  open: 'chat.disconnected',
-};
-
-const VIEW_SYMBOLS: Record<HubView, string> = {
-  sessions: 'bubble.left.and.bubble.right',
-  files: 'folder',
-  schedule: 'calendar',
-};
 
 export function NativeSessionsScreen({
   visibleView,
@@ -134,40 +123,24 @@ export function NativeSessionsScreen({
 
   const viewModel = useMemo<NativeSessionsViewModel>(() => {
     const loadError = state.sessionsError ?? state.botsError;
-    const connectionModel = (() => {
-      if (currentBot === null) return null;
-      if (!realtimeEnabled) {
-        return { label: t('chat.readOnly.short'), pendingLabel: '', retryHint: t('common.retry') };
-      }
-      if (connection === 'open' && state.pendingSends === 0) return null;
-      const pendingLabel =
-        state.pendingSends > 0 ? t('chat.pending', { count: state.pendingSends }) : '';
-      return {
-        label: t(CONNECTION_LABELS[connection]),
-        pendingLabel,
-        retryHint: t('chat.connection.retryHint'),
-      };
-    })();
+    // 连接行、agent 行、视图选项三份数据与文件 / 定时两个原生屏**同一处组装**
+    // （`features/session/hubChrome.ts`）：三个视图上这些位置必须是同一份数据。
+    const connectionModel = hubConnectionModel(
+      {
+        connection,
+        pendingSends: state.pendingSends,
+        realtimeEnabled,
+        currentBot,
+      },
+      t,
+    );
     const footer = sessionsFooter({
       cursor: state.sessionsCursor,
       loading: state.sessionsMoreLoading,
       error: state.sessionsMoreError,
     });
-    const botRows = state.bots.map((bot) => {
-      const status = agentStatus(bot, t);
-      return {
-        id: bot.id,
-        name: bot.display_name !== '' ? bot.display_name : bot.name,
-        statusLabel: status.label ?? '',
-        selected: bot.id === state.currentBotId,
-      };
-    });
-    const views = hubViews.map((id) => ({
-      id,
-      label: t(`hub.view.${id}`),
-      symbol: VIEW_SYMBOLS[id],
-      selected: id === visibleView,
-    }));
+    const botRows = hubBotRows(state.bots, state.currentBotId, t);
+    const views = hubViewOptions(hubViews, visibleView, t);
     const activityRow = (entry: (typeof active)[number]) => ({
       id: entry.sessionId,
       botId: entry.botId,
@@ -175,7 +148,8 @@ export function NativeSessionsScreen({
       detail: entry.botName,
     });
     return {
-      title: t('home.title'),
+      // 大标题就是当前视图名（这一屏只挂载 sessions，键与文件 / 定时同源）。
+      title: t(hubTitleKey(visibleView)),
       newSessionLabel: t('home.newSession'),
       newBotLabel: t('bots.create'),
       botMenuLabel: t('home.bot.switch'),

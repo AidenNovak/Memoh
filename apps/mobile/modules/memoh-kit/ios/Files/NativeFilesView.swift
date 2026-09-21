@@ -42,6 +42,13 @@ struct NativeFilesModel: Decodable, Equatable {
   let hiddenCount: Int
   let retryEnabled: Bool
   let parentPath: String?
+  /// Hub 顶层件（大标题 / 视图切换 / agent 菜单 / 连接行 / 新建会话）。
+  ///
+  /// 可选：`/files` 那条独立路由（RN 栈里自带 header 与返回）不下发它，此时这一页仍是
+  /// 纯列表——同一个视图在两种宿主里各画一套壳，迟早会有一套先改。
+  /// 可选字段在合成的 `init(from:)` 里就是 `decodeIfPresent`，老的下发（不带 `hub`）
+  /// 解码照旧成功，不会把整份模型打回上一版。
+  let hub: HubChromeModel?
 
   static func decode(_ json: String) throws -> NativeFilesModel {
     try JSONDecoder().decode(NativeFilesModel.self, from: Data(json.utf8))
@@ -58,6 +65,12 @@ private final class NativeFilesStore: ObservableObject {
   var onRefresh: () -> Void = {}
   var onLoadMore: () -> Void = {}
   var onAction: (String, String) -> Void = { _, _ in }
+  /// Hub 顶层件的四个动作。原生只转发：切视图/切 agent 要不要跳路由、连接怎么重试，
+  /// 都是 RN 的判断（原生不认识路由，也不认识 agent）。
+  var onSelectView: (String) -> Void = { _ in }
+  var onSelectBot: (String) -> Void = { _ in }
+  var onNewSession: () -> Void = {}
+  var onRetryConnection: () -> Void = {}
 
   var colorScheme: ColorScheme? { MemohAppearanceMode.colorScheme(mode) }
   var background: Color { MemohAppearanceMode.formBackground(mode) }
@@ -74,15 +87,26 @@ private struct NativeFilesPage: View {
   var body: some View {
     Group {
       if let model = store.model {
-        List {
-          breadcrumbSection(model)
-          contentSection(model)
-          footerSection(model)
+        if let hub = model.hub {
+          // Hub 壳里：这一页自己带导航栏（大标题 + agent 菜单 + 新建会话），因为
+          // Hub 所在的 `(tabs)` 路由是 `headerShown: false`，RN 那层没有 header 可挂。
+          NavigationStack {
+            list(model)
+              .navigationTitle(hub.title)
+              .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                  HubChromeBotMenu(model: hub) { store.onSelectBot($0) }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                  HubChromeNewSessionButton(model: hub, onNewSession: store.onNewSession)
+                }
+              }
+          }
+        } else {
+          // 独立 `/files` 路由：header 与返回由 RN 的栈给（`app/files/*.tsx` 里写的
+          // `headerShown: true`）。这里再套一层 NavigationStack 就会出现两条标题栏。
+          list(model)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(store.background)
-        .refreshable { store.onRefresh() }
       } else {
         ProgressView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -91,6 +115,24 @@ private struct NativeFilesPage: View {
       }
     }
     .preferredColorScheme(store.colorScheme)
+  }
+
+  /// 列表本体。`hub` 非 nil（Hub 壳里）时最前面插视图切换与连接行——它们属于壳，
+  /// 不属于目录内容，所以排在面包屑之前：切视图是"换一种看法"，换的是整个列表。
+  private func list(_ model: NativeFilesModel) -> some View {
+    List {
+      if let hub = model.hub {
+        HubChromePicker(model: hub) { store.onSelectView($0) }
+        HubChromeConnectionRow(model: hub, onRetry: store.onRetryConnection)
+      }
+      breadcrumbSection(model)
+      contentSection(model)
+      footerSection(model)
+    }
+    .listStyle(.insetGrouped)
+    .scrollContentBackground(.hidden)
+    .background(store.background)
+    .refreshable { store.onRefresh() }
   }
 
   @ViewBuilder
@@ -238,6 +280,11 @@ final class NativeFilesView: ExpoView {
   let onRefresh = EventDispatcher()
   let onLoadMore = EventDispatcher()
   let onAction = EventDispatcher()
+  // Hub 顶层件的四个事件。载荷键名是桥契约：`view` / `botId`，空载荷的两个不带字段。
+  let onViewChange = EventDispatcher()
+  let onSelectBot = EventDispatcher()
+  let onNewSession = EventDispatcher()
+  let onRetryConnection = EventDispatcher()
 
   private let store: NativeFilesStore
   private let host: UIHostingController<NativeFilesPage>
@@ -254,6 +301,10 @@ final class NativeFilesView: ExpoView {
     store.onRefresh = { [weak self] in self?.onRefresh([:]) }
     store.onLoadMore = { [weak self] in self?.onLoadMore([:]) }
     store.onAction = { [weak self] path, action in self?.onAction(["path": path, "action": action]) }
+    store.onSelectView = { [weak self] id in self?.onViewChange(["view": id]) }
+    store.onSelectBot = { [weak self] id in self?.onSelectBot(["botId": id]) }
+    store.onNewSession = { [weak self] in self?.onNewSession([:]) }
+    store.onRetryConnection = { [weak self] in self?.onRetryConnection([:]) }
   }
 
   override func layoutSubviews() {

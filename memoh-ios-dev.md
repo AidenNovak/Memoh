@@ -228,7 +228,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
 | 8 | Chat | 完成；原生顶栏/横条/队列/斜杠/composer/审批/ask_user；RN 暂持 store、WS、判据与路由 |
-| 9 | App 壳收口 | 移除剩余 Expo Router/RN UI、桥接状态与不再需要的 RN 依赖 |
+| 9 | App 壳收口 | 进行中；拆为 9A（剩余可见 UI 原生化）与 9B（运行时核心换 Swift）。9A1 完成：Hub 顶层件原生、hub 壳退成纯分发器 |
 
 每个 PR 必须写清：本模块范围、原生与 RN 各自仍持有什么、行为兼容性、自动化与模拟器证据、
 Human QA 状态，以及下一模块；合并前不得把后续模块顺手带入。
@@ -347,6 +347,31 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   仍需 Human QA：发消息/停止/队列/斜杠/审批两种决定/ask_user 单题与多题、键盘遮挡、
   最大字号、VoiceOver、深色/OLED；`Human QA passed` 保持未勾选。
 - **下一模块**：App 壳收口（模块 9）：移除剩余 Expo Router/RN UI、桥接状态与依赖。
+
+#### 模块 9A1 验收记录（`feat/ios-native-shell`）
+
+- **拆分说明**：模块 9 一次 PR 装不下（运行时核心约 8k 行协议/状态代码），按
+  "可见 UI 先行（9A）、运行时核心殿后（9B）"拆。9A1 是 Hub 顶层件。
+- **原生 ownership**：新共享件 `Hub/HubChrome.swift`（大标题、segmented 视图切换、
+  agent 菜单、连接行、新建会话按钮）；Files 与 Schedule 两个原生视图各自挂接
+  （`hub` 为可选模型字段，缺省 = 不画，独立 `/files` 路由行为不变）。Sessions 一行未改；
+  两个按钮在 Schedule toolbar 的次序固定（`schedule-new` 在左、`hub-new-session` 在右）。
+- **RN ownership**：`SessionsHubScreen` 退成纯分发器（深链 `?view=`、权限收敛、视图状态），
+  组装判据抽到 `features/session/hubChrome.ts`（三个视图共用一份）；
+  `agentStatus` 从 `ui/BotSwitcher.tsx` 移入 `features/bots/label.ts`。
+- **删除**：`screens/HomeScreen.tsx`、`ui/PendingApprovals.tsx`、`ui/ViewSwitcher.tsx`、
+  `ui/ConnectionBadge.tsx`（逐一验证无真实引用；HomeScreen 自模块 4 起已是死代码）。
+- **顺手修掉一个线上 bug**：`hub.view.sessions` 的 i18n key 两种语言都缺（分段控件第一
+  段一直显示原始 key），已补 en `Sessions` / zh-Hans `会话`（589×2）。
+- **自动化证据**：mobile typecheck、lint（0 errors，12 warnings——比基线少 1，
+  HomeScreen 那条随删除消失）、三元、按压态、i18n、Prettier、`git diff --check`、
+  两个 Swift typecheck 脚本（清单加入 `Hub/HubChrome.swift`）、
+  Xcode Debug Simulator 构建（arm64/x86_64）通过。
+- **模拟器证据**：iOS 26.5 模拟器安装启动 `ai.memoh.ios` 无崩溃，控制台 12 秒无桥接
+  错误。Hub chrome 的视觉验收（切换器、agent 菜单、连接行、两颗＋的次序）仍需
+  Human QA，`Human QA passed` 保持未勾选。
+- **下一模块**：9A2（Onboarding 原生化）与 9A3（各选择器/信息页 sheet）继续 9A；
+  9B（store/WS/API/路由换 Swift）最后做。
 
 ---
 

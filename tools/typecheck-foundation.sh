@@ -42,6 +42,12 @@ sources=(
   "$KIT/Chat/ChatSheetsContract.swift"
   # 首启引导契约：同上。
   "$KIT/Onboarding/OnboardingContract.swift"
+  # REST 数据层（9B-1）：动态 JSON 值 / 错误映射 / 协议模型 / 客户端本体，全部只用 Foundation。
+  # 这 4 个文件是"与 TS 逐条对齐"的那一层，所以它们不只做类型检查，还要跑契约测试（见下）。
+  "$KIT/API/MemohJSONValue.swift"
+  "$KIT/API/MemohAPIError.swift"
+  "$KIT/API/MemohAPIModels.swift"
+  "$KIT/API/MemohAPIClient.swift"
 )
 
 echo "对 ${#sources[@]} 个 Foundation-only 文件做类型检查（macOS SDK，不需要 Xcode）…"
@@ -60,5 +66,20 @@ swiftc \
   "$ROOT/tools/test-auth-contract.swift" \
   -o "$test_binary"
 "$test_binary"
+
+# REST 数据层同理：请求形状（method/URL/query 编码/头/体）、错误映射、超时、401、204 与空体、
+# 以及 tools/api-fixtures 里每个夹具的"raw → 解码 → 规范化 → 与 TS 的 expected 比"。
+# 全部离线跑（URLProtocol 桩），不需要 dev 实例。
+api_test_binary="$(mktemp "${TMPDIR:-/tmp}/memoh-api-contract.XXXXXX")"
+trap 'rm -f "$test_binary" "$api_test_binary"' EXIT
+swiftc \
+  -parse-as-library \
+  "$KIT/API/MemohJSONValue.swift" \
+  "$KIT/API/MemohAPIError.swift" \
+  "$KIT/API/MemohAPIModels.swift" \
+  "$KIT/API/MemohAPIClient.swift" \
+  "$ROOT/tools/test-api-contract.swift" \
+  -o "$api_test_binary"
+"$api_test_binary"
 
 echo "类型检查通过（UIKit 那批不在这里：要 iOS SDK，跑 pnpm ios:typecheck:kit）"

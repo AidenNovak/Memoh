@@ -1,0 +1,165 @@
+{
+  "entries": [
+    {
+      "isDir": false,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "Lrwxrwxrwx",
+      "name": "bin",
+      "path": "/bin",
+      "size": 7
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-07-02T19:05:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "boot",
+      "path": "/boot",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-09-18T08:07:42Z",
+      "mode": "drwxr-xr-x",
+      "name": "data",
+      "path": "/data",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-09-13T11:34:16Z",
+      "mode": "drwxr-xr-x",
+      "name": "dev",
+      "path": "/dev",
+      "size": 340
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-29T17:27:04Z",
+      "mode": "drwxr-xr-x",
+      "name": "etc",
+      "path": "/etc",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-07-02T19:05:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "home",
+      "path": "/home",
+      "size": 4096
+    },
+    {
+      "isDir": false,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "Lrwxrwxrwx",
+      "name": "lib",
+      "path": "/lib",
+      "size": 7
+    },
+    {
+      "isDir": false,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "Lrwxrwxrwx",
+      "name": "lib64",
+      "path": "/lib64",
+      "size": 9
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "media",
+      "path": "/media",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "mnt",
+      "path": "/mnt",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-29T17:27:05Z",
+      "mode": "drwxr-xr-x",
+      "name": "opt",
+      "path": "/opt",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-09-13T11:34:16Z",
+      "mode": "dr-xr-xr-x",
+      "name": "proc",
+      "path": "/proc",
+      "size": 0
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-29T17:26:48Z",
+      "mode": "drwx------",
+      "name": "root",
+      "path": "/root",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-09-13T11:34:16Z",
+      "mode": "drwxr-xr-x",
+      "name": "run",
+      "path": "/run",
+      "size": 60
+    },
+    {
+      "isDir": false,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "Lrwxrwxrwx",
+      "name": "sbin",
+      "path": "/sbin",
+      "size": 8
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "srv",
+      "path": "/srv",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-26T04:31:24Z",
+      "mode": "dr-xr-xr-x",
+      "name": "sys",
+      "path": "/sys",
+      "size": 0
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-09-18T03:24:39Z",
+      "mode": "dtrwxrwxrwx",
+      "name": "tmp",
+      "path": "/tmp",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "usr",
+      "path": "/usr",
+      "size": 4096
+    },
+    {
+      "isDir": true,
+      "modTime": "2026-08-24T00:00:00Z",
+      "mode": "drwxr-xr-x",
+      "name": "var",
+      "path": "/var",
+      "size": 4096
+    }
+  ],
+  "path": "/"
+}

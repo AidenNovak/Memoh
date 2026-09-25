@@ -1,0 +1,65 @@
+{
+  "backend": "containerd",
+  "metrics": {
+    "cpu": {
+      "kernel_nanoseconds": 1269182094000,
+      "usage_nanocores": 0,
+      "usage_nanoseconds": 3306701959000,
+      "usage_percent": 0.019822784308283943,
+      "user_nanoseconds": 2037519864000
+    },
+    "memory": {
+      "limit_bytes": 0,
+      "usage_bytes": 552419328,
+      "usage_percent": 0
+    },
+    "storage": {
+      "path": "/",
+      "used_bytes": 3596552144
+    }
+  },
+  "resource_limits": {
+    "applied": {
+      "cpu_millicores": 0,
+      "memory_bytes": 0,
+      "storage_bytes": 0
+    },
+    "backend": "containerd",
+    "capabilities": {
+      "cpu": {
+        "hard_limit_supported": true,
+        "soft_limit_supported": false
+      },
+      "memory": {
+        "hard_limit_supported": true,
+        "soft_limit_supported": false
+      },
+      "storage": {
+        "hard_limit_supported": false,
+        "soft_limit_supported": true
+      }
+    },
+    "desired": {
+      "cpu_millicores": 0,
+      "memory_bytes": 0,
+      "storage_bytes": 0
+    },
+    "observed": {
+      "cpu_usage_percent": 0.021846442990701584,
+      "memory_limit_bytes": 0,
+      "memory_usage_bytes": 552407040,
+      "storage_over_soft_limit": false,
+      "storage_used_bytes": 3596552144
+    },
+    "requires_recreate": false,
+    "runtime_backend": "io.containerd.runc.v2",
+    "status": "applied",
+    "workspace_backend": "container"
+  },
+  "sampled_at": "2026-09-24T03:59:00.800953611Z",
+  "status": {
+    "exists": true,
+    "task_running": true
+  },
+  "supported": true
+}

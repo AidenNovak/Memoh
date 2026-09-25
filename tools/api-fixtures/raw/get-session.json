@@ -1,0 +1,19 @@
+{
+  "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+  "created_at": "2026-09-15T02:20:24.06523Z",
+  "created_by_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+  "id": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312",
+  "metadata": {
+    "workspace_target": {
+      "kind": "native",
+      "name": "Server Workspace",
+      "target_id": "native"
+    },
+    "workspace_target_id": "native"
+  },
+  "runtime_type": "model",
+  "session_mode": "chat",
+  "title": "提问表单验收 102021",
+  "type": "chat",
+  "updated_at": "2026-09-15T02:24:25.938404Z"
+}

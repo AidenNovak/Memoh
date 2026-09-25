@@ -1,0 +1,10 @@
+{
+  "access_token": "<redacted-by-capture>",
+  "display_name": "admin",
+  "expires_at": "2026-10-01T03:59:00Z",
+  "role": "admin",
+  "timezone": "UTC",
+  "token_type": "Bearer",
+  "user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+  "username": "admin"
+}

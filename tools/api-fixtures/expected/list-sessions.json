@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "created_at": "2026-09-24T03:59:00.004621Z",
+      "created_by_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+      "id": "2fd54381-0e43-4cf5-8399-cb35b2f1a699",
+      "runtime_type": "model",
+      "session_mode": "schedule",
+      "title": "每天早上整理邮件摘要",
+      "type": "schedule",
+      "updated_at": "2026-09-24T03:59:00.004621Z"
+    },
+    {
+      "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "created_at": "2026-09-24T03:58:00.00365Z",
+      "created_by_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+      "id": "b281843a-67a3-444f-a9f5-4ab95dd8cf68",
+      "runtime_type": "model",
+      "session_mode": "schedule",
+      "title": "每天早上整理邮件摘要",
+      "type": "schedule",
+      "updated_at": "2026-09-24T03:58:00.00365Z"
+    },
+    {
+      "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "created_at": "2026-09-24T03:57:00.002246Z",
+      "created_by_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+      "id": "cf7ae472-49ea-4785-95b2-a3337c0fcae5",
+      "runtime_type": "model",
+      "session_mode": "schedule",
+      "title": "每天早上整理邮件摘要",
+      "type": "schedule",
+      "updated_at": "2026-09-24T03:57:00.002246Z"
+    }
+  ],
+  "next_cursor": "MjAyNi0wOS0yNFQwMzo1NzowMC4wMDIyNDZafGNmN2FlNDcyLTQ5ZWEtNDc4NS05NWIyLWEzMzM3YzBmY2FlNQ"
+}

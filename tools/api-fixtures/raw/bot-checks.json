@@ -1,0 +1,55 @@
+{
+  "items": [
+    {
+      "id": "container.init",
+      "status": "ok",
+      "summary": "Initialization finished.",
+      "title_key": "bots.checks.titles.containerInit",
+      "type": "container.init"
+    },
+    {
+      "detail": "runtime_id=workspace-c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "id": "container.record",
+      "metadata": {
+        "container_id": "workspace-c904ca2a-c419-4ee9-9644-5de5afa63008",
+        "image": "docker.io/memohai/workspace:debian-latest",
+        "namespace": "default"
+      },
+      "status": "ok",
+      "summary": "Workspace runtime record exists.",
+      "title_key": "bots.checks.titles.containerRecord",
+      "type": "container.record"
+    },
+    {
+      "detail": "status=running",
+      "id": "container.task",
+      "metadata": {
+        "status": "running"
+      },
+      "status": "ok",
+      "summary": "Workspace runtime state is reported.",
+      "title_key": "bots.checks.titles.containerTask",
+      "type": "container.task"
+    },
+    {
+      "id": "container.data_path",
+      "status": "ok",
+      "summary": "Workspace is reachable via gRPC.",
+      "title_key": "bots.checks.titles.containerDataPath",
+      "type": "container.data_path"
+    },
+    {
+      "id": "model.connection.chat",
+      "metadata": {
+        "latency_ms": 756,
+        "model_id": "93bcad5b-d248-4e06-9ddd-c7466b90caa5",
+        "role": "chat"
+      },
+      "status": "ok",
+      "subtitle": "Chat Model",
+      "summary": "Chat Model is healthy.",
+      "title_key": "bots.checks.titles.modelConnection",
+      "type": "model.connection"
+    }
+  ]
+}

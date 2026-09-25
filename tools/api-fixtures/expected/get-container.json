@@ -1,0 +1,14 @@
+{
+  "container_id": "workspace-c904ca2a-c419-4ee9-9644-5de5afa63008",
+  "container_path": "/data",
+  "created_at": "2026-09-13T11:34:16.32739Z",
+  "has_preserved_data": false,
+  "image": "docker.io/memohai/workspace:debian-latest",
+  "legacy": false,
+  "namespace": "default",
+  "runtime_backend": "io.containerd.runc.v2",
+  "status": "running",
+  "task_running": true,
+  "updated_at": "2026-09-13T11:34:16.329118Z",
+  "workspace_backend": "container"
+}

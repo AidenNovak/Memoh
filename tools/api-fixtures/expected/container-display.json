@@ -1,0 +1,14 @@
+{
+  "a11y_available": true,
+  "available": true,
+  "browser_available": true,
+  "desktop_available": true,
+  "enabled": true,
+  "encoder": "gstreamer",
+  "encoder_available": true,
+  "prepare_supported": true,
+  "prepare_system": "debian",
+  "running": true,
+  "toolkit_available": false,
+  "transport": "webrtc"
+}

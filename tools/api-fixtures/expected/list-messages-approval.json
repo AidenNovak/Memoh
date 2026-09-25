@@ -1,0 +1,63 @@
+{
+  "items": [
+    {
+      "id": "699f1aa6-8f21-4e59-b380-e5401c041587",
+      "platform": "web",
+      "role": "user",
+      "sender_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+      "text": "用 df -h 看一下磁盘，一句话汇报",
+      "timestamp": "2026-09-15T02:20:20.781916Z",
+      "turn_id": "12cf0d64-0d26-4429-ab90-18b8bf83faa5",
+      "turn_position": 1
+    },
+    {
+      "id": "529ca03a-4680-4ee9-8a11-dc2038b7738e",
+      "messages": [
+        {
+          "content": "User wants a quick disk report. Run df -h.",
+          "id": 0,
+          "reasoning_timing": {
+            "duration_ms": 550
+          },
+          "type": "reasoning"
+        },
+        {
+          "approval": {
+            "approval_id": "74943eab-eddb-4569-8889-73bb5c53524f",
+            "short_id": 1,
+            "status": "approved"
+          },
+          "execution_location": {
+            "kind": "native",
+            "name": "Server Workspace"
+          },
+          "id": 1,
+          "input": {
+            "command": "df -h",
+            "description": "Show disk usage in human-readable format",
+            "target_id": "native"
+          },
+          "name": "exec",
+          "output": {
+            "exit_code": 0,
+            "stderr": "",
+            "stdout": "Filesystem      Size  Used Avail Use% Mounted on\noverlay         219G  161G   47G  78% /\ntmpfs            64M     0   64M   0% /dev\nshm              64M     0   64M   0% /dev/shm\ntmpfs            64M     0   64M   0% /run\n/dev/md0        219G  161G   47G  78% /etc/resolv.conf\noverlay         219G  161G   47G  78% /opt/memoh/bridge\ntmpfs           4.0K     0  4.0K   0% /proc/acpi\n"
+          },
+          "running": false,
+          "tool_call_id": "tool_cWoxRr2SbPsv7wCqYVZIEJNg",
+          "type": "tool"
+        },
+        {
+          "content": "根分区 219G 用了 161G，剩 47G，占用率 78%，暂时不算紧张但值得留意。",
+          "id": 2,
+          "type": "text"
+        }
+      ],
+      "platform": "web",
+      "role": "assistant",
+      "timestamp": "2026-09-15T02:20:20.781916Z",
+      "turn_id": "12cf0d64-0d26-4429-ab90-18b8bf83faa5",
+      "turn_position": 1
+    }
+  ]
+}

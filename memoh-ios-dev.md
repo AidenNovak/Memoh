@@ -28,7 +28,10 @@
   加一行之前先想想能不能不加。
 - **怎么跟上游**：`git fetch upstream && git merge upstream/main`（或 rebase）。
   远程约定：`upstream` = `felinics/Memoh`，`origin` = 我们在 GitHub 上的这个 fork。
-  冲突只会落在 §6 那 6 个文件上，其余是纯新增。
+  冲突只会落在 §6 那 9 个文件上，其余是纯新增。
+  2026-09-25 实测：`upstream/main` 已到 `1cbddba12`（比 §4.5 的基线 `22752cd` 新 **27 个提交**），
+  `git merge-tree --write-tree origin/main upstream/main` **零冲突**（合并后 4265 个文件、iOS 树完整）。
+  这条会随时间失效，**动手前自己重跑一次 dry-run**，别照抄。
 
 ---
 
@@ -228,7 +231,7 @@ SwiftUI/UIKit 持有；RN 可以暂时保留路由、服务端状态、i18n 和�
 | 6 | 定时任务 | 完成；原生列表、启用开关、编辑表单与删除确认；RN 暂持 API、cron 解析、权限、i18n 与路由 |
 | 7 | Bot 设置与表单 | 完成；原生分组表单覆盖设置/新建/进度三屏；RN 暂持取数、差分保存、选择器、权限与路由 |
 | 8 | Chat | 完成；原生顶栏/横条/队列/斜杠/composer/审批/ask_user；RN 暂持 store、WS、判据与路由 |
-| 9 | App 壳收口 | 进行中；9A 剩余可见 UI 原生化（9A1 Hub 顶层件 / 9A2 Onboarding / 9A3a 选择器 / 9A3b cron+信息面板 已完成），9B 运行时核心换 Swift 未开始 |
+| 9 | App 壳收口 | 进行中；9A 剩余可见 UI 原生化（9A1 Hub 顶层件 / 9A2 Onboarding / 9A3a 选择器 / 9A3b cron+信息面板 已完成），9B 运行时核心换 Swift 进行中（9B-1 REST 数据层完成，见下；WS 实时通道、会话 store 与路由仍未换） |
 
 每个 PR 必须写清：本模块范围、原生与 RN 各自仍持有什么、行为兼容性、自动化与模拟器证据、
 Human QA 状态，以及下一模块；合并前不得把后续模块顺手带入。
@@ -439,6 +442,40 @@ Human QA 状态，以及下一模块；合并前不得把后续模块顺手带�
   `Memoh.app/Frameworks/` 里有没有 `React.framework`**，否则会把打包问题误判成代码崩溃。
 - **下一模块**：9A 收尾（死件清理），然后 9B（运行时核心换 Swift）。
 
+#### 模块 9B-1 验收记录（`feat/swift-api-client`）
+
+- **本片范围**：REST 数据层换 Swift —— `API/MemohJSONValue.swift`（动态 JSON 值）、
+  `API/MemohAPIError.swift`（错误映射）、`API/MemohAPIModels.swift`（协议模型）、
+  `API/MemohAPIClient.swift`（客户端本体），约 2.3k 行，全部只用 Foundation。
+  **本片刻意不接线**：不注册进 `MemohKitModule`、RN 不引用它，`apps/mobile/src/api/client.ts`
+  仍是活的那一份。这是"先做对照、后换血"的地基，不是替换。
+- **判据怎么来（不接受"我以为客户端会怎么做"）**：`tools/api-fixtures/raw/` 是 dev 实例真发过的
+  字节（`capture-raw.sh` 抓，写盘前递归删掉 `access_token` / `api_key` 这类键），
+  `tools/api-fixtures/expected/` 由**真 TS 客户端**跑 raw 生成——`gen-api-goldens.mjs` 把全局
+  `fetch` 换成桩，客户端走自己的真实代码路径，只有"字节从哪来"被替换。Swift 侧跑同一份 raw，
+  与 expected 逐字段比语义（键序无关、`1` 与 `1.0` 等价）。
+- **覆盖**：`manifest.json` 29 条，其中 26 条可比 —— 3 条标 `source: "unavailable"`：该部署没有
+  `/queue` 路由，`models` / `providers` 在这台部署恒为裸数组（包裹形状没有真实来源）。**宁可少
+  覆盖，也不手编一份形状出来。** 另有请求形状（method / 完整 URL 含 query 顺序与百分号编码 / 头 / 体，
+  用 `URLProtocol` 桩离线跑）、204 与空体、错误体映射、非 JSON 错误页、401、超时、网络错误、编码往返。
+- **typed 模型是有意收窄**：bot-settings 丢 19 个键、container-metrics 丢 18 个、providers 丢 9 个、
+  get-container 丢 6 个、container-display 丢 1 个 —— 逐条有理由（TS 只建模界面用到的子集，
+  其余是服务端设置项与容器后端原始读数）。夹具层与 `check-api-models.py` 把"非可选字段在真响应里
+  缺席"当硬错误，防的正是 `avatar_url` 那一类事故（服务端省略键 → 整次解码失败 → 一条消息都渲染不出来）。
+- **真实联调证据**：`tools/api-parity-live.sh` —— 同一批端点、同一批参数，分别用 TS 客户端与 Swift
+  客户端打 `vultr-sg` 的 dev 实例，逐字段比规范化结果：**29/29 一致**，含两处"两边一致地失败"
+  （`stat-file-missing` 404、`token-usage` 缺参 400）。写路径只覆盖一处：建临时会话 → 取 id → 删掉。
+  token 只以环境变量交给子进程（不走 argv，argv 会进 `ps`），不打印、不落文件。
+- **踩坑记录**：`schedule-logs` 第一次跑出差异（TS 看到 `ok` / 空 `error_message`，Swift 看到
+  `error` / 402 余额不足且多一个 `completed_at`），**重跑即一致** —— 那是 dev 实例上"每分钟建一条
+  会话"的定时任务让日志流在两次调用之间翻页，不是两个客户端不一致。已按脚本既有的 `volatile`
+  （只比结构）处理，理由写在该行注释里；这与 `list-sessions` 是同一类原因。
+- **自动化证据**：`ios:typecheck:foundation` 已把这 4 个文件与 `tools/test-api-contract.swift`
+  加进清单并**实际执行**（离线，不需要 dev 实例）；`check-api-models.py` 结论"无不一致"。
+- **已知取舍**：`UIMessageType` 缺 spec 里的 `command` / `status` 两个枚举值 —— 有 unknown 兜底
+  不会崩，但服务端发这两个值时只能当未知渲染；`check-api-models.py` 会持续报这一条。
+- **下一模块**：9B 余下部分 —— WS 实时通道、会话 store 与路由换 Swift。
+
 ---
 
 ## 4. 协议契约
@@ -639,7 +676,7 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | `src/api/`               | REST + 实时协议（client / realtime / protocol / cursor / credentials / types）                                                         |
 | `src/ui/`                | 共享 UI 组件（29 个）                                                                                                                  |
 | `src/lib/`               | 基础设施（presentation / i18n / theme / accessibility）                                                                                |
-| `modules/memoh-kit/ios/` | Swift：Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support       |
+| `modules/memoh-kit/ios/` | Swift：API（REST 数据层：动态 JSON 值、错误映射、协议模型、客户端本体）、Transcript（政策与数据）、Markdown（解析）、MarkdownText（视觉）、MessageCells、NativeMessageList、Notifications、Support |
 
 规矩：
 
@@ -657,7 +694,7 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 
 ## 6. 我们对上游做的改动（全部）
 
-**改上游的现有文件（6 个）：**
+**改上游的现有文件（9 个）：**
 
 | 文件                                           | 改了什么                                                        | 为什么                                                                                                                                                                                                                                  |
 | ---------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -667,18 +704,28 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 | `eslint.config.mjs`                            | `ignores` 加 `apps/mobile/**`                                   | iOS 侧有自己的 ESLint 配置（Expo 规则集 + React Native / Node 两套全局量），跟这里的 Vue 规则集不是一回事；用它扫 RN 源码只会刷假问题                                                                                                   |
 | `.gitignore`                                   | 追加 iOS 段 + `/.verify/`                                       | prebuild、归档与发布产物不入库；签名材料绝不入库                                                                                                                                                                                        |
 | `pnpm-lock.yaml`                               | 重新解析                                                        | 加入 iOS 依赖后 pnpm 重解了一次依赖图；另记录 Worklets 的 `@babel/generator@7.28.5` package extension。除了新增的移动端条目，上游那 49 处被**去重**（例如重复的 `app-builder-lib@26.8.1` 归并到已有的 `26.16.1`）                       |
+| `README.md` / `README_CN.md` / `README_JA.md`  | 三份各加一节「Native iOS Client」+ 6 张截图表格                 | 三份语言版本都加（否则语言版本之间自相矛盾）。这一段是**唯一**让仓库首页说明"这是一个带 iOS 客户端的 fork"的地方；截图文件在 `assets/ios/`。改这三份会让每次跟上游同步多三处冲突，**能不加就不加** |
 
 **新增的目录（不改上游任何文件）：**
 
 | 路径           | 是什么                                                                             |
 | -------------- | ---------------------------------------------------------------------------------- |
-| `apps/mobile/` | iOS 客户端（254 个文件，`modules/memoh-kit` 11 个 Swift 源文件）                  |
+| `apps/mobile/` | iOS 客户端（287 个文件，`modules/memoh-kit` 43 个 Swift 源文件）                  |
 | `cmd/ios-push-gateway/` | iOS 设备注册、持久事件游标与 APNs 投递 sidecar（6 个 Go 文件）         |
-| `tools/`       | iOS 侧编译检查、资产与 TestFlight 发布脚本（7 个）                                |
+| `tools/`       | iOS 侧编译检查、契约测试、协议对齐工具、资产与 TestFlight 发布脚本（13 个 + `api-fixtures/` 55 个夹具文件） |
 | `infra/`       | 联调隧道、dev 栈与 push gateway 镜像/入口脚本（8 个）                             |
+| `assets/ios/`  | 三份 README 里那 6 张 iOS 截图（`README*.md` 引用的就是它们）                      |
 
-**不提交的内容：** 单元测试、E2E/验收脚本、fixtures、截图证据、测试专用路由与原生探针。
-这些内容已在功能收口前完成验证；当前分支只保留产品、构建发布链与本文。
+**不提交的内容：** RN 侧的单元测试、E2E/UI 验收脚本、截图证据、测试专用路由与调试页面。
+这些在功能收口前完成验证后整体删除（2026-09-19）。
+
+**提交的测试只有一类：** `tools/` 下**由门禁实际执行、或照文档能重跑**的契约测试与夹具 ——
+`tools/test-auth-contract.swift`（模块 3 起）、`tools/test-api-contract.swift` + `tools/api-fixtures/`
+（模块 9B-1 起），以及 9B-1 的对齐工具（`check-api-models.py`、`api-parity-live.sh`、
+`api-parity-probe.swift`、`gen-api-goldens.mjs`、`capture-raw.sh`）。它们全部只用 Foundation 或
+标准库、离线可跑、不含凭据：夹具在写盘前递归删掉 `access_token` / `api_key` 这类键，
+`manifest.json` 逐条记下"哪些键被换成了占位串"。**判据是"它会不会在 `pnpm ios:check` 里跑、
+或者下一个 agent 能不能照文档重跑它"** —— 两者都不是的（一次性探针、截图、场景回放）一律不提交。
 
 ---
 
@@ -729,22 +776,24 @@ outbound-only tunnel。Tailscale Serve 适合只给自己的 tailnet；Cloudflar
 
 ## 9. 当前状态与剩余验收
 
-- **TestFlight 0.1.0 (build 7) 已可用**：产品代码 head `bf60faa0a`，ASC 状态 `VALID`，
-  已挂 `Internal Testers`。发行签名、Team、bundle、build number、production APNs 与
-  Time Sensitive entitlement 都已核对。build 7 是首个包含 self-host push gateway 的内测包，
-  后续真实 APNs 验收必须使用这一版或更新版本。
+- **TestFlight 已到 build 10**（2026-09-25 实测 ASC）：3–10 全部 `VALID` 且都在 `Internal Testers`
+  组里；build 10 上传于 2026-09-21、**2026-12-20 到期**、`minOsVersion 26.0`（**只有 iOS 26 能装**）。
+  build 7（产品代码 head `bf60faa0a`）是首个包含 self-host push gateway 的内测包，发行签名、
+  Team、bundle、build number、production APNs 与 Time Sensitive entitlement 都已核对；
+  **后续真实 APNs 验收必须用 build 7 或更新版本**。
 - Release 默认连接 `https://memoh.yetodawn.com`。TestFlight 只决定谁能安装；
   Memoh member 决定谁能登录与访问哪个 Bot。内测账号只授予 `ios-dev` 的 Bot 级权限，
   不授予服务器 admin；登录凭据只保存在
   `/opt/memoh-dev/secrets/testflight-tester.env`（`0600 root:root`）。
 - 功能收口前已完成模拟器、协议、权限矩阵、原生构建与 TestFlight 发布验证。为保持提交克制，
-  仓库不保留单元测试、E2E、fixtures、截图证据、测试专用页面或探针。
+  RN 侧的单元测试、E2E、截图证据与测试专用页面不保留；`tools/` 下只保留门禁实际执行或照文档
+  能重跑的契约测试与夹具（口径见 §6）。
 - **仍需真机 Human QA**：真实 APNs 送达、通知卡片与动作按钮、生产 device token、
   触感、专注模式，以及蜂窝/Wi-Fi 切换。完成前 PR 保持 Draft，`Human QA passed` 不勾选。
 - `vultr-sg` dev 栈已运行由 commit `e21aa87d2` 构建的 push gateway：sidecar 健康、
   持久事件 cursor、独立重启恢复、公网 `/devices` 鉴权、双域名 TLS 均已通过，部署过程未重启
-  Memoh server / PostgreSQL。当前 production device 注册数仍为 0，说明 build 7 尚未在真机完成
-  登录与 token 注册；这项状态不能冒充 APNs 到达验证。
+  Memoh server / PostgreSQL。**2026-09-25 复查**：`ios_push.devices` 仍是 0 行 —— 说明还没有任何
+  真机用 build 7 之后的包完成登录与 token 注册；这项状态不能冒充 APNs 到达验证。
 - push gateway 已通过真实 Memoh/PostgreSQL 的 401/400/204 注册与解绑验证；APNs provider
   JWT、Team/Key/topic 与 HTTP/2 已用假 token 验证到 Apple 的 `BadDeviceToken` 回执并自动清理。
   仍缺的只是 TestFlight 真机产生 production token 后的实际送达与动作验收。

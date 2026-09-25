@@ -1,0 +1,29 @@
+{
+  "items": [
+    {
+      "check_issue_count": 0,
+      "check_state": "ok",
+      "created_at": "2026-09-13T11:33:09.551154Z",
+      "current_user_permissions": [
+        "chat",
+        "workspace_read",
+        "workspace_write",
+        "workspace_exec",
+        "manage"
+      ],
+      "display_name": "iOS Dev",
+      "id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "is_active": true,
+      "metadata": {
+        "workspace": {
+          "image": "docker.io/memohai/workspace:debian-latest"
+        }
+      },
+      "name": "ios-dev",
+      "owner_user_id": "1c0da433-4231-4b4f-b774-c5a725fb8411",
+      "status": "ready",
+      "timezone": "Asia/Shanghai",
+      "updated_at": "2026-09-21T04:09:30.282007Z"
+    }
+  ]
+}

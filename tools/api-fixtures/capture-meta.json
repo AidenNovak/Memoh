@@ -1,0 +1,122 @@
+{
+  "api": "http://127.0.0.1:18080",
+  "approval_session": "0898239f-380e-4448-8f3b-01976f938a81",
+  "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+  "endpoints": {
+    "bot-checks": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/checks",
+      "status": 200
+    },
+    "bot-settings": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/settings",
+      "status": 200
+    },
+    "container-display": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/display",
+      "status": 200
+    },
+    "container-metrics": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/metrics",
+      "status": 200
+    },
+    "get-container": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container",
+      "status": 200
+    },
+    "get-schedule": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule/321bd94c-a5b6-4376-89f7-a168a9495ba6",
+      "status": 200
+    },
+    "get-session": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions/aa40b9cf-c7ce-449d-99d6-2e310b8c1312",
+      "status": 200
+    },
+    "list-bots": {
+      "path": "GET /bots",
+      "status": 200
+    },
+    "list-files": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs/list?path=%2F",
+      "status": 200
+    },
+    "list-messages-approval": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/messages?session_id=0898239f-380e-4448-8f3b-01976f938a81&limit=300",
+      "status": 200
+    },
+    "list-messages-user-input": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/messages?session_id=aa40b9cf-c7ce-449d-99d6-2e310b8c1312&limit=300",
+      "status": 200
+    },
+    "list-sessions": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions?limit=3",
+      "status": 200
+    },
+    "login": {
+      "path": "POST /auth/login",
+      "status": 200
+    },
+    "me": {
+      "path": "GET /users/me",
+      "status": 200
+    },
+    "models": {
+      "path": "GET /models",
+      "status": 200
+    },
+    "name-availability-available": {
+      "path": "GET /bots/name-availability?name=root",
+      "status": 200
+    },
+    "name-availability-invalid": {
+      "path": "GET /bots/name-availability?name=a",
+      "status": 200
+    },
+    "name-availability-reserved": {
+      "path": "GET /bots/name-availability?name=admin",
+      "status": 200
+    },
+    "name-availability-taken": {
+      "path": "GET /bots/name-availability?name=ios-dev",
+      "status": 200
+    },
+    "providers": {
+      "path": "GET /providers",
+      "status": 200
+    },
+    "read-file": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs/read?path=%2Fetc%2Fhostname",
+      "status": 200
+    },
+    "schedule-list": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule",
+      "status": 200
+    },
+    "schedule-logs": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule/logs?limit=2",
+      "status": 200
+    },
+    "session-status": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions/aa40b9cf-c7ce-449d-99d6-2e310b8c1312/status",
+      "status": 200
+    },
+    "skills-catalog": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/skills/catalog",
+      "status": 200
+    },
+    "stat-file": {
+      "path": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs?path=%2Fetc%2Fhostname",
+      "status": 200
+    }
+  },
+  "redacted_placeholder": "<redacted-by-capture>",
+  "redacted_values": {
+    "login": [
+      "access_token"
+    ],
+    "providers": [
+      "api_key"
+    ]
+  },
+  "schedule_id": "321bd94c-a5b6-4376-89f7-a168a9495ba6",
+  "user_input_session": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312"
+}

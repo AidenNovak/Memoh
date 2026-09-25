@@ -1,0 +1,18 @@
+{
+  "skills": [
+    {
+      "description": "Configure Memoh hooks in /data/.memoh/hooks.json, including events, matchers, command/tool actions, decisions, on_error behavior, append_context, and validation. Use when the user asks to inspect, create, update, debug, or explain workspace hooks.",
+      "display_name": "hooks-setup",
+      "name": "hooks-setup",
+      "source_kind": "managed",
+      "state": "effective"
+    },
+    {
+      "description": "Create or update Memoh workspace skills under /data/skills, including SKILL.md, scripts, references, assets, and validation. Use when the user asks to create, scaffold, revise, audit, or explain a workspace skill.",
+      "display_name": "skill-creator",
+      "name": "skill-creator",
+      "source_kind": "managed",
+      "state": "effective"
+    }
+  ]
+}

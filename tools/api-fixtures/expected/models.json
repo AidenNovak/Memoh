@@ -1,0 +1,39 @@
+[
+  {
+    "config": {
+      "compatibilities": [
+        "reasoning",
+        "tool-call"
+      ]
+    },
+    "enable": true,
+    "id": "9b3d0874-8404-4c1c-a74e-2fe81798baac",
+    "model_id": "k3",
+    "name": "Kimi K3",
+    "provider_id": "c5b77abb-c10d-4103-ab96-9642f9aad170",
+    "reasoning": {
+      "can_disable": false,
+      "default_effort": "medium",
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "supported": true
+    },
+    "type": "chat"
+  },
+  {
+    "config": {},
+    "enable": true,
+    "id": "93bcad5b-d248-4e06-9ddd-c7466b90caa5",
+    "model_id": "deepseek-v4-flash",
+    "name": "DeepSeek V4 Flash",
+    "provider_id": "d7d3ff59-b247-4246-bd97-0589252f2820",
+    "reasoning": {
+      "can_disable": false,
+      "supported": false
+    },
+    "type": "chat"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "cache_stats": {
+    "cache_hit_rate": 94.26804696727575,
+    "cache_read_tokens": 13568,
+    "total_input_tokens": 14393
+  },
+  "context_usage": {
+    "used_tokens": 2085
+  },
+  "message_count": 4,
+  "skills": []
+}

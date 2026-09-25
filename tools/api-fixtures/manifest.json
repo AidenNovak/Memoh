@@ -1,0 +1,375 @@
+[
+  {
+    "name": "login",
+    "endpoint": "login",
+    "call": {
+      "username": "admin",
+      "password": "REDACTED-FIXTURE-REPLAY"
+    },
+    "http": "POST /auth/login",
+    "source": "dev-instance",
+    "status": 200,
+    "redacted": [
+      "access_token"
+    ],
+    "note": "口令不是夹具的一部分：`call.password` 只是个占位串（golden 生成与契约测试都把 fetch 打桩，参数不参与结果，只为了让签名成立）。`access_token` 的值被换成 `<redacted-by-capture>`——值不是真 token、也不由它派生；保留键是为了不破坏形状（删掉键会让 `LoginResponse.access_token` 在这份夹具上无法验证解码）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "me",
+    "endpoint": "me",
+    "call": {},
+    "http": "GET /users/me",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "Account。**这份真响应里既没有 `avatar_url` 也没有 `title_model_id`**，而 spec 里两个都有（只是没进 required）——TS 的类型把它们写成必填，照抄到 Swift 就会在这份响应上解码失败。check-api-models.py 与 api-parity-live.sh 都指着这一条。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "list-bots",
+    "endpoint": "listBots",
+    "call": {},
+    "http": "GET /bots",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "这台部署只有一个 bot，且 `avatar_url` / `timezone` / `current_user_permissions` 一个都没发——`avatar_url` 那次崩溃的现场形状。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "list-sessions",
+    "endpoint": "listSessions",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "limit": 3
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions?limit=3",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "Session 的一堆 `omitempty` 字段（`channel_type` / `parent_session_id` / `preferred_chat_model_id`…）全部缺席；`next_cursor` 是真实的不透明游标。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "get-session",
+    "endpoint": "getSession",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "sessionId": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions/aa40b9cf-c7ce-449d-99d6-2e310b8c1312",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "单个 Session。带 `metadata`（对象）——不是每个部署都有。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "list-messages-user-input",
+    "endpoint": "listMessages",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "sessionId": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312",
+      "limit": 300
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/messages?session_id=aa40b9cf-c7ce-449d-99d6-2e310b8c1312&limit=300",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "UITurn 列表（不是扁平消息）。含 `tool` 块上的 `user_input`（questions/answers/selected/short_id）、`running: false`、`input`/`output` 是对象不是字符串、`reasoning_timing`。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "list-messages-approval",
+    "endpoint": "listMessages",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "sessionId": "0898239f-380e-4448-8f3b-01976f938a81",
+      "limit": 300
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/messages?session_id=0898239f-380e-4448-8f3b-01976f938a81&limit=300",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "含 `approval`（只有 approval_id/short_id/status，没有 options/can_approve）与 `execution_location`；`output.stdout` 里有真实多行文本（转义要正确）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "session-status",
+    "endpoint": "getSessionStatus",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "sessionId": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions/aa40b9cf-c7ce-449d-99d6-2e310b8c1312/status",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "本部署的形状：`context_usage` 只给 `used_tokens`，**没有** `context_window` / `budget_plan` / `compaction`。Swift 侧把后者写成非可选就会在这里炸。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "bot-settings",
+    "endpoint": "getBotSettings",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/settings",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "BotSettings。`compaction_target_percent` 是 `null`（不是缺席）——解码成非可选 Double 会炸。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "get-container",
+    "endpoint": "getContainer",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "ContainerStatus。`status` 与 `task_running` 是两件事，都在。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "container-metrics",
+    "endpoint": "getContainerMetrics",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/metrics",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "嵌套很深（metrics.cpu/memory/storage + resource_limits.*），且 `supported: true` 这一支才有内容。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "container-display",
+    "endpoint": "getDisplay",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/display",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "DisplayCapability：全是布尔能力位，没有画面地址。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "bot-checks",
+    "endpoint": "listBotChecks",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/checks",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "`{items: [...]}`；每条只有 id/type/title_key/status/summary（`detail`/`metadata`/`subtitle` 都没发）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "skills-catalog",
+    "endpoint": "listSkills",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/skills/catalog",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "`{skills: [...]}`（不是 `items`）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "list-files",
+    "endpoint": "listFiles",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "path": "/"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs/list?path=%2F",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "**camelCase 例外**：`isDir` / `modTime`，且列表键是 `entries` 而不是 `items`。",
+    "compare": "exact"
+  },
+  {
+    "name": "read-file",
+    "endpoint": "readFile",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "path": "/etc/hostname"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs/read?path=%2Fetc%2Fhostname",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "小文本预览。`content` 带结尾换行——别在解码层 trim。",
+    "compare": "exact"
+  },
+  {
+    "name": "stat-file",
+    "endpoint": "statFile",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "path": "/etc/hostname"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/container/fs?path=%2Fetc%2Fhostname",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "单文件 stat，同样是 camelCase（`isDir` / `modTime`）。404 那一支（路径不存在）这里没有夹具——它是错误通道，不是解码形状。",
+    "compare": "exact"
+  },
+  {
+    "name": "models",
+    "endpoint": "listModels",
+    "call": {},
+    "http": "GET /models",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "**裸数组**形状（本部署的 `/models` 恒为数组，见 internal/handlers/models.go 的 `c.JSON(200, resp)`）。带 `reasoning` 投影。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "providers",
+    "endpoint": "listProviders",
+    "call": {},
+    "http": "GET /providers",
+    "source": "dev-instance",
+    "status": 200,
+    "redacted": [
+      "api_key"
+    ],
+    "note": "**裸数组**形状。`config.api_key` 的值被换成 `<redacted-by-capture>`（真值不落盘）；留下的 `base_url` / `chat_completions_compat` 是配置不是密钥。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "schedule-list",
+    "endpoint": "listSchedules",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "`{items: [...]}`；注意**没有** `next_run` / `last_run`（列表行的\"最近一次结果\"只能从 logs 拿）。",
+    "compare": "exact"
+  },
+  {
+    "name": "get-schedule",
+    "endpoint": "getSchedule",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "scheduleId": "321bd94c-a5b6-4376-89f7-a168a9495ba6"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule/321bd94c-a5b6-4376-89f7-a168a9495ba6",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "单条定时任务。这里也**没有** `execution` 块——`updateSchedule` 那个\"整块替换\"的坑在这台部署上取不到对照样本。",
+    "compare": "exact"
+  },
+  {
+    "name": "schedule-logs",
+    "endpoint": "listScheduleLogs",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "limit": 2
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/schedule/logs?limit=2",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "`{items, total_count}`；`usage` 是 camelCase（`inputTokens` / `outputTokenDetails`）——和 `/schedule` 本体不是一套命名。",
+    "compare": "exact"
+  },
+  {
+    "name": "name-availability-available",
+    "endpoint": "checkBotNameAvailability",
+    "call": {
+      "name": "root"
+    },
+    "http": "GET /bots/name-availability?name=root",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "**关键陷阱**：可用时服务端只发 `{\"available\": true}`——`reason` 整个键不存在。TS 的类型写的是 `reason: string`（必填），Swift 照抄成非可选 String 就会在这份真响应上解码失败（api-parity-live.sh 的 name-avail-available 行已复现）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "name-availability-taken",
+    "endpoint": "checkBotNameAvailability",
+    "call": {
+      "name": "ios-dev"
+    },
+    "http": "GET /bots/name-availability?name=ios-dev",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "reason = taken。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "name-availability-invalid",
+    "endpoint": "checkBotNameAvailability",
+    "call": {
+      "name": "a"
+    },
+    "http": "GET /bots/name-availability?name=a",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "reason = invalid（太短）。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "name-availability-reserved",
+    "endpoint": "checkBotNameAvailability",
+    "call": {
+      "name": "admin"
+    },
+    "http": "GET /bots/name-availability?name=admin",
+    "source": "dev-instance",
+    "status": 200,
+    "note": "reason = reserved（保留字）。四态里拿到三态 + available。",
+    "compare": "subset",
+    "compare_note": "Swift 侧是 typed 模型：未建模的键会被丢掉（§4 第 7 条），所以只能比 Swift 产出的那些键——值必须一致，且不许比 TS 多出键。TS 有而 Swift 没有的键是**信息**不是差异（否则每个 typed 端点永远红）。"
+  },
+  {
+    "name": "get-session-queue",
+    "endpoint": "getSessionQueue",
+    "call": {
+      "botId": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "sessionId": "aa40b9cf-c7ce-449d-99d6-2e310b8c1312"
+    },
+    "http": "GET /bots/c904ca2a-c419-4ee9-9644-5de5afa63008/sessions/aa40b9cf-c7ce-449d-99d6-2e310b8c1312/queue",
+    "source": "unavailable",
+    "reason": "dev 实例跑的是上游 `memohai/server:latest`（镜像构建于 3 周前），**没有** `/queue` 路由：实测 `GET …/queue`、`…/steer-queue`、`…/follow-up-queue` 全部 404（echo 默认 NotFound），`docker exec memoh-server strings /app/memoh-server` 里也不存在这些路径。该路由只存在于本仓库源码（`internal/handlers/session_queue.go`，经 `cmd/agent` 注册），部署镜像比源码旧。**因此这一片最重要的规范化用例（item_id→itemId、kind 由数组决定、steer_supported 严格等于 true、缺键→空数组）没有真夹具**，见报告。",
+    "note": "消费方（tools/test-api-contract.swift）必须按 `source == \"unavailable\"` 跳过：这条**没有** raw/expected 文件，当成普通夹具遍历会直接失败。"
+  },
+  {
+    "name": "models-wrapped",
+    "endpoint": "listModels",
+    "call": {},
+    "http": "GET /models",
+    "source": "unavailable",
+    "reason": "`{items: [...]}` 这种包裹形状在本部署上拿不到：`internal/handlers/models.go` 的 List 恒为 `c.JSON(200, resp)`（切片→裸数组），实测也是裸数组。包一层就只能手编，而手编等于把假设写成 golden。",
+    "note": "消费方（tools/test-api-contract.swift）必须按 `source == \"unavailable\"` 跳过：这条**没有** raw/expected 文件，当成普通夹具遍历会直接失败。"
+  },
+  {
+    "name": "providers-wrapped",
+    "endpoint": "listProviders",
+    "call": {},
+    "http": "GET /providers",
+    "source": "unavailable",
+    "reason": "同上：`internal/handlers/providers.go` 的 List 恒返回裸数组，实测一致。包裹形状无真实来源。",
+    "note": "消费方（tools/test-api-contract.swift）必须按 `source == \"unavailable\"` 跳过：这条**没有** raw/expected 文件，当成普通夹具遍历会直接失败。"
+  }
+]

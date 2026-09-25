@@ -1,0 +1,46 @@
+{
+  "acl_default_effect": "allow",
+  "chat_acp_project_mode": "project",
+  "chat_acp_project_path": "/data",
+  "chat_model_id": "93bcad5b-d248-4e06-9ddd-c7466b90caa5",
+  "chat_runtime": "model",
+  "command_ui_language": "auto",
+  "compaction_enabled": true,
+  "compaction_target_percent": null,
+  "compaction_threshold": 0,
+  "display_enabled": true,
+  "fetch_provider_id": "",
+  "image_model_id": "",
+  "language": "zh",
+  "memory_provider_id": "",
+  "overlay_enabled": false,
+  "persist_full_tool_results": false,
+  "reasoning_effort": "disable",
+  "search_provider_id": "",
+  "show_tool_calls_in_im": false,
+  "timezone": "Asia/Shanghai",
+  "tool_approval_config": {
+    "enabled": false,
+    "exec": {
+      "bypass_commands": [],
+      "force_review_commands": [],
+      "require_approval": false
+    },
+    "read": {
+      "bypass_globs": [],
+      "force_review_globs": [],
+      "require_approval": false
+    },
+    "write": {
+      "bypass_globs": [
+        "/data/**",
+        "/tmp/**"
+      ],
+      "force_review_globs": [],
+      "require_approval": true
+    }
+  },
+  "transcription_model_id": "",
+  "tts_model_id": "",
+  "video_model_id": ""
+}

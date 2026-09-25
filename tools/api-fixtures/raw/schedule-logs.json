@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "completed_at": "2026-09-24T03:59:00.884926Z",
+      "error_message": "",
+      "id": "962a2d20-d3b7-4254-bd88-d84fb1d73025",
+      "result_text": "OK",
+      "schedule_id": "321bd94c-a5b6-4376-89f7-a168a9495ba6",
+      "session_id": "2fd54381-0e43-4cf5-8399-cb35b2f1a699",
+      "started_at": "2026-09-24T03:59:00.007587Z",
+      "status": "ok",
+      "usage": {
+        "cachedInputTokens": 1536,
+        "inputTokenDetails": {
+          "cacheReadTokens": 1536,
+          "cacheWriteTokens": 0,
+          "noCacheTokens": 0
+        },
+        "inputTokens": 1762,
+        "outputTokenDetails": {
+          "reasoningTokens": 69,
+          "textTokens": 0
+        },
+        "outputTokens": 71,
+        "reasoningTokens": 69,
+        "totalTokens": 1833
+      }
+    },
+    {
+      "bot_id": "c904ca2a-c419-4ee9-9644-5de5afa63008",
+      "completed_at": "2026-09-24T03:58:00.822149Z",
+      "error_message": "",
+      "id": "308b663d-bdb6-48a7-8a75-081f224478c9",
+      "result_text": "OK",
+      "schedule_id": "321bd94c-a5b6-4376-89f7-a168a9495ba6",
+      "session_id": "b281843a-67a3-444f-a9f5-4ab95dd8cf68",
+      "started_at": "2026-09-24T03:58:00.005198Z",
+      "status": "ok",
+      "usage": {
+        "cachedInputTokens": 1536,
+        "inputTokenDetails": {
+          "cacheReadTokens": 1536,
+          "cacheWriteTokens": 0,
+          "noCacheTokens": 0
+        },
+        "inputTokens": 1762,
+        "outputTokenDetails": {
+          "reasoningTokens": 65,
+          "textTokens": 0
+        },
+        "outputTokens": 67,
+        "reasoningTokens": 65,
+        "totalTokens": 1829
+      }
+    }
+  ],
+  "total_count": 13034
+}
